@@ -1,0 +1,147 @@
+permission_style_example:
+  permission: ""
+  camera-position:
+    distance: 1.5
+    world: world
+    x: 0
+    y: 70
+    z: 0
+    yaw: 180
+    pitch: 0.0
+  layout:
+    title:
+      name: "<yellow><bold>Permission Style Demo</bold>"
+      x: 0.0
+      y: 1.1
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      text-size: 1.0
+    allowed:
+      permission: ""
+      name: "Allowed"
+      x: -1.0
+      y: 0.25
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      text-size: 0.85
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      style:
+        color: "#62e67a"
+      permission-style:
+        allowed:
+          color: "#62e67a"
+          bold: true
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+        transition:
+          type: smooth
+          duration: 5
+      pressed-style:
+        color: "#2ecc71"
+        bold: true
+        duration: 3
+      hover-tooltip:
+        type: actionbar
+        text: "<green>This button is always allowed"
+      hover-cursor:
+        material: EMERALD
+        scale: 1.12
+      command:
+        - "[message] <green>Allowed button clicked"
+      command-delay: 6
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: false
+    locked:
+      permission: customscreenmenu.demo.locked
+      name: "Locked"
+      x: 1.0
+      y: 0.25
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      text-size: 0.85
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      style:
+        color: "#ffd866"
+      permission-style:
+        allowed:
+          color: "#ffd866"
+          bold: true
+        denied:
+          text: "Locked"
+          color: "#777777"
+          strikethrough: true
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+        transition:
+          type: smooth
+          duration: 5
+      pressed-style:
+        color: "#ffaa00"
+        bold: true
+        duration: 3
+      hover-tooltip:
+        type: actionbar
+        text: "<gray>Requires <yellow>customscreenmenu.demo.locked</yellow>"
+      hover-cursor:
+        material: GOLD_INGOT
+        scale: 1.12
+      command:
+        - "[message] <gold>Locked button clicked"
+      command-delay: 6
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: false
+    message:
+      permission: ""
+      name: "MiniMessage"
+      x: 0.0
+      y: -0.45
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      text-size: 0.85
+      hover-enlarge:
+        enabled: true
+        scale: 1.1
+      style:
+        color: "#55ffff"
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+      pressed-style:
+        color: "#00c8ff"
+        bold: true
+        duration: 3
+      hover-tooltip:
+        type: actionbar
+        text: "<aqua>Click to send a clickable chat link"
+      hover-cursor:
+        material: WRITABLE_BOOK
+        scale: 1.1
+      command:
+        - "[message] <aqua>MiniMessage: <click:open_url:'https://modrinth.com/plugin/customscreenmenu'><underlined>open plugin page</underlined></click>"
+      command-delay: 6
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: false

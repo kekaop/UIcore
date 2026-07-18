@@ -12,6 +12,9 @@ This folder contains a local patch based on the current server jar. The changes 
 - `hover-tooltip` for actionbar or chat tooltip text on hover.
 - MiniMessage support for `[message]` and `[actionbar]` commands.
 - MiniMessage support for `[link]url|display text`, while keeping the open-url click event.
+- A ready-to-test permission style example menu:
+  - `server-data-current/menu/orven_permission_style.yml`
+  - `src-decompiled/menu/permission_style_example.yml`
 
 ## Style priority
 

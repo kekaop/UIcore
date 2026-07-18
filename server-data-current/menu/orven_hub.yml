@@ -179,6 +179,50 @@ orven_hub:
           x: 0.0
           y: 64.0
           z: 0.0
+    permissions:
+      name: "&eПрава"
+      x: 0.0
+      y: -1.05
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      style:
+        color: "#ffd866"
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+        transition:
+          type: smooth
+          duration: 5
+      pressed-style:
+        color: "#ffaa00"
+        bold: true
+        duration: 3
+      hover-tooltip:
+        type: actionbar
+        text: "<yellow>Пример permission-style"
+      hover-cursor:
+        material: NAME_TAG
+        scale: 1.1
+      text-size: 0.9
+      command-delay: 6
+      next-menu:
+        enabled: true
+        menu: orven_permission_style
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
     close:
       name: "&cЗакрыть"
       x: 0.9
