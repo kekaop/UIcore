@@ -4,6 +4,7 @@
 # Java/build outputs.
 /target/
 /build/
+/patch-classes*/
 
 # Local server runtime state.
 /server-data-current/users.db

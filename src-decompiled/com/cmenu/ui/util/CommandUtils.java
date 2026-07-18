@@ -1,11 +1,10 @@
 package com.cmenu.ui.util;
 
+import com.cmenu.ui.ColorParser;
 import com.cmenu.ui.CursorMenuPlugin;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -46,12 +45,12 @@ public final class CommandUtils {
          } else if (lowerCmd.startsWith("[message]")) {
             String message = processedCmd.replaceAll("\\[message\\]", "").trim();
             if (!message.isEmpty()) {
-               player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
+               sendChatMessage(player, message);
             }
          } else if (lowerCmd.startsWith("[actionbar]")) {
             String message = processedCmd.replaceAll("\\[actionbar\\]", "").trim();
             if (!message.isEmpty()) {
-               sendActionBar(player, ChatColor.translateAlternateColorCodes('&', message));
+               sendActionBar(player, message);
             }
          } else {
             String finalCmd = processedCmd.trim();
@@ -130,9 +129,19 @@ public final class CommandUtils {
    public static void sendActionBar(Player player, String message) {
       if (player != null && message != null) {
          try {
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+            player.sendActionBar(ColorParser.parse(message));
          } catch (Exception var3) {
             CursorMenuPlugin.plugin.getLogger().warning("发送ActionBar消息失败: " + var3.getMessage());
+         }
+      }
+   }
+
+   public static void sendChatMessage(Player player, String message) {
+      if (player != null && message != null) {
+         try {
+            player.sendMessage(ColorParser.parse(message));
+         } catch (RuntimeException var3) {
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
          }
       }
    }

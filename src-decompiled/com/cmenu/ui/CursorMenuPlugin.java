@@ -168,7 +168,7 @@ public class CursorMenuPlugin extends JavaPlugin {
    }
 
    public TextDisplay getTextDisplayByKeys(Player var1, String var2, String var3) {
-      List var4 = this.playerDisplays.get(var1);
+      List<TextDisplay> var4 = this.playerDisplays.get(var1);
       if (var4 == null) {
          return null;
       } else {
@@ -363,6 +363,14 @@ public class CursorMenuPlugin extends JavaPlugin {
       return itemDisplayManager;
    }
 
+   public HoverEnlargeManager getHoverEnlargeManager() {
+      return this.hoverEnlargeManager;
+   }
+
+   public ItemDisplay getCursorItemDisplay(Player player) {
+      return this.playerItemDisplays.get(player);
+   }
+
    public UserDataManager getUserDataManager() {
       return this.userDataManager;
    }
@@ -376,7 +384,7 @@ public class CursorMenuPlugin extends JavaPlugin {
    }
 
    private void clearMenuTextAnimationTasks(Player var1) {
-      List var2 = this.playerMenuTextAnimationTasks.remove(var1);
+      List<Integer> var2 = this.playerMenuTextAnimationTasks.remove(var1);
       if (var2 != null) {
          var2.forEach(Bukkit.getScheduler()::cancelTask);
       }
@@ -693,7 +701,7 @@ public class CursorMenuPlugin extends JavaPlugin {
             }
 
             this.clearMenuTextAnimationTasks(var3);
-            List var5 = this.playerDisplays.remove(var3);
+            List<TextDisplay> var5 = this.playerDisplays.remove(var3);
             if (var5 != null) {
                var5.forEach(var0 -> {
                   if (var0 != null && !var0.isDead()) {
@@ -741,7 +749,7 @@ public class CursorMenuPlugin extends JavaPlugin {
          itemDisplayManager.hideItem(var3);
       }
 
-      for (List var11 : this.playerDisplays.values()) {
+      for (List<TextDisplay> var11 : this.playerDisplays.values()) {
          var11.forEach(var0 -> {
             if (var0 != null && var0.isValid()) {
                var0.remove();
@@ -1034,25 +1042,25 @@ public class CursorMenuPlugin extends JavaPlugin {
                            Location var15x = var6x.clone().add(var14x);
                            ArmorStand var16x = this.spawnCursorArmorStand(var15x);
                            playerCursors.put(var1, var16x);
-                           ArrayList var17x = new ArrayList();
+                           ArrayList<TextDisplay> var17x = new ArrayList<>();
 
                            for (MenuLayout var19 : var15.layouts.values()) {
                               Vector var20 = var7x.clone().multiply(var19.z).add(var8x.clone().multiply(var19.x)).add(var9x.clone().multiply(var19.y));
                               Location var21 = var6x.clone().add(var20);
                               TextDisplay var22 = (TextDisplay)var16.spawn(var21, TextDisplay.class);
-                              String var23 = parsePlaceholders(var1, var19.name);
+                              String var23 = var19.renderStyledName(var1, false, false);
                               if (var19.isTypewriterEnabled()) {
                                  var22.setText(var19.getTypewriterCursorChar());
                                  textDisplayManager.getTypewriterEffect()
                                     .applyEffect(
                                        var22,
-                                       ColorParser.toLegacyString(var23),
+                                       var23,
                                        var19.getTypewriterSpeed(),
                                        var19.getTypewriterStartDelay(),
                                        var19.getTypewriterCursorChar()
                                     );
                               } else {
-                                 var22.setText(ColorParser.toLegacyString(var23));
+                                 var22.setText(var23);
                               }
 
                               var22.setCustomName(var2 + ":" + var19.key);
@@ -1103,9 +1111,9 @@ public class CursorMenuPlugin extends JavaPlugin {
                            this.clearBlockingBlocks(var1);
                            NPCModule.onMenuOpen(var1, var6x, var15.yaw, var15.pitch, var2);
                            if (var15.wasdEnabled && WASDModule.isMenuEnabled(var2)) {
-                              ArrayList var31 = new ArrayList();
-                              ArrayList var32 = new ArrayList();
-                              ArrayList var33 = new ArrayList();
+                              ArrayList<Location> var31 = new ArrayList<>();
+                              ArrayList<String> var32 = new ArrayList<>();
+                              ArrayList<Double> var33 = new ArrayList<>();
 
                               for (MenuLayout var35 : var15.layouts.values()) {
                                  Vector var36 = var7x.clone().multiply(var35.z).add(var8x.clone().multiply(var35.x)).add(var9x.clone().multiply(var35.y));
@@ -1186,7 +1194,7 @@ public class CursorMenuPlugin extends JavaPlugin {
          }
 
          this.clearMenuTextAnimationTasks(var1);
-         List var6 = this.playerDisplays.remove(var1);
+         List<TextDisplay> var6 = this.playerDisplays.remove(var1);
          if (var6 != null) {
             var6.forEach(var0 -> {
                if (var0 != null && !var0.isDead()) {
@@ -1433,7 +1441,7 @@ public class CursorMenuPlugin extends JavaPlugin {
       Section var25 = sectionManager.get(var2);
       if (var25 != null) {
          String var26 = this.getCurrentPlayerInputField(var1);
-         List var27 = this.playerDisplays.get(var1);
+         List<TextDisplay> var27 = this.playerDisplays.get(var1);
          if (var27 != null) {
             this.clearMenuTextAnimationTasks(var1);
             foliaLib.scheduling().entitySpecificScheduler(var1).run(() -> {
@@ -1458,14 +1466,14 @@ public class CursorMenuPlugin extends JavaPlugin {
                Vector var15 = var10.clone().multiply(var14.z).add(var11.clone().multiply(var14.x)).add(var12.clone().multiply(var14.y));
                Location var16 = var9.clone().add(var15);
                TextDisplay var17 = (TextDisplay)var8.spawn(var16, TextDisplay.class);
-               String var18 = parsePlaceholders(var1, var14.name);
-               String var19 = ColorParser.toLegacyString(var18);
+               String var18 = var14.renderStyledName(var1, false, false);
+               String var19 = var18;
                if (var14.isTypewriterEnabled()) {
                   var17.setText(var14.getTypewriterCursorChar());
                   textDisplayManager.getTypewriterEffect()
                      .applyEffect(var17, var19, var14.getTypewriterSpeed(), var14.getTypewriterStartDelay(), var14.getTypewriterCursorChar());
                } else {
-                  var17.setText(ColorParser.toLegacyString(var18));
+                  var17.setText(var18);
                }
 
                var17.setCustomName(var2 + ":" + var14.key);
@@ -2023,7 +2031,7 @@ public class CursorMenuPlugin extends JavaPlugin {
                var9.remove();
             }
 
-            List var10 = CursorMenuPlugin.this.playerDisplays.remove(var1);
+            List<TextDisplay> var10 = CursorMenuPlugin.this.playerDisplays.remove(var1);
             if (var10 != null) {
                var10.forEach(Entity::remove);
             }

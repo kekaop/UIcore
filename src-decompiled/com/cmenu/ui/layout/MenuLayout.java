@@ -1,14 +1,13 @@
 package com.cmenu.ui.layout;
 
+import com.cmenu.ui.ColorParser;
 import com.cmenu.ui.CursorMenuPlugin;
+import com.cmenu.ui.HoverEnlargeManager;
+import com.cmenu.ui.style.TextStyleConfig;
 import com.cmenu.ui.util.CommandUtils;
 import java.util.List;
 import java.util.Random;
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.ClickEvent.Action;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -62,6 +61,18 @@ public class MenuLayout {
    private String floatingAnimationType = "none";
    private double floatingAnimationSpeed = 1.0;
    private double floatingAnimationAmplitude = 0.25;
+   private TextStyleConfig baseStyle = TextStyleConfig.empty();
+   private TextStyleConfig hoverStyle = TextStyleConfig.empty();
+   private TextStyleConfig pressedStyle = TextStyleConfig.empty();
+   private TextStyleConfig permissionAllowedStyle = TextStyleConfig.empty();
+   private TextStyleConfig permissionDeniedStyle = TextStyleConfig.empty();
+   private int pressedStyleDuration = 3;
+   private boolean hoverCursorEnabled = false;
+   private String hoverCursorMaterial = "";
+   private int hoverCursorCustomModelData = 0;
+   private double hoverCursorScale = -1.0;
+   private String hoverTooltipType = "actionbar";
+   private String hoverTooltipText = "";
 
    public MenuLayout(
       String var1,
@@ -215,9 +226,143 @@ public class MenuLayout {
       return this.command;
    }
 
+   public boolean hasPermission(Player player) {
+      return this.permission == null || this.permission.isEmpty() || player.hasPermission(this.permission) || player.isOp();
+   }
+
+   public boolean hasHoverStyle() {
+      return !this.hoverStyle.isEmpty();
+   }
+
+   public boolean hasPressedStyle() {
+      return !this.pressedStyle.isEmpty();
+   }
+
+   public boolean hasPermissionStyle() {
+      return !this.permissionAllowedStyle.isEmpty() || !this.permissionDeniedStyle.isEmpty();
+   }
+
+   public boolean hasHoverCursor() {
+      return this.hoverCursorEnabled && this.hoverCursorMaterial != null && !this.hoverCursorMaterial.isBlank();
+   }
+
+   public String getHoverCursorMaterial() {
+      return this.hoverCursorMaterial;
+   }
+
+   public int getHoverCursorCustomModelData() {
+      return this.hoverCursorCustomModelData;
+   }
+
+   public double getHoverCursorScale() {
+      return this.hoverCursorScale;
+   }
+
+   public boolean hasHoverTooltip() {
+      return this.hoverTooltipText != null && !this.hoverTooltipText.isBlank();
+   }
+
+   public String getHoverTooltipType() {
+      return this.hoverTooltipType;
+   }
+
+   public String getHoverTooltipText() {
+      return this.hoverTooltipText;
+   }
+
+   public int getPressedStyleDuration() {
+      return this.pressedStyleDuration;
+   }
+
+   public boolean hasHoverVisualEffect() {
+      return this.hasHoverStyle() || this.hasHoverCursor() || this.hasHoverTooltip();
+   }
+
+   public boolean hasAnyTextStyle() {
+      return !this.baseStyle.isEmpty() || this.hasPermissionStyle() || this.hasHoverStyle() || this.hasPressedStyle();
+   }
+
+   public TextStyleConfig resolveTextStyle(Player player, boolean hovered, boolean pressed) {
+      TextStyleConfig style = this.baseStyle;
+      boolean allowed = this.hasPermission(player);
+      if (allowed) {
+         style = style.merge(this.permissionAllowedStyle);
+      }
+
+      if (hovered) {
+         style = style.merge(this.hoverStyle);
+      }
+
+      if (pressed) {
+         style = style.merge(this.pressedStyle);
+      }
+
+      if (!allowed) {
+         style = style.merge(this.permissionDeniedStyle);
+      }
+
+      return style;
+   }
+
+   public String resolveTextColor(Player player, boolean hovered, boolean pressed) {
+      return this.resolveTextStyle(player, hovered, pressed).color();
+   }
+
+   public boolean hasSmoothHoverTransition() {
+      return this.hoverStyle.smoothTransition();
+   }
+
+   public int getHoverTransitionDuration() {
+      return this.hoverStyle.transitionDuration();
+   }
+
+   public String renderStyledName(Player player, boolean hovered, boolean pressed) {
+      return this.renderStyledText(player, this.name, hovered, pressed);
+   }
+
+   public String renderStyledName(Player player, boolean hovered, boolean pressed, String colorOverride) {
+      return this.renderStyledText(player, this.name, hovered, pressed, colorOverride);
+   }
+
+   public String renderStyledText(Player player, String text, boolean hovered, boolean pressed) {
+      return this.renderStyledText(player, text, hovered, pressed, null);
+   }
+
+   public String renderStyledText(Player player, String text, boolean hovered, boolean pressed, String colorOverride) {
+      String parsedText = CursorMenuPlugin.parsePlaceholders(player, text == null ? "" : text);
+      return this.resolveTextStyle(player, hovered, pressed).render(parsedText, colorOverride);
+   }
+
    public void loadConfig(ConfigurationSection var1) {
       if (var1.contains("command-delay")) {
          this.setCommandDelay(var1.getLong("command-delay", 20L));
+      }
+
+      this.baseStyle = TextStyleConfig.from(var1.getConfigurationSection("style"));
+      this.hoverStyle = TextStyleConfig.from(var1.getConfigurationSection("hover-style"));
+      this.pressedStyle = TextStyleConfig.from(var1.getConfigurationSection("pressed-style"));
+      if (var1.contains("pressed-style.duration")) {
+         this.pressedStyleDuration = Math.max(1, var1.getInt("pressed-style.duration", 3));
+      }
+
+      ConfigurationSection permissionStyle = var1.getConfigurationSection("permission-style");
+      if (permissionStyle != null) {
+         this.permissionAllowedStyle = TextStyleConfig.from(permissionStyle.getConfigurationSection("allowed"));
+         this.permissionDeniedStyle = TextStyleConfig.from(permissionStyle.getConfigurationSection("denied"));
+      }
+
+      ConfigurationSection hoverCursor = var1.getConfigurationSection("hover-cursor");
+      if (hoverCursor != null) {
+         this.hoverCursorEnabled = hoverCursor.getBoolean("enabled", true);
+         this.hoverCursorMaterial = hoverCursor.getString("material", "");
+         this.hoverCursorCustomModelData = Math.max(0, hoverCursor.getInt("custom-model-data", 0));
+         this.hoverCursorScale = hoverCursor.contains("scale") ? hoverCursor.getDouble("scale") : -1.0;
+      }
+
+      ConfigurationSection hoverTooltip = var1.getConfigurationSection("hover-tooltip");
+      if (hoverTooltip != null) {
+         this.hoverTooltipType = hoverTooltip.getString("type", "actionbar");
+         this.hoverTooltipText = hoverTooltip.getString("text", "");
       }
 
       if (var1.contains("condition.variable") && var1.contains("condition.operator") && var1.contains("condition.value")) {
@@ -284,7 +429,7 @@ public class MenuLayout {
    }
 
    public void runCommand(Player var1) {
-      if (!this.permission.isEmpty() && !var1.hasPermission(this.permission) && !var1.isOp()) {
+      if (!this.hasPermission(var1)) {
          var1.sendMessage(CursorMenuPlugin.plugin.getLangMessage("permission.no_permission_button", "&c[CursorMenu] 你没有权限执行该按钮"));
       } else if (CursorMenuPlugin.plugin.requiresLogin(this.name, this.key) && !CursorMenuPlugin.plugin.isPlayerLoggedIn(var1)) {
          CursorMenuPlugin.plugin.sendActionBarMessage(var1, CursorMenuPlugin.plugin.getLangMessage("menu.require_login", "&c[CursorMenu] 请先登录后再执行此操作"));
@@ -306,6 +451,11 @@ public class MenuLayout {
          CursorMenuPlugin.plugin.selectedLayouts.put(var1, this);
          if (!this.isClick) {
             this.isClick = true;
+            HoverEnlargeManager hoverManager = CursorMenuPlugin.plugin.getHoverEnlargeManager();
+            if (hoverManager != null) {
+               hoverManager.applyPressedStyle(var1, this);
+            }
+
             CursorMenuPlugin.foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(var1x -> this.isClick = false, null, 1L);
             if (CursorMenuPlugin.plugin.getCurrentPlayerMenu(var1) != null
                && (
@@ -375,17 +525,18 @@ public class MenuLayout {
    }
 
    private void sendClickableLink(Player var1, String var2) {
-      if (var2.startsWith("[link]")) {
-         String var3 = var2.substring(6);
-         String[] var4 = var3.split("\\|", 2);
-         String var5 = var4[0];
-         String var6 = var4.length > 1 ? var4[1] : var5;
-         TextComponent var7 = new TextComponent(ChatColor.translateAlternateColorCodes('&', var6));
-         var7.setClickEvent(new ClickEvent(Action.OPEN_URL, var5));
-         var1.spigot().sendMessage(ChatMessageType.CHAT, var7);
-      } else {
-         String var8 = ChatColor.translateAlternateColorCodes('&', var2);
-         var1.spigot().sendMessage(ChatMessageType.CHAT, TextComponent.fromLegacyText(var8));
+      try {
+         if (var2.startsWith("[link]")) {
+            String var3 = var2.substring(6);
+            String[] var4 = var3.split("\\|", 2);
+            String var5 = var4[0];
+            String var6 = var4.length > 1 ? var4[1] : var5;
+            var1.sendMessage(ColorParser.parse(var6).clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(var5)));
+         } else {
+            var1.sendMessage(ColorParser.parse(var2));
+         }
+      } catch (RuntimeException var7) {
+         var1.sendMessage(ChatColor.translateAlternateColorCodes('&', var2));
       }
    }
 

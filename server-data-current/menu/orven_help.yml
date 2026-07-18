@@ -52,8 +52,26 @@ orven_help:
       hover-enlarge:
         enabled: true
         scale: 1.12
+      style:
+        color: "#55ffff"
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+        transition:
+          type: smooth
+          duration: 5
+      pressed-style:
+        color: "#00c8ff"
+        bold: true
+        duration: 3
+      hover-tooltip:
+        type: actionbar
+        text: "<aqua>Клик отправит кликабельную ссылку в чат"
+      hover-cursor:
+        material: WRITABLE_BOOK
+        scale: 1.1
       text-size: 0.9
-      link: "[link]https://modrinth.com/plugin/customscreenmenu|&bОткрыть страницу CustomScreenMenu"
+      link: "[link]https://modrinth.com/plugin/customscreenmenu|<aqua><underlined>Открыть страницу CustomScreenMenu</underlined></aqua>"
       command-delay: 6
       stop-menu:
         enabled: false

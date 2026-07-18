@@ -10,12 +10,30 @@ link_example:
     pitch: 0.0
   layout:
     discord_link:
-      name: "加入我们的 Discord 服务器"
+      name: "Discord"
       x: -1
       y: 1
       z: 3
+      style:
+        color: "#55ffff"
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+        transition:
+          type: smooth
+          duration: 5
+      pressed-style:
+        color: "#00c8ff"
+        bold: true
+        duration: 3
+      hover-tooltip:
+        type: actionbar
+        text: "<aqua>Click to send an open-url chat link"
+      hover-cursor:
+        material: WRITABLE_BOOK
+        scale: 1.1
       command: []
-      link: "[link]https://discord.gg/example|点击加入我们的 Discord 服务器"
+      link: "[link]https://discord.gg/example|<aqua><underlined>Open Discord</underlined></aqua>"
       stop-menu:
         enabled: false
       next-menu:
@@ -46,12 +64,21 @@ link_example:
         enabled: false
         
     normal_command:
-      name: "普通命令按钮"
+      name: "MiniMessage message"
       x: -1
       y: -0.5
       z: 3
+      style:
+        color: "#62e67a"
+      hover-style:
+        color: "#ffffff"
+        bold: true
+      pressed-style:
+        color: "#2ecc71"
+        underlined: true
+        duration: 3
       command:
-        - "[console] say 这是一个普通命令"
+        - "[message] <green>MiniMessage works: <click:open_url:'https://modrinth.com/plugin/customscreenmenu'><aqua><underlined>open page</underlined></aqua></click>"
       stop-menu:
         enabled: false
       next-menu:

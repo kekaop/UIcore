@@ -2,6 +2,7 @@ package com.cmenu.ui;
 
 import com.cmenu.ui.layout.MenuLayout;
 import com.cmenu.ui.section.Section;
+import com.cmenu.ui.style.TextStyleConfig;
 import com.cmenu.ui.util.CommandUtils;
 import com.cmenu.ui.util.HoverSoundManager;
 import java.util.List;
@@ -11,9 +12,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.joml.Vector3f;
 
@@ -24,6 +30,9 @@ public class HoverEnlargeManager {
    private final HoverSoundManager hoverSoundManager;
    private final Map<UUID, TextDisplay> currentHovered = new ConcurrentHashMap<>();
    private final Map<UUID, MenuLayout> currentHoveredLayout = new ConcurrentHashMap<>();
+   private final Map<UUID, BukkitTask> textStyleTasks = new ConcurrentHashMap<>();
+   private final Map<UUID, ItemStack> originalCursorItems = new ConcurrentHashMap<>();
+   private final Map<UUID, Vector3f> originalCursorScales = new ConcurrentHashMap<>();
    private BukkitRunnable hoverDetectionTask;
 
    public HoverEnlargeManager(CursorMenuPlugin plugin) {
@@ -52,7 +61,11 @@ public class HoverEnlargeManager {
                            double minDistance = Double.MAX_VALUE;
 
                            for (MenuLayout layout : section.layouts.values()) {
-                              if (layout.isHoverEnlargeEnabled() || layout.getHoverSound() != null || layout.hasHoverCommands() || layout.hasLeaveCommands()) {
+                              if (layout.isHoverEnlargeEnabled()
+                                 || layout.getHoverSound() != null
+                                 || layout.hasHoverCommands()
+                                 || layout.hasLeaveCommands()
+                                 || layout.hasHoverVisualEffect()) {
                                  TextDisplay display = HoverEnlargeManager.this.plugin.getTextDisplayByKeys(player, menuKey, layout.key);
                                  if (display != null && display.isValid() && TextDisplayHitBox.isInside(display, cursorLoc)) {
                                     double distance = display.getLocation().distanceSquared(cursorLoc);
@@ -70,6 +83,12 @@ public class HoverEnlargeManager {
                            TextDisplay previouslyHovered = HoverEnlargeManager.this.currentHovered.get(playerId);
                            MenuLayout previousLayout = HoverEnlargeManager.this.currentHoveredLayout.get(playerId);
                            if (closestLayout != previousLayout) {
+                              if (previousLayout != null && previouslyHovered != null) {
+                                 HoverEnlargeManager.this.applyTextStyle(player, previouslyHovered, previousLayout, false);
+                                 HoverEnlargeManager.this.clearHoverTooltip(player, previousLayout);
+                              }
+
+                              HoverEnlargeManager.this.resetHoverCursor(player);
                               if (previousLayout != null && previousLayout.hasLeaveCommands()) {
                                  HoverEnlargeManager.this.executeCommands(player, previousLayout.getLeaveCommands());
                               }
@@ -80,6 +99,12 @@ public class HoverEnlargeManager {
 
                               if (closestLayout != null) {
                                  HoverEnlargeManager.this.currentHoveredLayout.put(playerId, closestLayout);
+                                 if (closestDisplay != null) {
+                                    HoverEnlargeManager.this.applyTextStyle(player, closestDisplay, closestLayout, true);
+                                 }
+
+                                 HoverEnlargeManager.this.applyHoverCursor(player, closestLayout);
+                                 HoverEnlargeManager.this.showHoverTooltip(player, closestLayout);
                               } else {
                                  HoverEnlargeManager.this.currentHoveredLayout.remove(playerId);
                               }
@@ -99,18 +124,24 @@ public class HoverEnlargeManager {
                                     );
                               }
 
-                              if (currentlyEnlarged != closestDisplay && closestLayout.isHoverEnlargeEnabled()) {
-                                 if (currentlyEnlarged != null) {
-                                    HoverEnlargeManager.this.resetTextDisplaySize(currentlyEnlarged);
-                                    HoverEnlargeManager.this.enlargedTextDisplays.remove(playerId);
-                                 }
+                              if (currentlyEnlarged != null && currentlyEnlarged != closestDisplay) {
+                                 HoverEnlargeManager.this.resetTextDisplaySize(currentlyEnlarged);
+                                 HoverEnlargeManager.this.enlargedTextDisplays.remove(playerId);
+                              }
 
+                              if (currentlyEnlarged != closestDisplay && closestLayout.isHoverEnlargeEnabled()) {
                                  HoverEnlargeManager.this.enlargeTextDisplay(closestDisplay, closestLayout);
                                  HoverEnlargeManager.this.enlargedTextDisplays.put(playerId, closestDisplay);
                               }
 
                               HoverEnlargeManager.this.currentHovered.put(playerId, closestDisplay);
                            } else if (currentlyEnlarged != null || previouslyHovered != null) {
+                              if (previousLayout != null && previouslyHovered != null) {
+                                 HoverEnlargeManager.this.applyTextStyle(player, previouslyHovered, previousLayout, false);
+                                 HoverEnlargeManager.this.clearHoverTooltip(player, previousLayout);
+                              }
+
+                              HoverEnlargeManager.this.resetHoverCursor(player);
                               if (currentlyEnlarged != null) {
                                  HoverEnlargeManager.this.resetTextDisplaySize(currentlyEnlarged);
                                  HoverEnlargeManager.this.enlargedTextDisplays.remove(playerId);
@@ -161,6 +192,150 @@ public class HoverEnlargeManager {
       }
    }
 
+   private void applyTextStyle(Player player, TextDisplay display, MenuLayout layout, boolean hovered) {
+      if (player != null && display != null && display.isValid() && layout != null && layout.hasAnyTextStyle()) {
+         BukkitTask previousTask = this.textStyleTasks.remove(display.getUniqueId());
+         if (previousTask != null) {
+            previousTask.cancel();
+         }
+
+         String startColor = layout.resolveTextColor(player, !hovered, false);
+         String targetColor = layout.resolveTextColor(player, hovered, false);
+         int[] from = TextStyleConfig.parseRgb(startColor);
+         int[] to = TextStyleConfig.parseRgb(targetColor);
+         if (hovered && layout.hasSmoothHoverTransition() && from != null && to != null) {
+            int duration = Math.max(1, layout.getHoverTransitionDuration());
+            BukkitRunnable task = new BukkitRunnable() {
+               private int tick = 0;
+
+               public void run() {
+                  if (!display.isValid()) {
+                     this.cancel();
+                     HoverEnlargeManager.this.textStyleTasks.remove(display.getUniqueId());
+                     return;
+                  }
+
+                  double progress = Math.min(1.0, (double)this.tick / (double)duration);
+                  int red = (int)Math.round(from[0] + (to[0] - from[0]) * progress);
+                  int green = (int)Math.round(from[1] + (to[1] - from[1]) * progress);
+                  int blue = (int)Math.round(from[2] + (to[2] - from[2]) * progress);
+                  display.setText(layout.renderStyledName(player, true, false, TextStyleConfig.toHex(red, green, blue)));
+                  if (this.tick++ >= duration) {
+                     this.cancel();
+                     HoverEnlargeManager.this.textStyleTasks.remove(display.getUniqueId());
+                  }
+               }
+            };
+            this.textStyleTasks.put(display.getUniqueId(), task.runTaskTimer(this.plugin, 0L, 1L));
+         } else {
+            display.setText(layout.renderStyledName(player, hovered, false));
+         }
+      }
+   }
+
+   public void applyPressedStyle(Player player, MenuLayout layout) {
+      if (player != null && layout != null && layout.hasPressedStyle()) {
+         String menuKey = this.plugin.getCurrentPlayerMenu(player);
+         TextDisplay display = menuKey == null ? null : this.plugin.getTextDisplayByKeys(player, menuKey, layout.key);
+         if (display != null && display.isValid()) {
+            BukkitTask previousTask = this.textStyleTasks.remove(display.getUniqueId());
+            if (previousTask != null) {
+               previousTask.cancel();
+            }
+
+            display.setText(layout.renderStyledName(player, this.isCurrentHovered(player, layout), true));
+            BukkitRunnable task = new BukkitRunnable() {
+               public void run() {
+                  if (display.isValid()) {
+                     display.setText(layout.renderStyledName(player, HoverEnlargeManager.this.isCurrentHovered(player, layout), false));
+                  }
+
+                  HoverEnlargeManager.this.textStyleTasks.remove(display.getUniqueId());
+               }
+            };
+            this.textStyleTasks.put(display.getUniqueId(), task.runTaskLater(this.plugin, Math.max(1, layout.getPressedStyleDuration())));
+         }
+      }
+   }
+
+   private boolean isCurrentHovered(Player player, MenuLayout layout) {
+      return player != null && layout != null && this.currentHoveredLayout.get(player.getUniqueId()) == layout;
+   }
+
+   private void showHoverTooltip(Player player, MenuLayout layout) {
+      if (player != null && layout != null && layout.hasHoverTooltip()) {
+         String text = CursorMenuPlugin.parsePlaceholders(player, layout.getHoverTooltipText());
+         if ("message".equalsIgnoreCase(layout.getHoverTooltipType()) || "chat".equalsIgnoreCase(layout.getHoverTooltipType())) {
+            CommandUtils.sendChatMessage(player, text);
+         } else {
+            CommandUtils.sendActionBar(player, text);
+         }
+      }
+   }
+
+   private void clearHoverTooltip(Player player, MenuLayout layout) {
+      if (player != null
+         && layout != null
+         && layout.hasHoverTooltip()
+         && !"message".equalsIgnoreCase(layout.getHoverTooltipType())
+         && !"chat".equalsIgnoreCase(layout.getHoverTooltipType())) {
+         player.sendActionBar(net.kyori.adventure.text.Component.empty());
+      }
+   }
+
+   private void applyHoverCursor(Player player, MenuLayout layout) {
+      if (player != null && layout != null && layout.hasHoverCursor()) {
+         ItemDisplay cursor = this.plugin.getCursorItemDisplay(player);
+         if (cursor != null && cursor.isValid()) {
+            Material material = Material.matchMaterial(layout.getHoverCursorMaterial());
+            if (material != null) {
+               UUID playerId = player.getUniqueId();
+               ItemStack currentItem = cursor.getItemStack();
+               if (currentItem != null) {
+                  this.originalCursorItems.putIfAbsent(playerId, currentItem.clone());
+               }
+
+               Transformation oldTrans = cursor.getTransformation();
+               this.originalCursorScales.putIfAbsent(playerId, new Vector3f(oldTrans.getScale()));
+               ItemStack stack = new ItemStack(material);
+               if (layout.getHoverCursorCustomModelData() > 0) {
+                  ItemMeta meta = stack.getItemMeta();
+                  if (meta != null) {
+                     meta.setCustomModelData(layout.getHoverCursorCustomModelData());
+                     stack.setItemMeta(meta);
+                  }
+               }
+
+               cursor.setItemStack(stack);
+               if (layout.getHoverCursorScale() > 0.0) {
+                  Vector3f originalScale = this.originalCursorScales.get(playerId);
+                  Vector3f scaled = new Vector3f(originalScale == null ? oldTrans.getScale() : originalScale).mul((float)layout.getHoverCursorScale());
+                  cursor.setTransformation(new Transformation(oldTrans.getTranslation(), oldTrans.getLeftRotation(), scaled, oldTrans.getRightRotation()));
+               }
+            }
+         }
+      }
+   }
+
+   private void resetHoverCursor(Player player) {
+      if (player != null) {
+         UUID playerId = player.getUniqueId();
+         ItemDisplay cursor = this.plugin.getCursorItemDisplay(player);
+         ItemStack originalItem = this.originalCursorItems.remove(playerId);
+         Vector3f originalScale = this.originalCursorScales.remove(playerId);
+         if (cursor != null && cursor.isValid()) {
+            if (originalItem != null) {
+               cursor.setItemStack(originalItem);
+            }
+
+            if (originalScale != null) {
+               Transformation oldTrans = cursor.getTransformation();
+               cursor.setTransformation(new Transformation(oldTrans.getTranslation(), oldTrans.getLeftRotation(), originalScale, oldTrans.getRightRotation()));
+            }
+         }
+      }
+   }
+
    public void cleanupPlayer(Player player) {
       UUID playerId = player.getUniqueId();
       TextDisplay display = this.enlargedTextDisplays.remove(playerId);
@@ -168,6 +343,15 @@ public class HoverEnlargeManager {
          this.resetTextDisplaySize(display);
       }
 
+      TextDisplay hoveredDisplay = this.currentHovered.get(playerId);
+      if (hoveredDisplay != null) {
+         BukkitTask styleTask = this.textStyleTasks.remove(hoveredDisplay.getUniqueId());
+         if (styleTask != null) {
+            styleTask.cancel();
+         }
+      }
+
+      this.resetHoverCursor(player);
       this.currentHovered.remove(playerId);
       this.currentHoveredLayout.remove(playerId);
       this.hoverSoundManager.cleanupPlayer(playerId);
@@ -183,8 +367,15 @@ public class HoverEnlargeManager {
          this.resetTextDisplaySize(display);
       }
 
+      for (BukkitTask task : this.textStyleTasks.values()) {
+         task.cancel();
+      }
+
       this.enlargedTextDisplays.clear();
       this.originalScales.clear();
+      this.textStyleTasks.clear();
+      this.originalCursorItems.clear();
+      this.originalCursorScales.clear();
       this.currentHovered.clear();
       this.currentHoveredLayout.clear();
       this.hoverSoundManager.cleanupAll();

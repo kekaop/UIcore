@@ -198,7 +198,7 @@ public class TextDisplayManager {
 
    public void createTextDisplayWithLayout(Player player, String text, Location loc, float scale, MenuLayout layout) {
       if (player != null && loc != null && layout != null) {
-         String parsedText = ColorParser.toLegacyString(CursorMenuPlugin.parsePlaceholders(player, text));
+         String parsedText = layout.renderStyledText(player, text, false, false);
          World world = loc.getWorld();
          if (world != null) {
             TextDisplay display = (TextDisplay)world.spawn(loc, TextDisplay.class);
@@ -207,7 +207,7 @@ public class TextDisplayManager {
                this.typewriterEffect
                   .applyEffect(display, parsedText, layout.getTypewriterSpeed(), layout.getTypewriterStartDelay(), layout.getTypewriterCursorChar());
             } else {
-               display.setText(ColorParser.toLegacyString(text));
+               display.setText(parsedText);
             }
 
             display.setCustomName(layout.key);

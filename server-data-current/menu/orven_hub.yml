@@ -48,6 +48,28 @@ orven_hub:
       hover-enlarge:
         enabled: true
         scale: 1.15
+      style:
+        color: "#62e67a"
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+        transition:
+          type: smooth
+          duration: 6
+      pressed-style:
+        color: "#2ecc71"
+        bold: true
+        duration: 3
+      permission-style:
+        denied:
+          color: "#777777"
+          strikethrough: true
+      hover-tooltip:
+        type: actionbar
+        text: "<green>Открыть карточку профиля"
+      hover-cursor:
+        material: EMERALD
+        scale: 1.15
       text-size: 1.0
       command-delay: 6
       next-menu:
@@ -73,6 +95,23 @@ orven_hub:
         z: 0.0
       hover-enlarge:
         enabled: true
+        scale: 1.15
+      style:
+        color: "#46d9ff"
+      hover-style:
+        color: "#ffffff"
+        bold: true
+        transition:
+          type: instant
+      pressed-style:
+        color: "#00a8ff"
+        underlined: true
+        duration: 3
+      hover-tooltip:
+        type: actionbar
+        text: "<aqua>Переходы между меню без закрытия камеры"
+      hover-cursor:
+        material: COMPASS
         scale: 1.15
       text-size: 1.0
       command-delay: 6
@@ -152,9 +191,27 @@ orven_hub:
       hover-enlarge:
         enabled: true
         scale: 1.15
+      style:
+        color: "#ff6666"
+      hover-style:
+        color: "#ffdddd"
+        strikethrough: true
+        transition:
+          type: smooth
+          duration: 4
+      pressed-style:
+        color: "#ff2222"
+        bold: true
+        duration: 2
+      hover-tooltip:
+        type: actionbar
+        text: "<red>Закрыть меню"
+      hover-cursor:
+        material: BARRIER
+        scale: 1.2
       text-size: 1.0
       command:
-        - "[message] &7Меню закрыто."
+        - "[message] <gray>Меню закрыто. <click:open_url:'https://modrinth.com/plugin/customscreenmenu'><aqua><underlined>Страница плагина</underlined></aqua></click>"
       command-delay: 6
       stop-menu:
         enabled: true
