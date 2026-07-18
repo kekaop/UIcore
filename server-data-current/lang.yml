@@ -1,0 +1,203 @@
+# ========================================
+# CursorMenu 提示信息配置文件
+# 该文件包含插件所有的提示信息配置
+# 支持热加载，修改后使用 /cursormenu reload 即可生效
+# ========================================
+
+# ========================================
+# 登录相关提示
+# ========================================
+login:
+  success: '&a[CursorMenu] 登录成功!'
+  wrong_password: '&c[CursorMenu] 密码错误'
+  empty_password: '&c[CursorMenu] 密码不能为空'
+  user_not_found: '&c[CursorMenu] 用户不存在'
+  locked: '&c[CursorMenu] 账户已被锁定，请稍后再试'
+  too_many_attempts: '&c[CursorMenu] 登录尝试次数过多，请稍后再试'
+  same_ip_not_allowed: '&c[CursorMenu] 当前配置不允许使用该IP登录'
+
+# ========================================
+# 注册相关提示
+# ========================================
+register:
+  success: '&a[CursorMenu] 用户 %player_name% 注册成功!'
+  failed: '&c[CursorMenu] 注册失败，请稍后重试'
+  password_mismatch: '&c[CursorMenu] 两次输入的密码不一致'
+  invalid_password_length: '&c[CursorMenu] 密码长度必须在6-12位之间'
+  weak_password: '&c[CursorMenu] 密码过于简单，请使用更复杂的密码'
+  user_exists: '&c[CursorMenu] 该账户已注册'
+  empty_password: '&c[CursorMenu] 密码不能为空'
+  empty_confirm_password: '&c[CursorMenu] 确认密码不能为空'
+  error: '&c[CursorMenu] 注册失败，请稍后重试'
+  ip_blacklisted: '&c[CursorMenu] 您的IP地址已被禁止注册'
+  ip_not_in_whitelist: '&c[CursorMenu] 您的IP地址不在允许注册的列表中'
+
+# ========================================
+# 输入相关提示
+# ========================================
+input:
+  field_set: '&a[CursorMenu] 当前输入字段已设置为: %field%'
+  data_saved: '&a[CursorMenu] %field% 已设置为: %value%'
+  incomplete: '&c[CursorMenu] 请先完成所有输入项'
+
+# ========================================
+# 密码可见性相关提示
+# ========================================
+password:
+  visibility_toggled: '&a[CursorMenu] 密码可见性已切换'
+  visibility_shown: '&a[CursorMenu] 密码已显示'
+  visibility_hidden: '&a[CursorMenu] 密码已隐藏'
+  visibility_button_shown: '[密码:隐藏]'
+  visibility_button_hidden: '[密码:显示]'
+
+# ========================================
+# 权限相关提示
+# ========================================
+permission:
+  no_permission: '&c[CursorMenu] 你没有权限使用该命令'
+  no_permission_button: '&c[CursorMenu] 你没有权限执行该按钮'
+  no_permission_menu: '&c[CursorMenu] 你没有权限打开该菜单'
+  player_only: '&c[CursorMenu] 仅玩家可用'
+
+# ========================================
+# 命令相关提示
+# ========================================
+command:
+  unknown_argument: '&c[CursorMenu] 未知参数'
+  reload: '&a[CursorMenu] 插件重载...'
+  reload_complete: '&a[CursorMenu] 插件重载完成!'
+  menu_not_found: '&c[CursorMenu] 菜单 ''%menu%'' 未找到，请检查配置文件！'
+  menu_opened: '&a[CursorMenu] 已为玩家 %player% 打开菜单 %menu%'
+  text_display_opened: '&a[CursorMenu] 已为玩家 %player% 打开文字显示: %text_id%'
+  text_display_not_found: '&c[CursorMenu] 文字显示ID不存在: %text_id%'
+  item_disabled: '&a[CursorMenu] 已关闭物品显示'
+  item_not_found: '&c[CursorMenu] 物品ID不存在: %item_id%'
+  input_menu_hint: '&c[CursorMenu] 输入对应的菜单选项'
+  menu_option_not_found: '&c[CursorMenu] 无该菜单选项'
+
+# ========================================
+# 玩家管理相关提示
+# ========================================
+player:
+  not_found: '&c[CursorMenu] 玩家 %player% 不存在或不在线'
+  not_registered: '&c[CursorMenu] 玩家 %player% 不存在于注册列表中'
+  delete_success: '&a[CursorMenu] 玩家 %player% 的注册信息已成功删除，该玩家现在可以重新注册'
+  delete_failed: '&c[CursorMenu] 删除玩家 %player% 的注册信息失败'
+  delete_notify: '&e[CursorMenu] 您的注册信息已被管理员删除，请重新注册'
+  reset_password_success: '&a[CursorMenu] 玩家 %player% 的密码已成功重置'
+  reset_password_failed: '&c[CursorMenu] 重置玩家 %player% 的密码失败'
+  reset_password_notify: '&e[CursorMenu] 您的密码已被管理员重置，请重新登录'
+
+# ========================================
+# 菜单相关提示
+# ========================================
+menu:
+  require_login: '&c[CursorMenu] 请先登录后再执行此操作'
+  already_registered: '&c[CursorMenu] 您已注册，请直接登录'
+  condition_not_met: '&c[CursorMenu] 条件不满足，无法执行该操作'
+  cursor_activated: '&a[CursorMenu] 光标菜单已激活!'
+  cursor_deactivated: '&c[CursorMenu] 光标菜单已关闭!'
+
+# ========================================
+# 系统相关提示
+# ========================================
+system:
+  ip_warning: '&e[警告] 您的IP与注册时不同！'
+  server_transfer_failed: '&c[CursorMenu] 跨服传送失败: %error%'
+  config_reloaded: '&a[CursorMenu] 配置文件已重新加载'
+
+# ========================================
+# NPC相关提示
+# ========================================
+npc:
+  toggle_on: '&a[CursorMenu] NPC创建已启用'
+  toggle_off: '&c[CursorMenu] NPC创建已禁用'
+  status_enabled: '&a[CursorMenu] NPC创建状态: 已启用'
+  status_disabled: '&c[CursorMenu] NPC创建状态: 已禁用'
+  reloaded: '&a[CursorMenu] NPC配置已重载'
+  rotated: '&a[CursorMenu] NPC已旋转 %angle% 度'
+  rotate_usage: '&c[CursorMenu] 用法: /cursormenu npc rotate <角度>'
+  invalid_angle: '&c[CursorMenu] 无效的角度值: %angle%'
+  system_disabled: '&e[CursorMenu] NPC镜像系统未启用（需要安装FancyNpcs插件）'
+
+# ========================================
+# WASD导航相关提示
+# ========================================
+wasd:
+  enabled: '&a[CursorMenu] WASD导航已启用'
+  disabled: '&c[CursorMenu] WASD导航已禁用'
+
+# ========================================
+# 打字机效果相关提示 / Typewriter Effect Messages
+# ========================================
+typewriter:
+  started: '&a[CursorMenu] 打字机效果已启动'
+  completed: '&a[CursorMenu] 文字显示完成'
+  cancelled: '&e[CursorMenu] 打字机效果已取消'
+
+# ========================================
+# 悬停音效相关提示 / Hover Sound Messages
+# ========================================
+hover-sound:
+  play_success: '&7[CursorMenu] 悬停音效播放成功'
+  play_failed: '&c[CursorMenu] 悬停音效播放失败: %sound%'
+  cooldown_active: '&7[CursorMenu] 悬停音效冷却中...'
+
+# ========================================
+# 配置说明（中文）/ Configuration Help (Chinese)
+# ========================================
+config-help:
+  typewriter:
+    description: 打字机效果配置说明 - 实现文字逐字显示的动态效果
+    enabled: 是否启用打字机效果 (true/false)
+    speed: '每个字符显示间隔，单位为游戏刻(ticks)，20 ticks = 1秒 (推荐值: 1-5)'
+    start-delay: '开始显示前的延迟时间，单位为游戏刻(ticks) (推荐值: 0-40)'
+    cursor-char: '光标字符，用于指示文字正在输入 (默认: |)'
+    example: |
+      # 打字机效果配置示例：
+      typewriter:
+        enabled: true          # 启用打字机效果
+        speed: 2              # 每2个tick显示一个字符
+        start-delay: 10       # 延迟10个tick后开始
+        cursor-char: "|"      # 使用竖线作为光标
+  hover-sound:
+    description: 悬停音效配置说明 - 鼠标悬停时播放特定音效
+    name: 'Minecraft音效名称 (如: block.note.pling, ui.button.click, entity.experience_orb.pickup)'
+    volume: '音量大小，范围 0.0 - 1.0 (推荐值: 0.3-1.0)'
+    pitch: '音调高低，范围 0.5 - 2.0 (推荐值: 0.8-1.5)'
+    cooldown: '防重复播放冷却时间，单位为游戏刻(ticks) (推荐值: 10-40)'
+    example: |
+      # 悬停音效配置示例：
+      hover-sound:
+        name: "block.note.pling"   # 音效名称
+        volume: 0.8                # 音量大小
+        pitch: 1.2                 # 音调高低
+        cooldown: 20               # 冷却时间(1秒)
+  usage: |
+    # 在菜单按钮配置中使用示例 / Usage Example in Menu Button Config:
+    buttons:
+      welcome:
+        text: "欢迎来到服务器！"
+        # 打字机效果配置
+        typewriter:
+          enabled: true
+          speed: 3
+          start-delay: 5
+          cursor-char: "_"
+        # 悬停音效配置
+        hover-sound:
+          name: "block.note.pling"
+          volume: 0.6
+          pitch: 1.0
+          cooldown: 30
+# ========================================
+# 常用音效参考 / Common Sound Reference
+# ========================================
+sounds-reference:
+  note_sounds: '音符类: block.note.pling, block.note.harp, block.note.bass, block.note.hat,
+    block.note.snare'
+  ui_sounds: '界面类: ui.button.click, ui.toast.challenge_complete, ui.cartography_table.result_created'
+  entity_sounds: '实体类: entity.experience_orb.pickup, entity.player.levelup, entity.villager.yes,
+    entity.villager.no'
+  block_sounds: '方块类: block.chest.open, block.chest.close, block.amethyst_block.chime,
+    block.beacon.activate'

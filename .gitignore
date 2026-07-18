@@ -1,0 +1,17 @@
+# Local/dirty decompile attempt kept on disk only.
+/decompiled/
+
+# Java/build outputs.
+/target/
+/build/
+
+# Local server runtime state.
+/server-data-current/users.db
+/server-data-current/blockcache/
+
+# IDE/system files.
+/.idea/
+/.vscode/
+*.iml
+Thumbs.db
+.DS_Store

@@ -1,0 +1,167 @@
+orven_hub:
+  permission: ""
+  wasd-enabled: false
+  auto-commands:
+    enabled: true
+    commands:
+      - "[actionbar] &aOrvenCraft: главное меню открыто"
+    delays:
+      - 5
+  camera-position:
+    distance: 1.5
+    world: world
+    x: -187
+    y: 100
+    z: 347
+    yaw: 190
+    pitch: 0.0
+  layout:
+    title:
+      name: "&e&lOrvenCraft"
+      x: 0.0
+      y: 1.25
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      text-size: 1.35
+    subtitle:
+      name: "&7Тестовые меню CustomScreenMenu"
+      x: 0.0
+      y: 0.85
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      text-size: 0.75
+    profile:
+      name: "&aПрофиль"
+      x: -1.45
+      y: 0.2
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.15
+      text-size: 1.0
+      command-delay: 6
+      next-menu:
+        enabled: true
+        menu: orven_profile
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
+    travel:
+      name: "&bПереходы"
+      x: 0.0
+      y: 0.2
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.15
+      text-size: 1.0
+      command-delay: 6
+      next-menu:
+        enabled: true
+        menu: orven_travel
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
+    rewards:
+      name: "&6Награды"
+      x: 1.45
+      y: 0.2
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.15
+      text-size: 1.0
+      command-delay: 6
+      next-menu:
+        enabled: true
+        menu: orven_rewards
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
+    help:
+      name: "&dСправка"
+      x: -0.75
+      y: -0.55
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.15
+      text-size: 1.0
+      command-delay: 6
+      next-menu:
+        enabled: true
+        menu: orven_help
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
+    close:
+      name: "&cЗакрыть"
+      x: 0.9
+      y: -0.55
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.15
+      text-size: 1.0
+      command:
+        - "[message] &7Меню закрыто."
+      command-delay: 6
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0

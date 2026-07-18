@@ -1,0 +1,142 @@
+orven_rewards:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    distance: 1.5
+    world: world
+    x: -187
+    y: 100
+    z: 347
+    yaw: 190
+    pitch: 0.0
+  layout:
+    title:
+      name: "&6&lНаграды"
+      x: 0.0
+      y: 1.2
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      text-size: 1.2
+    daily:
+      name: "&eЕжедневный бонус"
+      x: 0.0
+      y: 0.55
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      text-size: 1.0
+      command:
+        - "[message] &6Ты нажал ежедневный бонус. Здесь можно подключить выдачу награды."
+      command-delay: 6
+      stop-menu:
+        enabled: false
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
+    random:
+      name: "&bСлучайное сообщение"
+      x: 0.0
+      y: 0.0
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      text-size: 0.95
+      random-commands:
+        - "[message] &aСегодня тебе повезет."
+        - "[message] &eПопробуй найти NPC с заданием."
+        - "[message] &bЗагляни на рынок."
+      random-chances:
+        - 40
+        - 35
+        - 25
+      command-delay: 6
+      stop-menu:
+        enabled: false
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
+    typed:
+      name: "&dПечатный текст"
+      x: 0.0
+      y: -0.55
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      text-size: 0.9
+      typewriter:
+        enabled: true
+        speed: 2
+        start-delay: 10
+        cursor-char: "|"
+    back:
+      name: "&7Назад"
+      x: -0.75
+      y: -1.05
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      text-size: 0.9
+      command-delay: 6
+      next-menu:
+        enabled: true
+        menu: orven_hub
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
+    close:
+      name: "&cЗакрыть"
+      x: 0.75
+      y: -1.05
+      z: 3.5
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      text-size: 0.9
+      command-delay: 6
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+          back-original: false
+          world: world
+          x: 0.0
+          y: 64.0
+          z: 0.0
