@@ -397,6 +397,7 @@
           <tr><td><code>pressed-style</code></td><td>Short text style after click. <code>duration</code> is in ticks.</td></tr>
           <tr><td><code>permission-style.allowed</code></td><td>Style applied when the player can use the element.</td></tr>
           <tr><td><code>permission-style.denied</code></td><td>Style applied when the player lacks the element permission. This has the highest priority.</td></tr>
+          <tr><td><code>permission-denied</code></td><td>Behavior when a player without permission clicks the element: message, actionbar, sound, commands, and deny/ignore mode.</td></tr>
           <tr><td><code>hover-tooltip</code></td><td>Actionbar or chat tooltip when hovering.</td></tr>
           <tr><td><code>hover-cursor</code></td><td>Temporarily changes the cursor item material/custom-model-data/scale while hovering.</td></tr>
         </tbody>
@@ -437,10 +438,34 @@
     material: GOLD_INGOT
     custom-model-data: 0
     scale: 1.12
+  permission-denied:
+    message: "&lt;red&gt;You cannot use this button"
+    actionbar: "&lt;gray&gt;Requires &lt;yellow&gt;orven.demo.vip&lt;/yellow&gt;"
+    sound: minecraft:entity.villager.no
+    volume: 0.8
+    pitch: 1.0
+    click-behavior: deny
+    commands:
+      - "[message] &lt;gray&gt;Denied command example"
   command:
     - "[message] &lt;gold&gt;VIP button clicked"</code></pre>
 
       <p>Supported style fields: <code>text</code>, <code>color</code>, <code>bold</code>, <code>italic</code>, <code>underlined</code>/<code>underline</code>, <code>strikethrough</code>/<code>strike</code>, <code>obfuscated</code>/<code>magic</code>. Smooth transitions currently interpolate color only; formatting and text changes switch immediately.</p>
+
+      <h3>Permission denied click behavior</h3>
+      <p>If a player does not pass the element permission check and clicks the button, normal <code>command</code>, <code>random-commands</code>, <code>link</code>, <code>next-menu</code>, and <code>stop-menu</code> actions do not run. Instead, the optional <code>permission-denied</code> block is used. If the block is missing, the plugin falls back to the global <code>permission.no_permission_button</code> message.</p>
+
+      <table>
+        <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>message</code></td><td>MiniMessage/legacy chat message sent on denied click.</td></tr>
+          <tr><td><code>actionbar</code></td><td>MiniMessage/legacy actionbar text sent on denied click.</td></tr>
+          <tr><td><code>sound</code></td><td>Sound key played to the player, for example <code>minecraft:entity.villager.no</code>.</td></tr>
+          <tr><td><code>volume</code>, <code>pitch</code></td><td>Denied sound volume and pitch.</td></tr>
+          <tr><td><code>click-behavior</code></td><td><code>deny</code> runs denied feedback. <code>ignore</code> silently ignores the click.</td></tr>
+          <tr><td><code>commands</code></td><td>Commands executed only on denied click. They use the same prefixes as normal click commands.</td></tr>
+        </tbody>
+      </table>
     </section>
 
     <section id="english-actions">
@@ -734,6 +759,7 @@ ip-binding:
           <tr><td><code>pressed-style</code></td><td>点击后的短暂反馈样式。<code>duration</code> 单位为 tick。</td></tr>
           <tr><td><code>permission-style.allowed</code></td><td>玩家有权限使用此元素时的样式。</td></tr>
           <tr><td><code>permission-style.denied</code></td><td>玩家缺少此元素权限时的样式。它优先级最高。</td></tr>
+          <tr><td><code>permission-denied</code></td><td>无权限玩家点击元素时的行为：消息、actionbar、音效、命令和 deny/ignore 模式。</td></tr>
           <tr><td><code>hover-tooltip</code></td><td>悬停时显示 actionbar 或聊天提示。</td></tr>
           <tr><td><code>hover-cursor</code></td><td>悬停时临时改变光标物品、custom-model-data 或缩放。</td></tr>
         </tbody>
@@ -774,10 +800,34 @@ ip-binding:
     material: GOLD_INGOT
     custom-model-data: 0
     scale: 1.12
+  permission-denied:
+    message: "&lt;red&gt;You cannot use this button"
+    actionbar: "&lt;gray&gt;Requires &lt;yellow&gt;orven.demo.vip&lt;/yellow&gt;"
+    sound: minecraft:entity.villager.no
+    volume: 0.8
+    pitch: 1.0
+    click-behavior: deny
+    commands:
+      - "[message] &lt;gray&gt;Denied command example"
   command:
     - "[message] &lt;gold&gt;VIP button clicked"</code></pre>
 
       <p>支持的样式字段：<code>text</code>、<code>color</code>、<code>bold</code>、<code>italic</code>、<code>underlined</code>/<code>underline</code>、<code>strikethrough</code>/<code>strike</code>、<code>obfuscated</code>/<code>magic</code>。平滑过渡当前只插值颜色，文字内容与格式开关会立即切换。</p>
+
+      <h3>无权限点击行为</h3>
+      <p>如果玩家没有通过元素权限检查并点击按钮，普通的 <code>command</code>、<code>random-commands</code>、<code>link</code>、<code>next-menu</code> 和 <code>stop-menu</code> 不会执行。插件会改用可选的 <code>permission-denied</code> 配置段。如果没有配置该段，则回退到全局 <code>permission.no_permission_button</code> 消息。</p>
+
+      <table>
+        <thead><tr><th>字段</th><th>含义</th></tr></thead>
+        <tbody>
+          <tr><td><code>message</code></td><td>无权限点击时发送的聊天消息，支持 MiniMessage 和传统颜色。</td></tr>
+          <tr><td><code>actionbar</code></td><td>无权限点击时发送的 ActionBar，支持 MiniMessage 和传统颜色。</td></tr>
+          <tr><td><code>sound</code></td><td>播放给玩家的音效 key，例如 <code>minecraft:entity.villager.no</code>。</td></tr>
+          <tr><td><code>volume</code>, <code>pitch</code></td><td>无权限音效的音量和音调。</td></tr>
+          <tr><td><code>click-behavior</code></td><td><code>deny</code> 执行无权限反馈；<code>ignore</code> 静默忽略点击。</td></tr>
+          <tr><td><code>commands</code></td><td>只在无权限点击时执行的命令，使用与普通点击命令相同的前缀。</td></tr>
+        </tbody>
+      </table>
     </section>
 
     <section id="chinese-actions">

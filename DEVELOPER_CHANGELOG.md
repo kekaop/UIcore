@@ -10,6 +10,7 @@ This folder contains a local patch based on the current server jar. The changes 
 - `permission-style.allowed` and `permission-style.denied` for permission-aware button visuals.
 - `hover-cursor` for changing the visible cursor item while hovering a button.
 - `hover-tooltip` for actionbar or chat tooltip text on hover.
+- `permission-denied` for denied click feedback: message, actionbar, sound, commands, and deny/ignore mode.
 - MiniMessage support for `[message]` and `[actionbar]` commands.
 - MiniMessage support for `[link]url|display text`, while keeping the open-url click event.
 - A ready-to-test permission style example menu:
@@ -75,6 +76,7 @@ layout:
 - Smooth transitions are implemented for color only. Formatting and text changes switch immediately.
 - `hover-tooltip.type` supports `actionbar` by default, plus `message`/`chat`.
 - `hover-cursor.material` uses Bukkit material names.
+- `permission-denied.commands` run only when the player clicks without the required button permission. Normal click commands, links, next-menu, and stop-menu do not run in that case.
 - Old `hover-enlarge`, `hover-sound`, `hover-commands`, and `leave-commands` continue to work.
 - Existing command behavior is not hardened in this patch. `[op]` and `[console]` are still supported because changing that would break compatibility.
 

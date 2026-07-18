@@ -102,6 +102,15 @@ permission_style_example:
       hover-cursor:
         material: GOLD_INGOT
         scale: 1.12
+      permission-denied:
+        message: "<red>You cannot use this button"
+        actionbar: "<gray>Requires <yellow>customscreenmenu.demo.locked</yellow>"
+        sound: minecraft:entity.villager.no
+        volume: 0.8
+        pitch: 1.0
+        click-behavior: deny
+        commands:
+          - "[message] <gray>Denied command example: missing <yellow>customscreenmenu.demo.locked</yellow>"
       command:
         - "[message] <gold>Locked button clicked"
       command-delay: 6

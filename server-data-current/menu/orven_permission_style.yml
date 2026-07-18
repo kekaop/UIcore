@@ -117,6 +117,15 @@ orven_permission_style:
       hover-cursor:
         material: GOLD_INGOT
         scale: 1.12
+      permission-denied:
+        message: "<red>У тебя нет доступа к VIP кнопке"
+        actionbar: "<gray>Нужно право <yellow>orven.demo.vip</yellow>"
+        sound: minecraft:entity.villager.no
+        volume: 0.8
+        pitch: 1.0
+        click-behavior: deny
+        commands:
+          - "[message] <gray>Denied command example: missing <yellow>orven.demo.vip</yellow>"
       command:
         - "[message] <gold>VIP button clicked"
       command-delay: 6
@@ -169,6 +178,15 @@ orven_permission_style:
       hover-cursor:
         material: REDSTONE
         scale: 1.12
+      permission-denied:
+        message: "<red>Admin доступ закрыт"
+        actionbar: "<gray>Нужно право <red>orven.demo.admin</red>"
+        sound: minecraft:entity.villager.no
+        volume: 0.8
+        pitch: 0.8
+        click-behavior: deny
+        commands:
+          - "[actionbar] <red>Denied command: admin permission missing"
       command:
         - "[message] <red>Admin button clicked"
       command-delay: 6

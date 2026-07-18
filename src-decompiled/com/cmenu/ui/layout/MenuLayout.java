@@ -5,6 +5,7 @@ import com.cmenu.ui.CursorMenuPlugin;
 import com.cmenu.ui.HoverEnlargeManager;
 import com.cmenu.ui.style.TextStyleConfig;
 import com.cmenu.ui.util.CommandUtils;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -73,6 +74,13 @@ public class MenuLayout {
    private double hoverCursorScale = -1.0;
    private String hoverTooltipType = "actionbar";
    private String hoverTooltipText = "";
+   private String permissionDeniedMessage = "";
+   private String permissionDeniedActionBar = "";
+   private String permissionDeniedSound = "";
+   private float permissionDeniedSoundVolume = 1.0F;
+   private float permissionDeniedSoundPitch = 1.0F;
+   private String permissionDeniedClickBehavior = "deny";
+   private List<String> permissionDeniedCommands = Collections.emptyList();
 
    public MenuLayout(
       String var1,
@@ -278,6 +286,10 @@ public class MenuLayout {
       return this.hasHoverStyle() || this.hasHoverCursor() || this.hasHoverTooltip();
    }
 
+   public boolean hasPermissionDeniedCommands() {
+      return this.permissionDeniedCommands != null && !this.permissionDeniedCommands.isEmpty();
+   }
+
    public boolean hasAnyTextStyle() {
       return !this.baseStyle.isEmpty() || this.hasPermissionStyle() || this.hasHoverStyle() || this.hasPressedStyle();
    }
@@ -365,6 +377,17 @@ public class MenuLayout {
          this.hoverTooltipText = hoverTooltip.getString("text", "");
       }
 
+      ConfigurationSection permissionDenied = var1.getConfigurationSection("permission-denied");
+      if (permissionDenied != null) {
+         this.permissionDeniedMessage = permissionDenied.getString("message", "");
+         this.permissionDeniedActionBar = permissionDenied.getString("actionbar", "");
+         this.permissionDeniedSound = permissionDenied.getString("sound", "");
+         this.permissionDeniedSoundVolume = (float)permissionDenied.getDouble("volume", permissionDenied.getDouble("sound-volume", 1.0));
+         this.permissionDeniedSoundPitch = (float)permissionDenied.getDouble("pitch", permissionDenied.getDouble("sound-pitch", 1.0));
+         this.permissionDeniedClickBehavior = permissionDenied.getString("click-behavior", "deny");
+         this.permissionDeniedCommands = permissionDenied.getStringList("commands");
+      }
+
       if (var1.contains("condition.variable") && var1.contains("condition.operator") && var1.contains("condition.value")) {
          this.conditionVariable = var1.getString("condition.variable");
          this.conditionOperator = var1.getString("condition.operator");
@@ -430,7 +453,7 @@ public class MenuLayout {
 
    public void runCommand(Player var1) {
       if (!this.hasPermission(var1)) {
-         var1.sendMessage(CursorMenuPlugin.plugin.getLangMessage("permission.no_permission_button", "&c[CursorMenu] 你没有权限执行该按钮"));
+         this.handlePermissionDeniedClick(var1);
       } else if (CursorMenuPlugin.plugin.requiresLogin(this.name, this.key) && !CursorMenuPlugin.plugin.isPlayerLoggedIn(var1)) {
          CursorMenuPlugin.plugin.sendActionBarMessage(var1, CursorMenuPlugin.plugin.getLangMessage("menu.require_login", "&c[CursorMenu] 请先登录后再执行此操作"));
       } else if (CursorMenuPlugin.plugin.requiresNotRegistered(this.name, this.key)
@@ -522,6 +545,41 @@ public class MenuLayout {
             }
          }
       }
+   }
+
+   private void handlePermissionDeniedClick(Player player) {
+      if ("ignore".equalsIgnoreCase(this.permissionDeniedClickBehavior)) {
+         return;
+      }
+
+      if (this.permissionDeniedMessage != null && !this.permissionDeniedMessage.isBlank()) {
+         CommandUtils.sendChatMessage(player, CursorMenuPlugin.parsePlaceholders(player, this.permissionDeniedMessage));
+      } else {
+         player.sendMessage(CursorMenuPlugin.plugin.getLangMessage("permission.no_permission_button", "&c[CursorMenu] 你没有权限执行该按钮"));
+      }
+
+      if (this.permissionDeniedActionBar != null && !this.permissionDeniedActionBar.isBlank()) {
+         CommandUtils.sendActionBar(player, CursorMenuPlugin.parsePlaceholders(player, this.permissionDeniedActionBar));
+      }
+
+      if (this.permissionDeniedSound != null && !this.permissionDeniedSound.isBlank()) {
+         this.playPermissionDeniedSound(player);
+      }
+
+      if (this.hasPermissionDeniedCommands()) {
+         for (String command : this.permissionDeniedCommands) {
+            String processedCommand = command;
+            if (CursorMenuPlugin.hasPAPI) {
+               processedCommand = PlaceholderAPI.setPlaceholders(player, command);
+            }
+
+            CommandUtils.executeCommand(player, processedCommand);
+         }
+      }
+   }
+
+   private void playPermissionDeniedSound(Player player) {
+      player.playSound(player.getLocation(), this.permissionDeniedSound, this.permissionDeniedSoundVolume, this.permissionDeniedSoundPitch);
    }
 
    private void sendClickableLink(Player var1, String var2) {
