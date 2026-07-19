@@ -1,14 +1,24 @@
-# Local/dirty decompile attempt kept on disk only.
+# Local/dirty decompile and archive material kept on disk only.
 /decompiled/
+/extracted/
+/original/
+/src-decompiled/
+/dist/
+/jar-build-*/
+/patch-classes*/
+/docx-extract-*/
+*.rar
+*.zip
+*.jar
 
 # Java/build outputs.
 /target/
 /build/
-/patch-classes*/
+customscreenmenu-api/target/
+customscreenmenu-plugin/target/
 
 # Local server runtime state.
-/server-data-current/users.db
-/server-data-current/blockcache/
+/server-data-current/
 
 # IDE/system files.
 /.idea/

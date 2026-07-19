@@ -1,0 +1,64 @@
+name: CustomScreenMenu
+main: com.cmenu.ui.CursorMenuPlugin
+version: ${project.version}
+api-version: '1.21'
+description: CustomScreenMenu Orven custom build for fixed-camera world-space menus.
+
+commands:
+  cursormenu:
+    aliases: [cmenu]
+permissions:
+  cursormenu.start:
+    default: op
+  cursormenu.stop:
+    default: op
+  cursormenu.reload:
+    default: op
+  cursormenu.items:
+    default: op
+  cursormenu.itemsstop:
+    default: op
+  cursormenu.text:
+    default: op
+  cursormenu.resetpassword:
+    default: op
+  cursormenu.menu.login:
+    default: op
+  cursormenu.register_confirm:
+    default: op
+  cursormenu.close:
+    default: op
+  cursormenu.check_registered:
+    default: op
+  cursormenu.check_and_register:
+    default: op
+  cursormenu.check_password_before_login:
+    default: op
+  cursormenu.login:
+    default: op
+  cursormenu.toggle_password_visibility:
+    default: op
+  cursormenu.set_input_field:
+    default: op
+  cursormenu.input:
+    default: op
+  cursormenu.npc.toggle:
+    default: op
+  cursormenu.npc.status:
+    default: op
+  cursormenu.npc.reload:
+    default: op
+  cursormenu.npc.rotate:
+    default: op
+
+libraries:
+  - org.xerial:sqlite-jdbc:3.42.0.0
+
+depend:
+  - packetevents
+
+softdepend:
+  - PlaceholderAPI
+  - FancyNpcs
+  - SkinsRestorer
+  - CraftEngine
