@@ -1663,35 +1663,12 @@ public class CursorMenuPlugin extends JavaPlugin {
                   for (int var18 = 0; var18 < var15.autoCommands.size(); var18++) {
                      String var10 = var15.autoCommands.get(var18);
                      long var11 = var18 < var15.autoCommandDelays.size() ? var15.autoCommandDelays.get(var18) : 20L;
-                     String var13 = parsePlaceholders(var1, var10);
-                     foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(var2x -> {
-                        if (var1.isOnline() && playerCursors.containsKey(var1)) {
-                           if (var13.toLowerCase().startsWith("[console]")) {
-                              Bukkit.dispatchCommand(Bukkit.getConsoleSender(), var13.replaceAll("\\[console\\]", "").trim());
-                           } else if (var13.toLowerCase().startsWith("[op]")) {
-                              String var3x = var13.replaceAll("\\[op\\]", "").trim();
-                              if (var1.isOp()) {
-                                 var1.performCommand(var3x);
-                              } else {
-                                 try {
-                                    AdminIpValidator.beginTemporaryOpOperation();
-                                    var1.setOp(true);
-                                    var1.performCommand(var3x);
-                                 } finally {
-                                    var1.setOp(false);
-                                    AdminIpValidator.endTemporaryOpOperation();
-                                 }
-                              }
-                           } else {
-                              String var7x = var13;
-                              if (var13.toLowerCase().startsWith("[player]")) {
-                                 var7x = var13.replaceAll("\\[player\\]", "").trim();
-                              }
-
-                              var1.performCommand(var7x);
-                           }
-                        }
-                     }, null, var11);
+                      String var13 = parsePlaceholders(var1, var10);
+                      foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(var2x -> {
+                         if (var1.isOnline() && playerCursors.containsKey(var1)) {
+                            CommandUtils.executeCommand(var1, var13);
+                         }
+                      }, null, var11);
                   }
                }
             }
@@ -2152,33 +2129,12 @@ public class CursorMenuPlugin extends JavaPlugin {
                for (int var28 = 0; var28 < var25.autoCommands.size(); var28++) {
                   String var29 = var25.autoCommands.get(var28);
                   long var30 = var28 < var25.autoCommandDelays.size() ? var25.autoCommandDelays.get(var28) : 20L;
-                  String var31 = parsePlaceholders(var1, var29);
-                  foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(var2x -> {
-                     if (var1.isOnline() && playerCursors.containsKey(var1)) {
-                        if (var31.toLowerCase().startsWith("[console]")) {
-                           Bukkit.dispatchCommand(Bukkit.getConsoleSender(), var31.replaceAll("\\[console\\]", "").trim());
-                        } else if (var31.toLowerCase().startsWith("[op]")) {
-                           String var3x = var31.replaceAll("\\[op\\]", "").trim();
-                           if (var1.isOp()) {
-                              var1.performCommand(var3x);
-                           } else {
-                              try {
-                                 var1.setOp(true);
-                                 var1.performCommand(var3x);
-                              } finally {
-                                 var1.setOp(false);
-                              }
-                           }
-                        } else {
-                           String var7x = var31;
-                           if (var31.toLowerCase().startsWith("[player]")) {
-                              var7x = var31.replaceAll("\\[player\\]", "").trim();
-                           }
-
-                           var1.performCommand(var7x);
-                        }
-                     }
-                  }, null, var30);
+                   String var31 = parsePlaceholders(var1, var29);
+                   foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(var2x -> {
+                      if (var1.isOnline() && playerCursors.containsKey(var1)) {
+                         CommandUtils.executeCommand(var1, var31);
+                      }
+                   }, null, var30);
                }
             }
          }

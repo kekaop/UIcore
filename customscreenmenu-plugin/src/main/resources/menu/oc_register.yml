@@ -1,4 +1,4 @@
-﻿oc_register:
+oc_register:
   permission: ""
   wasd-enabled: false
   auto-commands:
@@ -50,7 +50,7 @@
         type: actionbar
         text: "<yellow>Type password in chat"
       command:
-        - "[op] cmenu set_input_field password"
+        - "[player] cmenu set_input_field password"
         - "[actionbar] <yellow>Type password in chat."
       command-delay: 1
       stop-menu:
@@ -71,7 +71,7 @@
         type: actionbar
         text: "<yellow>Repeat password in chat"
       command:
-        - "[op] cmenu set_input_field confirm_password"
+        - "[player] cmenu set_input_field confirm_password"
         - "[actionbar] <yellow>Repeat password in chat."
       command-delay: 1
       stop-menu:
@@ -86,7 +86,7 @@
         enabled: true
         scale: 1.08
       command:
-        - "[op] cmenu toggle_password_visibility"
+        - "[player] cmenu toggle_password_visibility"
       command-delay: 1
       stop-menu:
         enabled: false
@@ -107,7 +107,7 @@
         bold: true
         duration: 3
       command:
-        - "[op] cmenu register_confirm"
+        - "[player] cmenu register_confirm"
         - "[message] <gray>If registration succeeded, open <green>MAIN_MENU</green> below."
       command-delay: 1
       stop-menu:

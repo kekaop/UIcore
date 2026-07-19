@@ -1,4 +1,4 @@
-﻿login_menu:
+login_menu:
   permission: ""
   wasd-enabled: false
   auto-commands:
@@ -38,7 +38,7 @@
         enabled: true
         scale: 1.08
       command:
-        - "[op] cmenu set_input_field password"
+        - "[player] cmenu set_input_field password"
         - "[actionbar] <yellow>Type password in chat."
       command-delay: 1
       stop-menu:
@@ -55,7 +55,7 @@
         enabled: true
         scale: 1.08
       command:
-        - "[op] cmenu set_input_field confirm_password"
+        - "[player] cmenu set_input_field confirm_password"
         - "[actionbar] <yellow>Repeat password in chat."
       command-delay: 1
       stop-menu:
@@ -72,7 +72,7 @@
         enabled: true
         scale: 1.08
       command:
-        - "[op] cmenu toggle_password_visibility"
+        - "[player] cmenu toggle_password_visibility"
       command-delay: 1
       stop-menu:
         enabled: false
@@ -88,7 +88,7 @@
         enabled: true
         scale: 1.12
       command:
-        - "[op] cmenu register_confirm"
+        - "[player] cmenu register_confirm"
       command-delay: 1
       stop-menu:
         enabled: false

@@ -43,7 +43,7 @@ menu:
       enabled: true
       commands:
         - "[console] say Welcome to the lobby menu, executing after 3 seconds"
-        - "[op] say This command executes after 5 seconds"
+        - "[player] say This command executes after 5 seconds"
       delays:
         - 60   # 3 seconds = 60 ticks
         - 100  # 5 seconds = 100 ticks
@@ -80,7 +80,7 @@ menu:
           value: "10"                 # Value to compare
         # Commands to execute on click
         command:
-          - '[op] say hello'
+          - '[player] say hello'
           - '[server] lobby' # Velocity server command example
         # Random command execution (optional)
         # random-commands:
@@ -127,7 +127,7 @@ menu:
           z: 0.0    # наклон вбок
         command:
           - '[player] say test'
-          - '[op] give %player% stone 1'
+          - '[player] give %player% stone 1'
         stop-menu:
           enabled: false
           teleport:
@@ -153,7 +153,7 @@ menu:
           z: 0.0
         command:
           - '[player] say test'
-          - '[op] give %player% stone 1'
+          - '[player] give %player% stone 1'
         stop-menu:
           enabled: false
           teleport:
@@ -188,7 +188,7 @@ menu:
           z: 0.0    # наклон вбок
         command:
           - '[player] say test'
-          - '[op] give %player% stone 1'
+          - '[player] give %player% stone 1'
         stop-menu:
           enabled: false
           teleport:
@@ -213,7 +213,7 @@ menu:
           z: 0.0
         command:
           - '[player] say test'
-          - '[op] give %player% stone 1'
+          - '[player] give %player% stone 1'
         stop-menu:
           enabled: false
           teleport:

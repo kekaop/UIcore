@@ -81,6 +81,19 @@ messages:
   prefix: "&f[&eCustomScreenMenu&f] "
   command_blocked: "&cCommands are blocked while the menu camera is active!"
 
+security:
+  # Console commands from menu configuration are disabled by default.
+  # Set this to true only for trusted private configs.
+  allow-console-commands: false
+  # Optional prefix allowlist. Empty list means all console commands are allowed
+  # only when allow-console-commands is true.
+  console-command-allowlist: []
+  # Legacy OP-prefixed commands never grant temporary OP. If this is true,
+  # they may run only when the clicking player is already OP.
+  allow-op-commands-for-existing-ops: false
+  # Logs denied privileged actions without spamming normal servers.
+  debug-denied-commands: false
+
 sound:
   name: "music.menu"
   volume: 1
@@ -98,7 +111,7 @@ join-run:
   commands:
     - "[console] say Welcome %player% to the server!"
     - "[player] msg %player% Welcome to the server!"
-    - "[op] gamemode survival %player%"
+    - "[player] spawn"
 
 cursor-item:
   material: "ARROW"

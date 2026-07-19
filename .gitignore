@@ -10,6 +10,8 @@
 *.rar
 *.zip
 *.jar
+/ORVENCRAFT_TZ_TEST_MENU_NOTES.md
+/UPSTREAM_HANDOFF.md
 
 # Java/build outputs.
 /target/

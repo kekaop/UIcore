@@ -474,7 +474,7 @@
         <thead><tr><th>Prefix</th><th>Behavior</th></tr></thead>
         <tbody>
           <tr><td><code>[console]</code></td><td>Run command as console.</td></tr>
-          <tr><td><code>[op]</code></td><td>Temporarily grant OP and run as player. Powerful and risky; use only in trusted configs.</td></tr>
+          <tr><td><code>[player]</code></td><td>Run command as the clicking player. This does not grant OP.</td></tr>
           <tr><td><code>[player]</code></td><td>Run command as the player.</td></tr>
           <tr><td><code>[server]</code></td><td>Send the player to another BungeeCord server through plugin messaging.</td></tr>
           <tr><td><code>[message]</code></td><td>Send a chat message. In this private build, MiniMessage click/hover/color formatting is supported.</td></tr>
@@ -490,7 +490,7 @@
   - "[console] say %player% clicked a menu button"</code></pre>
 
       <div class="notice">
-        <strong>Security:</strong> Menu files are executable configuration. Restrict who can edit them. Be especially careful with <code>[op]</code>, <code>[console]</code>, and untrusted placeholders inside commands.
+        <strong>Security:</strong> Menu files are executable configuration. Restrict who can edit them. <code>[console]</code> is disabled by default and should be enabled only with a trusted policy/allowlist.
       </div>
     </section>
 
@@ -836,7 +836,7 @@ ip-binding:
         <thead><tr><th>前缀</th><th>行为</th></tr></thead>
         <tbody>
           <tr><td><code>[console]</code></td><td>以控制台身份执行命令。</td></tr>
-          <tr><td><code>[op]</code></td><td>临时给予玩家 OP 后执行命令。权限很高，有风险，只应在可信配置中使用。</td></tr>
+          <tr><td><code>[player]</code></td><td>以点击玩家身份执行命令，不会临时授予 OP。</td></tr>
           <tr><td><code>[player]</code></td><td>以玩家身份执行命令。</td></tr>
           <tr><td><code>[server]</code></td><td>通过插件消息将玩家发送到另一个 BungeeCord 服务器。</td></tr>
           <tr><td><code>[message]</code></td><td>发送聊天消息。当前私有补丁版支持 MiniMessage 点击、悬停和颜色格式。</td></tr>
@@ -852,7 +852,7 @@ ip-binding:
   - "[console] say %player% clicked a menu button"</code></pre>
 
       <div class="notice">
-        <strong>安全提醒：</strong>菜单文件属于可执行配置。请限制可编辑菜单的人。尤其要谨慎使用 <code>[op]</code>、<code>[console]</code> 和命令中的不可信占位符。
+        <strong>安全提醒：</strong>菜单文件属于可执行配置。请限制可编辑菜单的人。<code>[console]</code> 默认关闭，只应通过可信策略/白名单启用。
       </div>
     </section>
 

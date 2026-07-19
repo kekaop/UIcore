@@ -1,4 +1,4 @@
-﻿
+
 example:
   # 打开整个 test 菜单所需的权限，不写则任何人可开
   permission: cursormenu.menu.example
@@ -7,7 +7,7 @@ example:
     enabled: false
     commands:
       - "[console] say 欢迎进入大厅菜单，3秒后执行"
-      - "[op] say 这是5秒后执行的命令"
+      - "[player] say 这是5秒后执行的命令"
     delays:
       - 60   # 3秒 = 60 ticks
       - 100  # 5秒 = 100 ticks
@@ -38,7 +38,7 @@ example:
         z: 0.0 # 前后倾斜（翻滚）              
       # 点击的执行命令
       #command:
-        #- '[op] say 注册账号'
+        #- '[player] say 注册账号'
       # 随机命令执行（可选）
       # random-commands:
       #   - '[player] give %player% diamond 1'
@@ -98,7 +98,7 @@ example:
       #   - '[player] say 光标已离开注册账号按钮'
       # 点击的执行命令
       command:
-        - '[op] say 注册账号'
+        - '[player] say 注册账号'
       # 随机命令执行（可选）
       # random-commands:
       #   - '[player] give %player% diamond 1'
@@ -139,7 +139,7 @@ example:
         z: 0.0 # 前后倾斜（翻滚）              
       # 点击的执行命令
       command:
-        - '[op] say 退出游戏'
+        - '[player] say 退出游戏'
       # 悬停放大效果
       hover-enlarge:
         enabled: true    # 是否启用悬停放大效果
@@ -184,7 +184,7 @@ example:
         z: 0.0 # 前后倾斜（翻滚）              
       # 点击的执行命令
       command:
-        - '[op] say 进入服务器'
+        - '[player] say 进入服务器'
       # 悬停放大效果
       hover-enlarge:
         enabled: true    # 是否启用悬停放大效果
@@ -229,7 +229,7 @@ example:
         z: 0.0 # 前后倾斜（翻滚）              
       # 点击的执行命令
       command:
-        - '[op] say 制作人员'
+        - '[player] say 制作人员'
       # 悬停放大效果
       hover-enlarge:
         enabled: true    # 是否启用悬停放大效果
@@ -292,7 +292,7 @@ example:
       text-size: 1.2
       # 点击的执行命令
       command:
-        - '[op] say 注册账号'
+        - '[player] say 注册账号'
       # 随机命令执行（可选）
       # random-commands:
       #   - '[player] give %player% diamond 1'

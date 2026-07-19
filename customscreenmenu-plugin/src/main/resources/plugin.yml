@@ -23,25 +23,25 @@ permissions:
   cursormenu.resetpassword:
     default: op
   cursormenu.menu.login:
-    default: op
+    default: true
   cursormenu.register_confirm:
-    default: op
+    default: true
   cursormenu.close:
-    default: op
+    default: true
   cursormenu.check_registered:
-    default: op
+    default: true
   cursormenu.check_and_register:
-    default: op
+    default: true
   cursormenu.check_password_before_login:
-    default: op
+    default: true
   cursormenu.login:
-    default: op
+    default: true
   cursormenu.toggle_password_visibility:
-    default: op
+    default: true
   cursormenu.set_input_field:
-    default: op
+    default: true
   cursormenu.input:
-    default: op
+    default: true
   cursormenu.npc.toggle:
     default: op
   cursormenu.npc.status:
