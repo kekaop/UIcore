@@ -514,6 +514,25 @@ public class Commands implements CommandExecutor, TabExecutor {
                   UUID playerId = player.getUniqueId();
                   userInputData.computeIfAbsent(playerId, k -> new HashMap<>());
                   Map<String, String> userData = userInputData.get(playerId);
+                  if (!"username".equals(field) && !"password".equals(field) && !"confirm_password".equals(field)) {
+                     userData.put(field, value);
+                     CursorMenuPlugin.plugin.setPlayerInputData(player, field, value);
+                     String shownValue = CursorMenuPlugin.plugin.isPasswordInputField(field) ? "*****" : value;
+                     this.sendActionBarMessage(
+                        player,
+                        CursorMenuPlugin.plugin
+                           .getLangMessage("input.data_saved", "&a[CursorMenu] %field% set to: %value%")
+                           .replace("%field%", field)
+                           .replace("%value%", shownValue)
+                     );
+                     String currentMenu = CursorMenuPlugin.plugin.getCurrentPlayerMenu(player);
+                     if (currentMenu != null && !currentMenu.isEmpty()) {
+                        CursorMenuPlugin.plugin.setupCursor(player, currentMenu);
+                     }
+
+                     return true;
+                  }
+
                   switch (field) {
                      case "username":
                         userData.put("username", value);

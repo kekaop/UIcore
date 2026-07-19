@@ -1,6 +1,7 @@
 package com.cmenu.ui;
 
 import com.cmenu.ui.layout.MenuLayout;
+import com.cmenu.ui.api.event.MenuHoverEvent;
 import com.cmenu.ui.section.Section;
 import com.cmenu.ui.style.TextStyleConfig;
 import com.cmenu.ui.util.CommandUtils;
@@ -60,7 +61,7 @@ public class HoverEnlargeManager {
                            MenuLayout closestLayout = null;
                            double minDistance = Double.MAX_VALUE;
 
-                           for (MenuLayout layout : section.layouts.values()) {
+                           for (MenuLayout layout : HoverEnlargeManager.this.plugin.getLayoutsForPlayer(player, menuKey, section).values()) {
                               if (layout.isHoverEnlargeEnabled()
                                  || layout.getHoverSound() != null
                                  || layout.hasHoverCommands()
@@ -93,11 +94,16 @@ public class HoverEnlargeManager {
                                  HoverEnlargeManager.this.executeCommands(player, previousLayout.getLeaveCommands());
                               }
 
+                              if (previousLayout != null) {
+                                 Bukkit.getPluginManager().callEvent(new MenuHoverEvent(player, menuKey, previousLayout.key, previousLayout, false));
+                              }
+
                               if (closestLayout != null && closestLayout.hasHoverCommands()) {
                                  HoverEnlargeManager.this.executeCommands(player, closestLayout.getHoverCommands());
                               }
 
                               if (closestLayout != null) {
+                                 Bukkit.getPluginManager().callEvent(new MenuHoverEvent(player, menuKey, closestLayout.key, closestLayout, true));
                                  HoverEnlargeManager.this.currentHoveredLayout.put(playerId, closestLayout);
                                  if (closestDisplay != null) {
                                     HoverEnlargeManager.this.applyTextStyle(player, closestDisplay, closestLayout, true);
@@ -236,18 +242,22 @@ public class HoverEnlargeManager {
    public void applyPressedStyle(Player player, MenuLayout layout) {
       if (player != null && layout != null && layout.hasPressedStyle()) {
          String menuKey = this.plugin.getCurrentPlayerMenu(player);
-         TextDisplay display = menuKey == null ? null : this.plugin.getTextDisplayByKeys(player, menuKey, layout.key);
-         if (display != null && display.isValid()) {
+         if (menuKey != null) {
+            this.plugin.updateLayoutDisplayText(player, menuKey, layout, this.isCurrentHovered(player, layout), true);
+         }
+
+         for (TextDisplay display : menuKey == null ? List.<TextDisplay>of() : this.plugin.getTextDisplaysByKeys(player, menuKey, layout.key)) {
             BukkitTask previousTask = this.textStyleTasks.remove(display.getUniqueId());
             if (previousTask != null) {
                previousTask.cancel();
             }
 
-            display.setText(layout.renderStyledName(player, this.isCurrentHovered(player, layout), true));
             BukkitRunnable task = new BukkitRunnable() {
                public void run() {
                   if (display.isValid()) {
-                     display.setText(layout.renderStyledName(player, HoverEnlargeManager.this.isCurrentHovered(player, layout), false));
+                     String rendered = layout.renderStyledName(player, HoverEnlargeManager.this.isCurrentHovered(player, layout), false);
+                     display.setText(rendered);
+                     display.text(ColorParser.parse(rendered));
                   }
 
                   HoverEnlargeManager.this.textStyleTasks.remove(display.getUniqueId());

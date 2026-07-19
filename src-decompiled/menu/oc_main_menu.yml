@@ -1,0 +1,188 @@
+﻿oc_main_menu:
+  permission: ""
+  wasd-enabled: false
+  auto-commands:
+    enabled: true
+    commands:
+      - "[actionbar] <green>MAIN_MENU opened. Hover and left click buttons."
+    delays:
+      - 5
+  camera-position:
+    distance: 1.5
+    world: world
+    x: -187
+    y: 100
+    z: 347
+    yaw: 190
+    pitch: 0.0
+  layout:
+    logo:
+      name: "<gold><bold>OrvenCraft</bold>"
+      x: 0.0
+      y: 1.3
+      z: 3.5
+      text-size: 1.25
+    subtitle:
+      name: "<gray>Test world menu stand: navigation, state, profile, friends, links."
+      x: 0.0
+      y: 0.92
+      z: 3.5
+      text-size: 0.52
+    play:
+      name: "<green><bold>Start playing</bold>"
+      x: -1.1
+      y: 0.28
+      z: 3.5
+      text-size: 0.82
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+        transition:
+          type: smooth
+          duration: 5
+      pressed-style:
+        color: "#62e67a"
+        bold: true
+        duration: 3
+      hover-tooltip:
+        type: actionbar
+        text: "<green>Open PROFILE_SELECT"
+      hover-cursor:
+        material: EMERALD
+        scale: 1.1
+      next-menu:
+        enabled: true
+        menu: oc_profile_select
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    settings:
+      name: "<yellow>Settings"
+      x: 0.0
+      y: 0.28
+      z: 3.5
+      text-size: 0.82
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+      hover-tooltip:
+        type: actionbar
+        text: "<yellow>Open SETTINGS"
+      hover-cursor:
+        material: COMPARATOR
+        scale: 1.1
+      next-menu:
+        enabled: true
+        menu: oc_settings
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    friends:
+      name: "<aqua>Friends"
+      x: 1.1
+      y: 0.28
+      z: 3.5
+      text-size: 0.82
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+      hover-tooltip:
+        type: actionbar
+        text: "<aqua>Open FRIENDS"
+      hover-cursor:
+        material: PLAYER_HEAD
+        scale: 1.1
+      next-menu:
+        enabled: true
+        menu: oc_friends
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    discord:
+      name: "<blue>Discord"
+      x: -1.35
+      y: -0.44
+      z: 3.5
+      text-size: 0.72
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-tooltip:
+        type: actionbar
+        text: "<blue>Confirm Discord link"
+      next-menu:
+        enabled: true
+        menu: oc_social_discord
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    vk:
+      name: "<aqua>VK"
+      x: 0.0
+      y: -0.44
+      z: 3.5
+      text-size: 0.72
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-tooltip:
+        type: actionbar
+        text: "<aqua>Confirm VK link"
+      next-menu:
+        enabled: true
+        menu: oc_social_vk
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    site:
+      name: "<gold>Website"
+      x: 1.35
+      y: -0.44
+      z: 3.5
+      text-size: 0.72
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-tooltip:
+        type: actionbar
+        text: "<gold>Confirm website link"
+      next-menu:
+        enabled: true
+        menu: oc_social_site
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    version:
+      name: "<dark_gray>Test menu TZ v0.1 / CustomScreenMenu config only"
+      x: 0.0
+      y: -1.05
+      z: 3.5
+      text-size: 0.48
+    close:
+      name: "<red>Close"
+      x: 0.0
+      y: -1.35
+      z: 3.5
+      text-size: 0.64
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false

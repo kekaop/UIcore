@@ -1,6 +1,8 @@
 package com.cmenu.ui;
 
+import com.cmenu.ui.api.event.MenuInputEvent;
 import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -57,15 +59,23 @@ public class MenuListener implements Listener {
    public void onPlayerChat(AsyncPlayerChatEvent event) {
       Player player = event.getPlayer();
       String currentMenu = this.plugin.getCurrentPlayerMenu(player);
-      if (currentMenu != null && (currentMenu.equals("登录菜单") || currentMenu.equals("注册菜单"))) {
+      String inputField = this.plugin.getCurrentPlayerInputField(player);
+      if (currentMenu != null && inputField != null && !inputField.isEmpty()) {
          event.setCancelled(true);
-         String inputField = this.plugin.getCurrentPlayerInputField(player);
-         if (inputField != null && !inputField.isEmpty()) {
-            String inputValue = event.getMessage();
-            this.plugin.setPlayerInputData(player, inputField, inputValue);
-            player.sendMessage(ChatColor.GREEN + "[CursorMenu] " + inputField + " 已设置为: " + inputValue);
-            CursorMenuPlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(() -> this.plugin.setupCursor(player, currentMenu), null);
+         String inputValue = event.getMessage();
+         MenuInputEvent inputEvent = new MenuInputEvent(player, currentMenu, inputField, inputValue);
+         Bukkit.getPluginManager().callEvent(inputEvent);
+         if (inputEvent.isCancelled()) {
+            return;
          }
+
+         inputValue = inputEvent.getValue();
+         this.plugin.setPlayerInputData(player, inputField, inputValue);
+         Commands.getUserInputData().computeIfAbsent(player.getUniqueId(), var0 -> new java.util.concurrent.ConcurrentHashMap<>()).put(inputField, inputValue);
+         this.plugin.setCurrentPlayerInputField(player, "");
+         String shownValue = this.plugin.isPasswordInputField(inputField) ? "*****" : inputValue;
+         player.sendMessage(ChatColor.GREEN + "[CursorMenu] " + inputField + " saved: " + shownValue);
+         CursorMenuPlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(() -> this.plugin.setupCursor(player, currentMenu), null);
       }
    }
 

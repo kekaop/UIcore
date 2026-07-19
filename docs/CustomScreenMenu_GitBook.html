@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CustomScreenMenu Documentation</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #f7f7f8;
+      --panel-2: #ffffff;
+      --text: #202124;
+      --muted: #667085;
+      --border: #e6e8eb;
+      --accent: #346ddb;
+      --accent-bg: #edf3ff;
+      --code-bg: #f5f7fa;
+      --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+      --radius: 8px;
+      --sidebar: 292px;
+      --topbar: 64px;
+      color-scheme: light;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #111315;
+      --panel: #171a1f;
+      --panel-2: #1d2127;
+      --text: #eef2f7;
+      --muted: #a1a8b3;
+      --border: #2b313a;
+      --accent: #8ab4ff;
+      --accent-bg: #1b2a44;
+      --code-bg: #0f1217;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Microsoft YaHei", sans-serif;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      height: var(--topbar);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 22px;
+      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, #346ddb, #1f9d74);
+      font-weight: 800;
+      box-shadow: var(--shadow);
+    }
+
+    .brand small {
+      display: block;
+      color: var(--muted);
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button, select {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 7px;
+      min-height: 36px;
+      padding: 0 11px;
+      font: inherit;
+    }
+
+    button { cursor: pointer; }
+
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      padding-top: var(--topbar);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: var(--topbar);
+      height: calc(100vh - var(--topbar));
+      overflow: auto;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+      padding: 18px;
+    }
+
+    .search {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      outline: none;
+    }
+
+    .nav-section {
+      margin: 18px 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 7px;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      background: var(--accent-bg);
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    main {
+      min-width: 0;
+      padding: 36px min(7vw, 76px) 80px;
+    }
+
+    .doc {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    section {
+      padding: 18px 0 28px;
+      border-bottom: 1px solid var(--border);
+      scroll-margin-top: calc(var(--topbar) + 20px);
+    }
+
+    section:last-child { border-bottom: 0; }
+
+    h1, h2, h3 {
+      line-height: 1.25;
+      letter-spacing: 0;
+      margin: 0 0 14px;
+    }
+
+    h1 {
+      font-size: clamp(32px, 5vw, 52px);
+      margin-bottom: 10px;
+    }
+
+    h2 { font-size: 28px; margin-top: 4px; }
+    h3 { font-size: 19px; margin-top: 22px; }
+    p { margin: 10px 0; color: var(--text); }
+    .muted { color: var(--muted); }
+
+    .hero {
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--panel-2), var(--panel));
+      box-shadow: var(--shadow);
+      margin: 8px 0 28px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-2);
+      padding: 16px;
+    }
+
+    .card strong { display: block; margin-bottom: 4px; }
+
+    code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      overflow: auto;
+      margin: 14px 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--code-bg);
+    }
+
+    pre code {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: block;
+    }
+
+    thead, tbody, tr { display: table; width: 100%; table-layout: fixed; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { text-align: left; background: var(--panel); }
+    tr:last-child td { border-bottom: 0; }
+
+    .callout {
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 12px 14px;
+      margin: 16px 0;
+    }
+
+    .lang { display: none; }
+    html[data-lang="en"] .lang-en { display: block; }
+    html[data-lang="zh"] .lang-zh { display: block; }
+
+    .mobile-menu { display: none; }
+
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar {
+        position: fixed;
+        z-index: 30;
+        top: var(--topbar);
+        left: 0;
+        width: min(86vw, 330px);
+        transform: translateX(-105%);
+        transition: transform .18s ease;
+        box-shadow: var(--shadow);
+      }
+      body.sidebar-open .sidebar { transform: translateX(0); }
+      main { padding: 28px 20px 64px; }
+      .mobile-menu { display: inline-flex; align-items: center; }
+      .brand small { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <button class="mobile-menu" id="menuButton" type="button">☰</button>
+      <div class="brand-mark">CS</div>
+      <div>
+        <span>CustomScreenMenu</span>
+        <small data-i18n="subtitle">World-space menu documentation</small>
+      </div>
+    </div>
+    <div class="controls">
+      <select id="languageSelect" aria-label="Language">
+        <option value="en">English</option>
+        <option value="zh">中文</option>
+      </select>
+      <button id="themeButton" type="button" data-i18n="theme">Dark</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <input id="search" class="search" type="search" placeholder="Search">
+      <div class="nav-section" data-i18n="navStart">Start</div>
+      <a class="nav-link" href="#overview" data-i18n="navOverview">Overview</a>
+      <a class="nav-link" href="#install" data-i18n="navInstall">Install</a>
+      <a class="nav-link" href="#commands" data-i18n="navCommands">Commands</a>
+      <div class="nav-section" data-i18n="navAuthoring">Authoring</div>
+      <a class="nav-link" href="#menu-file" data-i18n="navMenuFile">Menu file</a>
+      <a class="nav-link" href="#layout" data-i18n="navLayout">Positioning</a>
+      <a class="nav-link" href="#styles" data-i18n="navStyles">Styles and hover</a>
+      <a class="nav-link" href="#conditions" data-i18n="navConditions">Conditions</a>
+      <a class="nav-link" href="#animation" data-i18n="navAnimation">Animation</a>
+      <a class="nav-link" href="#input" data-i18n="navInput">Input fields</a>
+      <a class="nav-link" href="#commands-in-menu" data-i18n="navMenuCommands">Menu commands</a>
+      <div class="nav-section" data-i18n="navAdvanced">Advanced</div>
+      <a class="nav-link" href="#items" data-i18n="navItems">Items and text</a>
+      <a class="nav-link" href="#wasd-npc" data-i18n="navWasdNpc">WASD and NPC</a>
+      <a class="nav-link" href="#api" data-i18n="navApi">Runtime API</a>
+      <a class="nav-link" href="#limits" data-i18n="navLimits">Notes</a>
+    </aside>
+
+    <main>
+      <article class="doc">
+        <section id="overview" data-title="overview 概览">
+          <div class="lang lang-en">
+            <h1>CustomScreenMenu Documentation</h1>
+            <div class="hero">
+              <p class="muted">A GitBook-style single-file guide for server owners and plugin developers.</p>
+              <p>CustomScreenMenu creates fixed-camera world-space menus using TextDisplay, ItemDisplay, a cursor entity, PacketEvents input, commands, placeholders, hover effects, and optional NPC/WASD integrations.</p>
+            </div>
+            <div class="cards">
+              <div class="card"><strong>Menu runtime</strong><span class="muted">Open fixed-camera menus with text, item previews, hover and click actions.</span></div>
+              <div class="card"><strong>Config driven</strong><span class="muted">Menus are YAML files under the plugin data folder.</span></div>
+              <div class="card"><strong>Developer API</strong><span class="muted">Open, close, edit elements, and read chat input fields from other plugins.</span></div>
+            </div>
+          </div>
+          <div class="lang lang-zh">
+            <h1>CustomScreenMenu 文档</h1>
+            <div class="hero">
+              <p class="muted">面向服主和插件开发者的 GitBook 风格单文件文档。</p>
+              <p>CustomScreenMenu 使用固定摄像机、TextDisplay、ItemDisplay、光标实体、PacketEvents 输入、命令、变量、悬停效果，以及可选的 NPC/WASD 集成来制作世界空间菜单。</p>
+            </div>
+            <div class="cards">
+              <div class="card"><strong>菜单运行时</strong><span class="muted">打开带文本、物品预览、悬停和点击动作的固定摄像机菜单。</span></div>
+              <div class="card"><strong>配置驱动</strong><span class="muted">菜单由插件数据目录中的 YAML 文件定义。</span></div>
+              <div class="card"><strong>开发者 API</strong><span class="muted">其他插件可以打开、关闭、编辑元素并读取聊天输入字段。</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="install" data-title="install 安装">
+          <div class="lang lang-en">
+            <h2>Install</h2>
+            <ol>
+              <li>Install Paper 26.1.2 or the server version supported by your build.</li>
+              <li>Install required dependencies: PacketEvents and PlaceholderAPI if your menus use PlaceholderAPI variables.</li>
+              <li>Place the jar in the server <code>plugins</code> folder.</li>
+              <li>Restart the server, then edit generated files under <code>plugins/CustomScreenMenu/</code>.</li>
+            </ol>
+            <div class="callout">Use a full restart after replacing the jar. <code>/cmenu reload</code> reloads YAML, but it does not replace Java classes.</div>
+          </div>
+          <div class="lang lang-zh">
+            <h2>安装</h2>
+            <ol>
+              <li>安装 Paper 26.1.2，或当前构建支持的服务端版本。</li>
+              <li>安装依赖：PacketEvents；如果菜单使用 PlaceholderAPI 变量，也需要安装 PlaceholderAPI。</li>
+              <li>将 jar 放入服务器 <code>plugins</code> 文件夹。</li>
+              <li>重启服务器，然后编辑 <code>plugins/CustomScreenMenu/</code> 中生成的配置。</li>
+            </ol>
+            <div class="callout">替换 jar 后请完整重启服务器。<code>/cmenu reload</code> 只会重载 YAML，不会替换 Java 类。</div>
+          </div>
+        </section>
+
+        <section id="commands" data-title="commands 命令">
+          <div class="lang lang-en">
+            <h2>Commands</h2>
+            <table>
+              <thead><tr><th>Command</th><th>Purpose</th></tr></thead>
+              <tbody>
+                <tr><td><code>/cmenu run &lt;menu&gt;</code></td><td>Open a menu.</td></tr>
+                <tr><td><code>/cmenu stop</code></td><td>Close the current menu.</td></tr>
+                <tr><td><code>/cmenu reload</code></td><td>Reload configuration and menu YAML files.</td></tr>
+                <tr><td><code>/cmenu input &lt;field&gt; &lt;value&gt;</code></td><td>Set a menu input field directly.</td></tr>
+                <tr><td><code>/cmenu set_input_field &lt;field&gt;</code></td><td>Focus a chat input field for the current player.</td></tr>
+                <tr><td><code>/cmenu toggle_password_visibility</code></td><td>Show or hide password-like input values in menu text.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="lang lang-zh">
+            <h2>命令</h2>
+            <table>
+              <thead><tr><th>命令</th><th>用途</th></tr></thead>
+              <tbody>
+                <tr><td><code>/cmenu run &lt;menu&gt;</code></td><td>打开菜单。</td></tr>
+                <tr><td><code>/cmenu stop</code></td><td>关闭当前菜单。</td></tr>
+                <tr><td><code>/cmenu reload</code></td><td>重载配置和菜单 YAML 文件。</td></tr>
+                <tr><td><code>/cmenu input &lt;field&gt; &lt;value&gt;</code></td><td>直接设置菜单输入字段。</td></tr>
+                <tr><td><code>/cmenu set_input_field &lt;field&gt;</code></td><td>让当前玩家聚焦一个聊天输入字段。</td></tr>
+                <tr><td><code>/cmenu toggle_password_visibility</code></td><td>显示或隐藏类似密码的输入值。</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="menu-file" data-title="menu file 菜单文件">
+          <div class="lang lang-en">
+            <h2>Menu File</h2>
+            <p>Menu files live in <code>plugins/CustomScreenMenu/menu/*.yml</code>. Each top-level key is a menu id.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>菜单文件</h2>
+            <p>菜单文件位于 <code>plugins/CustomScreenMenu/menu/*.yml</code>。每个顶级键都是一个菜单 ID。</p>
+          </div>
+<pre><code class="language-yaml">demo_main:
+  permission: cursormenu.menu.demo_main
+  wasd-enabled: true
+  camera-position:
+    world: world
+    x: 0.0
+    y: 80.0
+    z: 0.0
+    yaw: 0.0
+    pitch: 0.0
+    distance: 1.5
+  layout:
+    title:
+      name: "&lt;gold&gt;&lt;bold&gt;Demo Menu&lt;/bold&gt;"
+      x: 0.0
+      y: 0.55
+      z: 3.5
+      text-size: 0.55</code></pre>
+        </section>
+
+        <section id="layout" data-title="positioning layout cursor coordinates hitbox camera">
+          <div class="lang lang-en">
+            <h2>Positioning, Hitboxes And Cursor</h2>
+            <p>Each menu uses a fixed camera scene. <code>camera-position</code> defines where the camera entity is placed, which way it looks, and how far the cursor plane is from the camera. Layout elements are placed in the same scene: <code>x</code> moves left/right, <code>y</code> moves up/down, and <code>z</code> moves forward from the camera.</p>
+            <p>For the current test menus, use <code>camera-position.distance: 1.5</code> and element <code>z: 3.5</code>. Keep most clickable elements on the same <code>z</code> plane unless you intentionally build a layered depth effect.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>定位、点击框和光标</h2>
+            <p>每个菜单都是固定摄像机场景。<code>camera-position</code> 定义摄像机实体的位置、朝向，以及光标平面距离摄像机多远。布局元素放在同一个场景里：<code>x</code> 控制左右，<code>y</code> 控制上下，<code>z</code> 控制摄像机前方的深度。</p>
+            <p>当前测试菜单建议使用 <code>camera-position.distance: 1.5</code> 和元素 <code>z: 3.5</code>。除非你有意制作前后层次效果，否则大多数可点击元素应保持在同一个 <code>z</code> 平面。</p>
+          </div>
+<pre><code class="language-yaml">button_start:
+  name: "&lt;green&gt;Start"
+  x: 0.0
+  y: 0.1
+  z: 3.5
+  text-size: 0.45
+  command:
+    - "[message] &lt;green&gt;Clicked Start"</code></pre>
+          <div class="lang lang-en">
+            <p>Clickable text is checked against a TextDisplay hitbox. For short labels or item elements, set a custom hitbox so the cursor target matches the visible button area.</p>
+          </div>
+          <div class="lang lang-zh">
+            <p>可点击文本会通过 TextDisplay 点击框检测。对于短文本或物品元素，请设置自定义 hitbox，让光标目标和可见按钮区域一致。</p>
+          </div>
+<pre><code class="language-yaml">button_start:
+  name: "&lt;green&gt;Start"
+  x: 0.0
+  y: 0.1
+  z: 3.5
+  hitbox:
+    width: 0.9
+    height: 0.28
+    depth: 0.25
+
+# config.yml
+cursor-item:
+  material: ARROW
+  custom-model-data: 0
+  scale: 0.5
+  sensitivity: 1.0
+  smoothing: 1.0
+  max-x: 2
+  max-y: 3
+  x: 0.0
+  y: 0.0
+  z-offset: 0.0
+  movement-range:
+    enabled: false
+    x:
+      min: -2.0
+      max: 2.0
+    y:
+      min: -3.0
+      max: 3.0</code></pre>
+          <div class="callout lang lang-en">If clicks feel offset from the visual cursor, tune element <code>z</code>, <code>camera-position.distance</code>, and custom <code>hitbox</code> values together.</div>
+          <div class="callout lang lang-zh">如果点击位置和可见光标有偏差，请一起调整元素 <code>z</code>、<code>camera-position.distance</code> 和自定义 <code>hitbox</code>。</div>
+        </section>
+
+        <section id="styles" data-title="styles hover 样式 悬停">
+          <div class="lang lang-en">
+            <h2>Styles And Hover</h2>
+            <p>Elements can use base style, hover style, permission style, pressed style, hover cursor, and hover tooltip.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>样式与悬停</h2>
+            <p>元素支持基础样式、悬停样式、权限样式、按下样式、悬停光标和悬停提示。</p>
+          </div>
+<pre><code class="language-yaml">settings_button:
+  name: "&lt;gray&gt;Settings"
+  x: 0.0
+  y: -0.1
+  z: 3.5
+  style:
+    color: "#cbd5e1"
+  hover-style:
+    color: "#ffffff"
+    underlined: true
+    transition:
+      type: smooth
+      duration: 6
+  pressed-style:
+    text: "&lt;green&gt;Opening..."
+    color: "#62e67a"
+    duration: 5
+  permission-style:
+    denied:
+      color: "#777777"
+      strikethrough: true
+  permission-denied:
+    message: "&lt;red&gt;No permission."
+    commands:
+      - "[actionbar] &lt;red&gt;Access denied"
+  hover-tooltip:
+    type: actionbar
+    text: "&lt;yellow&gt;Open settings"
+  hover-cursor:
+    enabled: true
+    material: AMETHYST_SHARD
+    scale: 1.2</code></pre>
+        </section>
+
+        <section id="input" data-title="input fields 输入字段">
+          <div class="lang lang-en">
+            <h2>Input Fields</h2>
+            <p>Any menu can use chat-backed input fields. Click the field, type in chat, and the value is stored for the current player. The chat message is cancelled and the menu refreshes.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>输入字段</h2>
+            <p>任何菜单都可以使用基于聊天的输入字段。点击字段后在聊天中输入，值会保存到当前玩家。聊天消息会被取消，菜单会刷新。</p>
+          </div>
+<pre><code class="language-yaml">nickname_field:
+  type: input-field
+  name: "&lt;gray&gt;Nickname: &lt;white&gt;{input.nickname}"
+  field: nickname
+  x: 0.0
+  y: 0.2
+  z: 3.5
+  input-field:
+    prompt: "&lt;yellow&gt;Type nickname in chat."
+
+save_nickname:
+  name: "&lt;green&gt;Save"
+  x: 0.0
+  y: -0.1
+  z: 3.5
+  command:
+    - "[player] say My nickname is {input.nickname}"</code></pre>
+          <div class="lang lang-en">
+            <p>Supported placeholders: <code>{input.name}</code>, <code>{menu.input.name}</code>, <code>%input_name%</code>, and <code>%cursormenu_input_name%</code>.</p>
+          </div>
+          <div class="lang lang-zh">
+            <p>支持的变量：<code>{input.name}</code>、<code>{menu.input.name}</code>、<code>%input_name%</code>、<code>%cursormenu_input_name%</code>。</p>
+          </div>
+        </section>
+
+        <section id="commands-in-menu" data-title="menu commands 菜单命令">
+          <div class="lang lang-en">
+            <h2>Menu Commands</h2>
+            <p>Commands are executed when an element is clicked. MiniMessage is supported for chat messages and action bars through the built-in message helpers.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>菜单命令</h2>
+            <p>点击元素时会执行命令。通过内置消息工具发送聊天消息和 ActionBar 时支持 MiniMessage。</p>
+          </div>
+<pre><code class="language-yaml">command:
+  - "[message] &lt;green&gt;Saved!"
+  - "[actionbar] &lt;yellow&gt;Current value: {input.nickname}"
+  - "[player] say hello"
+  - "[console] lp user %player_name% permission set example.permission true"
+  - "[link]https://example.com|&lt;aqua&gt;Open website"</code></pre>
+          <div class="callout lang lang-en">Avoid <code>[op]</code> in production menus unless the server owner explicitly accepts the risk.</div>
+          <div class="callout lang lang-zh">生产环境中请尽量避免使用 <code>[op]</code>，除非服主明确接受风险。</div>
+        </section>
+
+        <section id="items" data-title="items text 物品 文本">
+          <div class="lang lang-en">
+            <h2>Items And Text</h2>
+            <p>Text menus can include item elements, and item menus can include normal text elements. Item elements use ItemDisplay plus a hidden TextDisplay hitbox for cursor click detection.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>物品与文本</h2>
+            <p>文本菜单可以包含物品元素，物品菜单也可以包含普通文本元素。物品元素使用 ItemDisplay，并用隐藏的 TextDisplay hitbox 做光标点击检测。</p>
+          </div>
+<pre><code class="language-yaml">reward_item:
+  type: item
+  material: DIAMOND
+  x: 0.0
+  y: 0.25
+  z: 3.5
+  scale: 0.55
+  rotate: true
+  rotate-speed: 2.0
+  hitbox:
+    width: 0.8
+    height: 0.8
+  command:
+    - "[message] &lt;aqua&gt;Diamond selected"</code></pre>
+        </section>
+
+        <section id="wasd-npc" data-title="wasd npc keyboard navigation mirror">
+          <div class="lang lang-en">
+            <h2>WASD Navigation And NPC Mirror</h2>
+            <p>WASD navigation is an optional input mode for menus. It tracks a selected menu element, lets the player move selection with <code>W/A/S/D</code>, and executes the selected element with <code>Space</code>. It is useful for controller-like navigation or when cursor aiming is not comfortable.</p>
+            <p>NPC mirror is a visual companion feature. When enabled, the plugin asks FancyNpcs to create a player-like mirror near the menu camera, with optional skin/equipment sync. It does not replace the normal menu renderer.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>WASD 与 NPC</h2>
+            <p>WASD 导航和 NPC 镜像是可选高级系统。只在需要的菜单中开启，并在功能需要时安装对应可选依赖。</p>
+          </div>
+<pre><code class="language-yaml">demo_main:
+  wasd-enabled: true
+  # Element positions are also used by WASD to decide the next selection.
+
+# wasd_config.yml
+enabled: true
+debug-mode: false
+navigation:
+  horizontal-threshold: 0.5
+  dot-product-threshold: 0.5
+  selection-cooldown: 500
+sound:
+  enabled: true
+  selection-sound: "minecraft:entity.experience_orb.pickup"
+menu-settings:
+  enable-for-all-menus: false
+  use-whitelist-mode: true
+  enabled-menus:
+    - demo_main
+    - demo_text_item</code></pre>
+          <div class="lang lang-en">
+            <p>The NPC mirror module requires FancyNpcs. SkinsRestorer is optional and is only needed when skin sync is enabled.</p>
+          </div>
+          <div class="lang lang-zh">
+            <p>NPC 镜像模块需要 FancyNpcs。SkinsRestorer 是可选依赖，只有启用皮肤同步时才需要。</p>
+          </div>
+<pre><code class="language-yaml"># npc_config.yml
+enabled: true
+debug-mode: false
+offset:
+  x: 2.0
+  y: 0.0
+  z: -4.0
+default-yaw: 180.0
+default-pitch: 0.0
+sync:
+  equipment: true
+  skin: true
+menu-settings:
+  enable-for-all-menus: false
+  use-whitelist-mode: true
+  enabled-menus:
+    - demo_main</code></pre>
+          <div class="lang lang-en">
+            <p>Useful WASD placeholders: <code>%cmp_wasd_menu%</code>, <code>%cmp_wasd_enabled%</code>, <code>%cmp_wasd_index%</code>, <code>%cmp_wasd_x%</code>, <code>%cmp_wasd_y%</code>, and <code>%cmp_wasd_z%</code>.</p>
+          </div>
+          <div class="lang lang-zh">
+            <p>WASD 状态常用变量：<code>%cmp_wasd_menu%</code>、<code>%cmp_wasd_enabled%</code>、<code>%cmp_wasd_index%</code>、<code>%cmp_wasd_x%</code>、<code>%cmp_wasd_y%</code> 和 <code>%cmp_wasd_z%</code>。</p>
+          </div>
+        </section>
+
+        <section id="conditions" data-title="conditions visible-if">
+          <div class="lang lang-en">
+            <h2>Conditions</h2>
+            <p><code>visible-if</code> hides an element before rendering. Hidden elements do not receive hover or click. Conditions can use permissions, placeholders, local menu state, and <code>all</code>/<code>any</code>/<code>not</code> groups.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>条件</h2>
+            <p><code>visible-if</code> 会在渲染前隐藏元素。隐藏元素不会触发悬停或点击。条件可以使用权限、PlaceholderAPI 变量、本地菜单状态，以及 <code>all</code>/<code>any</code>/<code>not</code> 组合。</p>
+          </div>
+<pre><code class="language-yaml">world_only:
+  name: "&lt;green&gt;Only in world"
+  x: 0.0
+  y: 0.2
+  z: 3.5
+  visible-if:
+    placeholder: "%player_world%"
+    equals: world
+
+page_two:
+  name: "&lt;yellow&gt;Page 2"
+  x: 0.0
+  y: 0.0
+  z: 3.5
+  visible-if:
+    state.page: 2
+
+admin_page_two:
+  name: "&lt;aqua&gt;Admin Page 2"
+  visible-if:
+    all:
+      - permission: "example.admin"
+      - state:
+          page: 2</code></pre>
+        </section>
+
+        <section id="animation" data-title="animation">
+          <div class="lang lang-en">
+            <h2>Animation</h2>
+            <p>TextDisplay elements support a small animation block. It is meant for lightweight UI feedback, not complex timelines.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>动画</h2>
+            <p>TextDisplay 元素支持轻量级 <code>animation</code> 配置。它适合菜单反馈，不是完整时间轴动画系统。</p>
+          </div>
+<pre><code class="language-yaml">animated_title:
+  name: "&lt;gold&gt;Animated"
+  x: 0.0
+  y: 0.5
+  z: 3.5
+  animation:
+    type: bounce
+    speed: 1.2
+    amplitude: 0.12
+
+fading_hint:
+  name: "&lt;gray&gt;Click a button"
+  animation:
+    type: fade
+    speed: 0.8
+    amplitude: 0.25</code></pre>
+          <div class="callout lang lang-en">Supported types: <code>fade</code>, <code>move</code>, <code>rotate</code>, <code>scale</code>, <code>bounce</code>. For <code>move</code>, use <code>axis: x</code> or <code>axis: y</code>.</div>
+          <div class="callout lang lang-zh">支持类型：<code>fade</code>、<code>move</code>、<code>rotate</code>、<code>scale</code>、<code>bounce</code>。<code>move</code> 可设置 <code>axis: x</code> 或 <code>axis: y</code>。</div>
+        </section>
+
+        <section id="api" data-title="api">
+          <div class="lang lang-en">
+            <h2>Runtime API</h2>
+            <p>Other plugins can get the API through Bukkit Services or through the plugin instance. The public API is intended for opening menus, closing menus, mutating loaded menu elements, refreshing viewers, and working with menu input fields.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h2>运行时 API</h2>
+            <p>其他插件可以通过 Bukkit Services 或插件实例获取 API。</p>
+          </div>
+          <div class="lang lang-en">
+            <h3>Mutation Scope</h3>
+            <p>Calls without <code>Player</code> are global and mutate the loaded in-memory menu for every viewer. Calls with <code>Player</code> create a player-only overlay and refresh only that player's active menu.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h3>修改范围</h3>
+            <p>不带 <code>Player</code> 的调用是全局修改，会影响所有查看该菜单的玩家。带 <code>Player</code> 的调用会创建仅属于该玩家的覆盖层，并只刷新该玩家当前打开的菜单。</p>
+          </div>
+<pre><code class="language-java">// Global: visible to everyone using demo_main.
+api.addElement("demo_main", element);
+
+// Player-scoped: visible only to this player.
+api.addElement(player, "demo_main", element);</code></pre>
+<pre><code class="language-java">CustomScreenMenuApi api = CustomScreenMenuProvider.get();
+api.openMenu(player, "demo_main");
+api.editElement("demo_main", "title", edit -&gt; edit.text("&lt;green&gt;Updated"));
+api.focusInputField(player, "nickname");
+api.setInput(player, "nickname", "Orven");
+String nickname = api.getInput(player, "nickname").orElse("");
+api.refresh(player);
+api.closeMenu(player);</code></pre>
+          <div class="lang lang-en">
+            <h3>Common API Calls</h3>
+          </div>
+          <div class="lang lang-zh">
+            <h3>常用 API 调用</h3>
+          </div>
+<pre><code class="language-java">// Open / close
+api.openMenu(player, "demo_main");
+api.closeMenu(player);
+api.closeMenu(player, false); // do not teleport back
+
+// Inspect loaded menus
+boolean open = api.isMenuOpen(player);
+Optional&lt;String&gt; current = api.getOpenMenu(player);
+Set&lt;String&gt; menuIds = api.getMenuIds();
+List&lt;String&gt; elementIds = api.getElementIds("demo_main");
+
+// Add a runtime element
+api.addElement("demo_main",
+    MenuElementSpec.builder("api_button")
+        .text("&lt;green&gt;API Button")
+        .position(0.0, -0.45, 3.5)
+        .textSize(0.45)
+        .commands(List.of("[message] &lt;aqua&gt;Clicked from API"))
+        .hoverEnlarge(true, 1.2)
+        .build());
+
+// Edit an existing element
+api.editElement("demo_main", "api_button", edit -&gt; edit
+    .text("&lt;yellow&gt;Updated")
+    .set("pressed-style.text", "&lt;green&gt;Pressed")
+    .set("pressed-style.duration", 5));
+
+// Input fields
+api.focusInputField(player, "nickname");
+api.setInput(player, "nickname", "Orven");
+String value = api.getInput(player, "nickname").orElse("");
+api.clearInput(player, "nickname");
+
+// Player-scoped menu state
+api.setState(player, "demo_main", "page", "2");
+String page = api.getState(player, "demo_main", "page").orElse("1");
+api.clearState(player, "demo_main", "page");
+
+// Redraw viewers after external state changes
+api.refresh(player);
+api.refreshMenu("demo_main");</code></pre>
+          <div class="lang lang-en">
+            <h3>Events</h3>
+            <p>Other plugins can listen for lifecycle, hover, click, and chat input events.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h3>事件</h3>
+            <p>其他插件可以监听菜单生命周期、悬停、点击和聊天输入事件。</p>
+          </div>
+<pre><code class="language-java">@EventHandler
+public void onMenuClick(MenuClickEvent event) {
+    if ("danger_button".equals(event.getElementId())) {
+        event.setCancelled(true);
+    }
+}
+
+@EventHandler
+public void onMenuInput(MenuInputEvent event) {
+    event.setValue(event.getValue().trim());
+}</code></pre>
+          <div class="lang lang-en">
+            <h3>WASD And NPC Helper Hooks</h3>
+            <p>These module calls are lower-level integration points. Most plugins should use <code>CustomScreenMenuApi</code> first, and only touch these hooks when integrating custom navigation or mirror behavior.</p>
+          </div>
+          <div class="lang lang-zh">
+            <h3>WASD 与 NPC 辅助钩子</h3>
+            <p>这些模块调用属于较底层的集成点。大多数插件应优先使用 <code>CustomScreenMenuApi</code>，只有在接入自定义导航或镜像行为时才需要直接使用这些钩子。</p>
+          </div>
+<pre><code class="language-java">// WASD state helpers
+if (WASDModule.isModuleEnabled() &amp;&amp; WASDModule.isMenuEnabled("demo_main")) {
+    String selectedMenu = WASDModule.getPlayerCurrentMenu(player);
+    Location selectedLocation = WASDModule.getPlayerCurrentLocation(player);
+}
+
+// NPC mirror lifecycle hooks, normally called by the menu runtime
+if (NPCModule.isModuleEnabled()) {
+    NPCModule.onMenuOpen(player, cameraLocation, yaw, pitch, "demo_main");
+    NPCModule.onMenuSwitch(player, newCameraLocation, newYaw, newPitch);
+    NPCModule.onMenuClose(player);
+}</code></pre>
+          <div class="lang lang-en">
+            <p>Runtime mutations are in-memory only. <code>/cmenu reload</code> reloads YAML files and discards runtime changes.</p>
+          </div>
+          <div class="lang lang-zh">
+            <p>运行时修改只保存在内存中。<code>/cmenu reload</code> 会重新读取 YAML 文件，并丢弃运行时修改。</p>
+          </div>
+        </section>
+
+        <section id="limits" data-title="notes limits 注意事项">
+          <div class="lang lang-en">
+            <h2>Notes</h2>
+            <ul>
+              <li>Use <code>camera-position.distance: 1.5</code> and element <code>z: 3.5</code> for the current test layout unless you intentionally tune the camera.</li>
+              <li>Use a restart after changing jars.</li>
+              <li>Use <code>/cmenu reload</code> after editing YAML files.</li>
+              <li>Input values are per player and are cleared when the player session is cleaned up.</li>
+              <li>Password-like field names are masked in menu text, but raw values are used in command placeholders.</li>
+            </ul>
+          </div>
+          <div class="lang lang-zh">
+            <h2>注意事项</h2>
+            <ul>
+              <li>当前测试布局建议使用 <code>camera-position.distance: 1.5</code> 和元素 <code>z: 3.5</code>，除非你需要主动调整摄像机。</li>
+              <li>更换 jar 后请重启服务器。</li>
+              <li>编辑 YAML 文件后使用 <code>/cmenu reload</code>。</li>
+              <li>输入值按玩家保存，并在玩家会话清理时删除。</li>
+              <li>类似密码的字段在菜单文本中会被隐藏，但命令变量使用原始值。</li>
+            </ul>
+          </div>
+        </section>
+      </article>
+    </main>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const langSelect = document.getElementById("languageSelect");
+    const themeButton = document.getElementById("themeButton");
+    const search = document.getElementById("search");
+    const menuButton = document.getElementById("menuButton");
+    const navLinks = [...document.querySelectorAll(".nav-link")];
+    const sections = [...document.querySelectorAll("main section")];
+    const labels = {
+      en: {
+        subtitle: "World-space menu documentation",
+        theme: "Dark",
+        themeLight: "Light",
+        navStart: "Start",
+        navOverview: "Overview",
+        navInstall: "Install",
+        navCommands: "Commands",
+        navAuthoring: "Authoring",
+        navMenuFile: "Menu file",
+        navLayout: "Positioning",
+        navStyles: "Styles and hover",
+        navConditions: "Conditions",
+        navAnimation: "Animation",
+        navInput: "Input fields",
+        navMenuCommands: "Menu commands",
+        navAdvanced: "Advanced",
+        navItems: "Items and text",
+        navWasdNpc: "WASD and NPC",
+        navApi: "Runtime API",
+        navLimits: "Notes",
+        search: "Search"
+      },
+      zh: {
+        subtitle: "世界空间菜单文档",
+        theme: "深色",
+        themeLight: "浅色",
+        navStart: "开始",
+        navOverview: "概览",
+        navInstall: "安装",
+        navCommands: "命令",
+        navAuthoring: "编写菜单",
+        navMenuFile: "菜单文件",
+        navLayout: "布局元素",
+        navStyles: "样式与悬停",
+        navInput: "输入字段",
+        navMenuCommands: "菜单命令",
+        navAdvanced: "高级",
+        navItems: "物品与文本",
+        navWasdNpc: "WASD 与 NPC",
+        navApi: "运行时 API",
+        navLimits: "注意事项",
+        search: "搜索"
+      }
+    };
+
+    function applyLanguage(lang) {
+      root.dataset.lang = lang;
+      langSelect.value = lang;
+      localStorage.setItem("csm-doc-lang", lang);
+      document.querySelectorAll("[data-i18n]").forEach((node) => {
+        const key = node.dataset.i18n;
+        node.textContent = labels[lang][key] || labels.en[key] || node.textContent;
+      });
+      search.placeholder = labels[lang].search;
+      document.title = lang === "zh" ? "CustomScreenMenu 文档" : "CustomScreenMenu Documentation";
+    }
+
+    function applyTheme(theme) {
+      root.dataset.theme = theme;
+      localStorage.setItem("csm-doc-theme", theme);
+      const lang = root.dataset.lang || "en";
+      themeButton.textContent = theme === "dark" ? labels[lang].themeLight : labels[lang].theme;
+    }
+
+    langSelect.addEventListener("change", () => {
+      applyLanguage(langSelect.value);
+      applyTheme(root.dataset.theme || "light");
+    });
+
+    themeButton.addEventListener("click", () => {
+      applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
+    });
+
+    menuButton.addEventListener("click", () => {
+      document.body.classList.toggle("sidebar-open");
+    });
+
+    navLinks.forEach((link) => {
+      link.addEventListener("click", () => document.body.classList.remove("sidebar-open"));
+    });
+
+    search.addEventListener("input", () => {
+      const q = search.value.trim().toLowerCase();
+      sections.forEach((section) => {
+        const text = (section.dataset.title + " " + section.innerText).toLowerCase();
+        section.style.display = !q || text.includes(q) ? "" : "none";
+      });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          navLinks.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === "#" + entry.target.id));
+        }
+      });
+    }, { rootMargin: "-35% 0px -55% 0px", threshold: 0 });
+    sections.forEach((section) => observer.observe(section));
+
+    applyLanguage(localStorage.getItem("csm-doc-lang") || "en");
+    applyTheme(localStorage.getItem("csm-doc-theme") || "light");
+  </script>
+</body>
+</html>

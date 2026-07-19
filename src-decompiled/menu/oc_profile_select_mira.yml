@@ -1,0 +1,101 @@
+﻿oc_profile_select_mira:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    distance: 1.5
+    world: world
+    x: -187
+    y: 100
+    z: 347
+    yaw: 190
+    pitch: 0.0
+  layout:
+    title:
+      name: "<gold><bold>PROFILE_SELECT</bold>"
+      x: 0.0
+      y: 1.25
+      z: 3.5
+      text-size: 0.98
+    profile_1:
+      name: "<white>[ ] Reynar  Lv.12  Old Mine"
+      x: -0.8
+      y: 0.42
+      z: 3.5
+      text-size: 0.68
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      command:
+        - "[console] lp user %player_name% permission set orvencraft.ui.profile.selected true"
+        - "[console] lp user %player_name% permission set orvencraft.ui.profile.reynar true"
+        - "[console] lp user %player_name% permission unset orvencraft.ui.profile.mira"
+        - "[actionbar] <green>Selected profile: Reynar"
+      command-delay: 1
+      next-menu:
+        enabled: true
+        menu: oc_profile_select_reynar
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    profile_2:
+      name: "<green>[selected] Mira  Lv.4  Harbor"
+      x: -0.8
+      y: -0.02
+      z: 3.5
+      text-size: 0.7
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+    profile_empty:
+      name: "<dark_gray>[empty] Create profile"
+      x: -0.8
+      y: -0.46
+      z: 3.5
+      text-size: 0.68
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      command:
+        - "[message] <yellow>PROFILE_CREATE_REQUESTED: character creation is not implemented in this test."
+      command-delay: 1
+      stop-menu:
+        enabled: false
+    play:
+      name: "<green><bold>Enter world as Mira</bold>"
+      x: 1.08
+      y: 0.12
+      z: 3.5
+      text-size: 0.74
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+      command:
+        - "[message] <green>CONNECTING profile_id=mira"
+      command-delay: 1
+      next-menu:
+        enabled: true
+        menu: oc_connecting
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    back:
+      name: "<yellow>Back"
+      x: 0.0
+      y: -1.1
+      z: 3.5
+      text-size: 0.68
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      next-menu:
+        enabled: true
+        menu: oc_main_menu
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false

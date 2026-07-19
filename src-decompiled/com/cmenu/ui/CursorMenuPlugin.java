@@ -2,6 +2,12 @@ package com.cmenu.ui;
 
 import com.cmenu.ui.bstats.bukkit.Metrics;
 import com.cmenu.ui.compat.CraftEngineCompat;
+import com.cmenu.ui.api.CustomScreenMenuApi;
+import com.cmenu.ui.api.CustomScreenMenuApiImpl;
+import com.cmenu.ui.api.event.MenuClickEvent;
+import com.cmenu.ui.api.event.MenuCloseEvent;
+import com.cmenu.ui.api.event.MenuOpenEvent;
+import com.cmenu.ui.api.event.MenuSwitchEvent;
 import com.cmenu.ui.layout.MenuLayout;
 import com.cmenu.ui.npc.NPCModule;
 import com.cmenu.ui.scheduler.ChunkLoaderManager;
@@ -27,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -36,6 +43,8 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -74,6 +83,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
@@ -101,8 +111,16 @@ public class CursorMenuPlugin extends JavaPlugin {
    public static Map<Player, ArmorStand> playerCursors = new ConcurrentHashMap<>();
    private final Map<Player, List<TextDisplay>> playerDisplays = new ConcurrentHashMap<>();
    private final Map<Player, ItemDisplay> playerItemDisplays = new ConcurrentHashMap<>();
+   private final Map<Player, List<ItemDisplay>> playerMenuItemDisplays = new ConcurrentHashMap<>();
    private final Map<Player, ItemDisplay> playerPumpkinDisplays = new ConcurrentHashMap<>();
    private final Map<Player, List<Integer>> playerMenuTextAnimationTasks = new ConcurrentHashMap<>();
+   private final Map<Player, List<Integer>> playerMenuItemAnimationTasks = new ConcurrentHashMap<>();
+   private final Map<UUID, Map<String, Boolean>> playerLayoutToggleStates = new ConcurrentHashMap<>();
+   private final Map<UUID, Map<String, Long>> playerLayoutClickTimes = new ConcurrentHashMap<>();
+   private final Map<UUID, Map<String, Long>> playerLayoutCooldownUntil = new ConcurrentHashMap<>();
+   private final Map<UUID, Map<String, Map<String, MenuLayout>>> playerMenuLayoutOverrides = new ConcurrentHashMap<>();
+   private final Map<UUID, Map<String, Set<String>>> playerMenuHiddenLayouts = new ConcurrentHashMap<>();
+   private final Map<UUID, Map<String, Map<String, String>>> playerMenuStates = new ConcurrentHashMap<>();
    public static Map<Player, Location> playerLocations = new ConcurrentHashMap<>();
    public static Map<Player, Pig> playerSit = new ConcurrentHashMap<>();
    public static Map<Player, Location> cursorExactLocations = new ConcurrentHashMap<>();
@@ -119,6 +137,7 @@ public class CursorMenuPlugin extends JavaPlugin {
    public static String joinRunSection;
    public static String cursorItem;
    public static int cursorModelData;
+   private static final Pattern INPUT_PLACEHOLDER_PATTERN = Pattern.compile("%(?:cursormenu_)?input_([A-Za-z0-9_.-]+)%|\\{(?:menu\\.)?input\\.([A-Za-z0-9_.-]+)\\}");
    public static double maxX;
    public static double maxY;
    public static double cursorScale;
@@ -136,6 +155,7 @@ public class CursorMenuPlugin extends JavaPlugin {
    public static double cursorDefaultPositionX;
    public static double cursorDefaultPositionY;
    private HoverEnlargeManager hoverEnlargeManager;
+   private CustomScreenMenuApi menuApi;
    private ChunkLoaderManager chunkLoaderManager;
    private Map<Player, String> currentPlayerMenus = new ConcurrentHashMap<>();
    public Map<Player, MenuLayout> selectedLayouts = new ConcurrentHashMap<>();
@@ -168,21 +188,36 @@ public class CursorMenuPlugin extends JavaPlugin {
    }
 
    public TextDisplay getTextDisplayByKeys(Player var1, String var2, String var3) {
-      List<TextDisplay> var4 = this.playerDisplays.get(var1);
-      if (var4 == null) {
-         return null;
-      } else {
-         String var5 = var2 + ":" + var3;
+      List<TextDisplay> displays = this.getTextDisplaysByKeys(var1, var2, var3);
+      return displays.isEmpty() ? null : displays.get(0);
+   }
 
-         for (TextDisplay var7 : var4) {
-            String var8 = var7.getCustomName();
-            if (var8 != null && var8.equals(var5)) {
-               return var7;
+   public List<TextDisplay> getTextDisplaysByKeys(Player player, String menuKey, String layoutKey) {
+      if (player == null || menuKey == null || layoutKey == null) {
+         return Collections.emptyList();
+      }
+
+      String displayName = menuKey + ":" + layoutKey;
+      LinkedHashMap<UUID, TextDisplay> matches = new LinkedHashMap<>();
+      List<TextDisplay> displays = this.playerDisplays.get(player);
+      if (displays != null) {
+         for (TextDisplay display : displays) {
+            if (display != null && display.isValid() && displayName.equals(display.getCustomName())) {
+               matches.put(display.getUniqueId(), display);
             }
          }
-
-         return null;
       }
+
+      World world = player.getWorld();
+      if (world != null) {
+         for (TextDisplay display : world.getEntitiesByClass(TextDisplay.class)) {
+            if (display != null && display.isValid() && displayName.equals(display.getCustomName()) && player.canSee(display)) {
+               matches.put(display.getUniqueId(), display);
+            }
+         }
+      }
+
+      return new ArrayList<>(matches.values());
    }
 
    public boolean isPlayerLoggedIn(Player var1) {
@@ -367,8 +402,320 @@ public class CursorMenuPlugin extends JavaPlugin {
       return this.hoverEnlargeManager;
    }
 
+   public CustomScreenMenuApi getMenuApi() {
+      return this.menuApi;
+   }
+
    public ItemDisplay getCursorItemDisplay(Player player) {
       return this.playerItemDisplays.get(player);
+   }
+
+   public boolean getLayoutToggleState(Player player, String layoutKey) {
+      return this.getLayoutToggleState(player, this.getCurrentPlayerMenu(player), layoutKey);
+   }
+
+   public boolean getLayoutToggleState(Player player, String menuKey, String layoutKey) {
+      if (player == null || layoutKey == null) {
+         return false;
+      }
+
+      if (menuKey == null || menuKey.isBlank()) {
+         menuKey = this.getCurrentPlayerMenu(player);
+         if (menuKey == null || menuKey.isBlank()) {
+            return false;
+         }
+      }
+
+      Map<String, Boolean> states = this.playerLayoutToggleStates.get(player.getUniqueId());
+      return states != null && states.getOrDefault(menuKey + ":" + layoutKey, false);
+   }
+
+   public boolean toggleLayoutContent(Player player, MenuLayout layout) {
+      if (player != null && layout != null) {
+         String menuKey = layout.getOwnerMenuKey();
+         if (menuKey == null || menuKey.isBlank()) {
+            menuKey = this.getCurrentPlayerMenu(player);
+         }
+
+         if (menuKey != null) {
+            String stateKey = menuKey + ":" + layout.key;
+            Map<String, Boolean> states = this.playerLayoutToggleStates.computeIfAbsent(player.getUniqueId(), var0 -> new ConcurrentHashMap<>());
+            boolean oldState = states.getOrDefault(stateKey, false);
+            boolean newState = !oldState;
+            states.put(stateKey, newState);
+            String resolvedMenuKey = menuKey;
+            this.refreshToggleDisplayText(player, resolvedMenuKey, layout);
+            long refreshDelay = layout.hasPressedStyle() ? Math.max(1, layout.getPressedStyleDuration() + 1L) : 3L;
+            foliaLib.scheduling().entitySpecificScheduler(player).runDelayed(var1 -> this.refreshToggleDisplayText(player, resolvedMenuKey, layout), null, refreshDelay);
+
+            return newState;
+         }
+      }
+
+      return false;
+   }
+
+   public long getLayoutCooldownLeftMillis(Player player, String cooldownKey) {
+      if (player == null || cooldownKey == null || cooldownKey.isBlank()) {
+         return 0L;
+      }
+
+      Map<String, Long> playerCooldowns = this.playerLayoutCooldownUntil.get(player.getUniqueId());
+      if (playerCooldowns == null) {
+         return 0L;
+      }
+
+      long now = System.currentTimeMillis();
+      Long until = playerCooldowns.get(cooldownKey);
+      if (until == null || until <= now) {
+         playerCooldowns.remove(cooldownKey);
+         return 0L;
+      }
+
+      return until - now;
+   }
+
+   public void startLayoutCooldown(Player player, String cooldownKey, long durationMillis) {
+      if (player != null && cooldownKey != null && !cooldownKey.isBlank() && durationMillis > 0L) {
+         Map<String, Long> playerCooldowns = this.playerLayoutCooldownUntil.computeIfAbsent(player.getUniqueId(), var0 -> new ConcurrentHashMap<>());
+         playerCooldowns.put(cooldownKey, System.currentTimeMillis() + durationMillis);
+      }
+   }
+
+   private void refreshToggleDisplayText(Player player, String menuKey, MenuLayout layout) {
+      if (player != null && menuKey != null && layout != null && !layout.isItemLayout()) {
+         String rendered = layout.renderStyledName(player, false, false);
+         for (TextDisplay display : this.getTextDisplaysByKeys(player, menuKey, layout.key)) {
+            if (display != null && display.isValid()) {
+               display.setText(rendered);
+               display.text(ColorParser.parse(rendered));
+            }
+         }
+      }
+   }
+
+   public void updateLayoutDisplayText(Player player, String menuKey, MenuLayout layout, boolean hovered, boolean pressed) {
+      if (player != null && menuKey != null && layout != null && !layout.isItemLayout()) {
+         String rendered = layout.renderStyledName(player, hovered, pressed);
+         for (TextDisplay display : this.getTextDisplaysByKeys(player, menuKey, layout.key)) {
+            display.setText(rendered);
+            display.text(ColorParser.parse(rendered));
+         }
+      }
+   }
+
+   private boolean tryAcquireLayoutClick(Player player, String menuKey, String layoutKey) {
+      if (player == null || menuKey == null || layoutKey == null) {
+         return false;
+      }
+
+      long now = System.currentTimeMillis();
+      String key = menuKey + ":" + layoutKey;
+      Map<String, Long> times = this.playerLayoutClickTimes.computeIfAbsent(player.getUniqueId(), var0 -> new ConcurrentHashMap<>());
+      Long previous = times.get(key);
+      if (previous != null && now - previous < 1200L) {
+         return false;
+      }
+
+      times.put(key, now);
+      return true;
+   }
+
+   public void refreshCurrentMenu(Player player) {
+      if (player != null && player.isOnline() && playerCursors.containsKey(player)) {
+         String menuKey = this.getCurrentPlayerMenu(player);
+         if (menuKey != null && sectionManager.get(menuKey) != null) {
+            this.refreshMenuContent(player, menuKey, menuKey);
+         }
+      }
+   }
+
+   public Map<String, MenuLayout> getLayoutsForPlayer(Player player, String menuKey, Section section) {
+      LinkedHashMap<String, MenuLayout> layouts = new LinkedHashMap<>();
+      if (section != null) {
+         layouts.putAll(section.layouts);
+      }
+
+      if (player != null && menuKey != null && !menuKey.isBlank()) {
+         UUID playerId = player.getUniqueId();
+         Map<String, Set<String>> hiddenByMenu = this.playerMenuHiddenLayouts.get(playerId);
+         Set<String> hidden = hiddenByMenu == null ? null : hiddenByMenu.get(menuKey);
+         if (hidden != null) {
+            for (String elementId : hidden) {
+               layouts.remove(elementId);
+            }
+         }
+
+         Map<String, Map<String, MenuLayout>> overridesByMenu = this.playerMenuLayoutOverrides.get(playerId);
+         Map<String, MenuLayout> overrides = overridesByMenu == null ? null : overridesByMenu.get(menuKey);
+         if (overrides != null) {
+            layouts.putAll(overrides);
+         }
+
+         layouts.entrySet().removeIf(var0 -> !var0.getValue().isVisible(player));
+      }
+
+      return Collections.unmodifiableMap(layouts);
+   }
+
+   public MenuLayout getLayoutForPlayer(Player player, String menuKey, String elementId) {
+      if (menuKey == null || elementId == null || elementId.isBlank()) {
+         return null;
+      }
+
+      Section section = sectionManager.get(menuKey);
+      if (section == null) {
+         return null;
+      }
+
+      return this.getLayoutsForPlayer(player, menuKey, section).get(elementId);
+   }
+
+   public MenuLayout getLayoutForPlayer(Player player, String fullName) {
+      if (fullName != null && fullName.contains(":")) {
+         String[] parts = fullName.split(":", 2);
+         return this.getLayoutForPlayer(player, parts[0], parts[1]);
+      }
+
+      return null;
+   }
+
+   public boolean putPlayerMenuLayout(Player player, String menuKey, String elementId, MenuLayout layout) {
+      if (player == null || menuKey == null || menuKey.isBlank() || elementId == null || elementId.isBlank() || layout == null) {
+         return false;
+      }
+
+      layout.setOwnerMenuKey(menuKey);
+      UUID playerId = player.getUniqueId();
+      this.playerMenuLayoutOverrides
+         .computeIfAbsent(playerId, var0 -> new ConcurrentHashMap<>())
+         .computeIfAbsent(menuKey, var0 -> new ConcurrentHashMap<>())
+         .put(elementId, layout);
+      Map<String, Set<String>> hiddenByMenu = this.playerMenuHiddenLayouts.get(playerId);
+      if (hiddenByMenu != null) {
+         Set<String> hidden = hiddenByMenu.get(menuKey);
+         if (hidden != null) {
+            hidden.remove(elementId);
+         }
+      }
+
+      return true;
+   }
+
+   public boolean hidePlayerMenuLayout(Player player, String menuKey, String elementId) {
+      if (player == null || menuKey == null || menuKey.isBlank() || elementId == null || elementId.isBlank()) {
+         return false;
+      }
+
+      UUID playerId = player.getUniqueId();
+      Map<String, Map<String, MenuLayout>> overridesByMenu = this.playerMenuLayoutOverrides.get(playerId);
+      if (overridesByMenu != null) {
+         Map<String, MenuLayout> overrides = overridesByMenu.get(menuKey);
+         if (overrides != null) {
+            overrides.remove(elementId);
+         }
+      }
+
+      this.playerMenuHiddenLayouts
+         .computeIfAbsent(playerId, var0 -> new ConcurrentHashMap<>())
+         .computeIfAbsent(menuKey, var0 -> ConcurrentHashMap.newKeySet())
+         .add(elementId);
+      return true;
+   }
+
+   public void clearPlayerMenuLayouts(Player player, String menuKey) {
+      if (player == null) {
+         return;
+      }
+
+      UUID playerId = player.getUniqueId();
+      if (menuKey == null || menuKey.isBlank()) {
+         this.playerMenuLayoutOverrides.remove(playerId);
+         this.playerMenuHiddenLayouts.remove(playerId);
+      } else {
+         Map<String, Map<String, MenuLayout>> overridesByMenu = this.playerMenuLayoutOverrides.get(playerId);
+         if (overridesByMenu != null) {
+            overridesByMenu.remove(menuKey);
+         }
+
+         Map<String, Set<String>> hiddenByMenu = this.playerMenuHiddenLayouts.get(playerId);
+         if (hiddenByMenu != null) {
+            hiddenByMenu.remove(menuKey);
+         }
+      }
+   }
+
+   public String getPlayerMenuState(Player player, String menuKey, String key) {
+      if (player == null || menuKey == null || key == null || menuKey.isBlank() || key.isBlank()) {
+         return "";
+      }
+
+      Map<String, Map<String, String>> statesByMenu = this.playerMenuStates.get(player.getUniqueId());
+      Map<String, String> states = statesByMenu == null ? null : statesByMenu.get(menuKey);
+      String value = states == null ? null : states.get(key);
+      return value == null ? "" : value;
+   }
+
+   public Map<String, String> getPlayerMenuStateSnapshot(Player player, String menuKey) {
+      if (player == null || menuKey == null || menuKey.isBlank()) {
+         return Collections.emptyMap();
+      }
+
+      Map<String, Map<String, String>> statesByMenu = this.playerMenuStates.get(player.getUniqueId());
+      Map<String, String> states = statesByMenu == null ? null : statesByMenu.get(menuKey);
+      return states == null ? Collections.emptyMap() : Collections.unmodifiableMap(new LinkedHashMap<>(states));
+   }
+
+   public void setPlayerMenuState(Player player, String menuKey, String key, String value) {
+      if (player == null || menuKey == null || key == null || menuKey.isBlank() || key.isBlank()) {
+         return;
+      }
+
+      UUID playerId = player.getUniqueId();
+      if (value == null) {
+         Map<String, Map<String, String>> statesByMenu = this.playerMenuStates.get(playerId);
+         if (statesByMenu != null) {
+            Map<String, String> states = statesByMenu.get(menuKey);
+            if (states != null) {
+               states.remove(key);
+               if (states.isEmpty()) {
+                  statesByMenu.remove(menuKey);
+               }
+            }
+
+            if (statesByMenu.isEmpty()) {
+               this.playerMenuStates.remove(playerId);
+            }
+         }
+      } else {
+         this.playerMenuStates
+            .computeIfAbsent(playerId, var0 -> new ConcurrentHashMap<>())
+            .computeIfAbsent(menuKey, var0 -> new ConcurrentHashMap<>())
+            .put(key, value);
+      }
+   }
+
+   public void clearPlayerMenuState(Player player, String menuKey, String key) {
+      this.setPlayerMenuState(player, menuKey, key, null);
+   }
+
+   public void clearPlayerMenuState(Player player, String menuKey) {
+      if (player == null) {
+         return;
+      }
+
+      UUID playerId = player.getUniqueId();
+      if (menuKey == null || menuKey.isBlank()) {
+         this.playerMenuStates.remove(playerId);
+      } else {
+         Map<String, Map<String, String>> statesByMenu = this.playerMenuStates.get(playerId);
+         if (statesByMenu != null) {
+            statesByMenu.remove(menuKey);
+            if (statesByMenu.isEmpty()) {
+               this.playerMenuStates.remove(playerId);
+            }
+         }
+      }
    }
 
    public UserDataManager getUserDataManager() {
@@ -390,89 +737,126 @@ public class CursorMenuPlugin extends JavaPlugin {
       }
    }
 
+   private void clearMenuItemAnimationTasks(Player var1) {
+      List<Integer> var2 = this.playerMenuItemAnimationTasks.remove(var1);
+      if (var2 != null) {
+         var2.forEach(Bukkit.getScheduler()::cancelTask);
+      }
+   }
+
+   private void clearMenuItemDisplays(Player var1) {
+      this.clearMenuItemAnimationTasks(var1);
+      List<ItemDisplay> var2 = this.playerMenuItemDisplays.remove(var1);
+      if (var2 != null) {
+         var2.forEach(var0 -> {
+            if (var0 != null && !var0.isDead()) {
+               var0.remove();
+            }
+         });
+         var2.clear();
+      }
+   }
+
    private void applyMenuTextFloatingAnimation(final Player var1, final TextDisplay var2, MenuLayout var3) {
       if (var1 != null && var2 != null && var3 != null && var3.isFloatingAnimationEnabled()) {
          String var4 = var3.getFloatingAnimationType();
          if (var4 != null && !"none".equalsIgnoreCase(var4)) {
             final double var5 = Math.max(0.01, var3.getFloatingAnimationSpeed());
             final double var7 = Math.max(0.0, var3.getFloatingAnimationAmplitude());
-            final boolean var9 = "left-right".equalsIgnoreCase(var4) || "float-x".equalsIgnoreCase(var4);
-            boolean var10 = "up-down".equalsIgnoreCase(var4) || "float-y".equalsIgnoreCase(var4);
-            boolean var11 = "rotate".equalsIgnoreCase(var4);
-            if (var9 || var10 || var11) {
-               if (var11) {
-                  final float var12 = (float)Math.toRadians(var3.tiltY);
-                  final float var13 = (float)Math.toRadians(var3.tiltX);
-                  final float var14 = (float)Math.toRadians(var3.tiltZ);
-                  int var15 = (new BukkitRunnable() {
-                        float angle;
+            final String var9 = var4.toLowerCase(Locale.ROOT);
+            final boolean var10 = "left-right".equals(var9) || "float-x".equals(var9);
+            final boolean var11 = "up-down".equals(var9) || "float-y".equals(var9);
+            final boolean var12 = "rotate".equals(var9);
+            final boolean var13 = "scale".equals(var9) || "pulse".equals(var9);
+            final boolean var14 = "fade".equals(var9);
+            final boolean var15 = "bounce".equals(var9);
+            if (var10 || var11 || var12 || var13 || var14 || var15) {
+               final float var16 = (float)Math.toRadians(var3.tiltY);
+               final float var17 = (float)Math.toRadians(var3.tiltX);
+               final float var18 = (float)Math.toRadians(var3.tiltZ);
+               final Vector3f var19 = new Vector3f(var2.getTransformation().getTranslation());
+               final Vector3f var20 = new Vector3f(var2.getTransformation().getScale());
+               final byte var21 = var2.getTextOpacity();
+               int var22 = (new BukkitRunnable() {
+                     long tick;
+                     float angle;
 
-                        {
-                           Objects.requireNonNull(CursorMenuPlugin.this);
-                           this.angle = 0.0F;
-                        }
+                     {
+                        Objects.requireNonNull(CursorMenuPlugin.this);
+                        this.tick = 0L;
+                        this.angle = 0.0F;
+                     }
 
-                        public void run() {
-                           if (var1.isOnline()
-                              && var2.isValid()
-                              && CursorMenuPlugin.this.playerDisplays.getOrDefault(var1, Collections.emptyList()).contains(var2)) {
+                     public void run() {
+                        if (var1.isOnline()
+                           && var2.isValid()
+                           && CursorMenuPlugin.this.playerDisplays.getOrDefault(var1, Collections.emptyList()).contains(var2)) {
+                           this.tick++;
+                           double wave = Math.sin(this.tick * var5 * 0.05);
+                           float offset = (float)(wave * var7);
+                           Transformation current = var2.getTransformation();
+                           Vector3f translation = new Vector3f(var19);
+                           Vector3f scale = new Vector3f(var20);
+                           if (var10) {
+                              translation.x += offset;
+                           } else if (var11) {
+                              translation.y += offset;
+                           } else if (var15) {
+                              translation.y += (float)(Math.abs(wave) * var7);
+                           }
+
+                           if (var13) {
+                              float factor = (float)Math.max(0.05, 1.0 + wave * var7);
+                              scale.mul(factor);
+                           }
+
+                           if (var12) {
                               this.angle = (float)(this.angle + var5 * 0.05);
-                              Transformation var1x = var2.getTransformation();
                               var2.setTransformation(
                                  new Transformation(
-                                    var1x.getTranslation(),
-                                    var1x.getLeftRotation().rotationYXZ(var12 + this.angle, var13, var14),
-                                    var1x.getScale(),
-                                    var1x.getRightRotation()
+                                    translation,
+                                    current.getLeftRotation().rotationYXZ(var16 + this.angle, var17, var18),
+                                    scale,
+                                    current.getRightRotation()
                                  )
                               );
                            } else {
-                              this.cancel();
+                              var2.setTransformation(new Transformation(translation, current.getLeftRotation(), scale, current.getRightRotation()));
                            }
-                        }
-                     })
-                     .runTaskTimer(this, 0L, 1L)
-                     .getTaskId();
-                  this.playerMenuTextAnimationTasks.computeIfAbsent(var1, var0 -> new CopyOnWriteArrayList<>()).add(var15);
-               } else {
-                  final Vector3f var16 = new Vector3f(var2.getTransformation().getTranslation());
-                  int var17 = (new BukkitRunnable() {
-                        long tick;
 
-                        {
-                           Objects.requireNonNull(CursorMenuPlugin.this);
-                           this.tick = 0L;
-                        }
-
-                        public void run() {
-                           if (var1.isOnline()
-                              && var2.isValid()
-                              && CursorMenuPlugin.this.playerDisplays.getOrDefault(var1, Collections.emptyList()).contains(var2)) {
-                              this.tick++;
-                              float var1x = (float)(Math.sin(this.tick * var5 * 0.05) * var7);
-                              Transformation var2x = var2.getTransformation();
-                              Vector3f var3 = var9 ? new Vector3f(var16.x + var1x, var16.y, var16.z) : new Vector3f(var16.x, var16.y + var1x, var16.z);
-                              var2.setTransformation(new Transformation(var3, var2x.getLeftRotation(), var2x.getScale(), var2x.getRightRotation()));
-                           } else {
-                              this.cancel();
+                           if (var14) {
+                              int alpha = (int)Math.max(30.0, Math.min(255.0, 142.0 + wave * 113.0));
+                              var2.setTextOpacity((byte)alpha);
                            }
+                        } else {
+                           if (var2.isValid()) {
+                              var2.setTextOpacity(var21);
+                           }
+
+                           this.cancel();
                         }
-                     })
-                     .runTaskTimer(this, 0L, 1L)
-                     .getTaskId();
-                  this.playerMenuTextAnimationTasks.computeIfAbsent(var1, var0 -> new CopyOnWriteArrayList<>()).add(var17);
-               }
+                     }
+                  })
+                  .runTaskTimer(this, 0L, 1L)
+                  .getTaskId();
+               this.playerMenuTextAnimationTasks.computeIfAbsent(var1, var0 -> new CopyOnWriteArrayList<>()).add(var22);
             }
          }
       }
    }
 
    public String getCurrentPlayerInputField(Player var1) {
-      return this.currentPlayerInputFields.get(var1.getUniqueId());
+      return var1 == null ? null : this.currentPlayerInputFields.get(var1.getUniqueId());
    }
 
    public void setCurrentPlayerInputField(Player var1, String var2) {
-      this.currentPlayerInputFields.put(var1.getUniqueId(), var2);
+      if (var1 != null) {
+         if (var2 == null || var2.isBlank()) {
+            this.currentPlayerInputFields.remove(var1.getUniqueId());
+         } else {
+            this.currentPlayerInputFields.put(var1.getUniqueId(), var2.trim());
+         }
+      }
    }
 
    public Map<String, String> getPlayerInputData(Player var1) {
@@ -481,8 +865,94 @@ public class CursorMenuPlugin extends JavaPlugin {
    }
 
    public void setPlayerInputData(Player var1, String var2, String var3) {
-      UUID var4 = var1.getUniqueId();
-      this.userInputData.computeIfAbsent(var4, var0 -> new HashMap<>()).put(var2, var3);
+      if (var1 != null && var2 != null && !var2.isBlank()) {
+         UUID var4 = var1.getUniqueId();
+         Map<String, String> inputs = this.userInputData.computeIfAbsent(var4, var0 -> new HashMap<>());
+         if (var3 == null) {
+            inputs.remove(var2);
+            if (inputs.isEmpty()) {
+               this.userInputData.remove(var4);
+            }
+         } else {
+            inputs.put(var2, var3);
+         }
+      }
+   }
+
+   public String getPlayerInputValue(Player player, String field) {
+      if (player == null || field == null || field.isBlank()) {
+         return "";
+      }
+
+      Map<String, String> inputs = this.userInputData.get(player.getUniqueId());
+      String value = inputs == null ? null : inputs.get(field);
+      if (value == null) {
+         Map<String, String> legacyInputs = Commands.getUserInputData().get(player.getUniqueId());
+         value = legacyInputs == null ? null : legacyInputs.get(field);
+      }
+
+      return value == null ? "" : value;
+   }
+
+   public Map<String, String> getPlayerInputSnapshot(Player player) {
+      if (player == null) {
+         return Collections.emptyMap();
+      }
+
+      Map<String, String> merged = new HashMap<>();
+      Map<String, String> legacyInputs = Commands.getUserInputData().get(player.getUniqueId());
+      if (legacyInputs != null) {
+         merged.putAll(legacyInputs);
+      }
+
+      Map<String, String> inputs = this.userInputData.get(player.getUniqueId());
+      if (inputs != null) {
+         merged.putAll(inputs);
+      }
+
+      return Collections.unmodifiableMap(merged);
+   }
+
+   public void clearPlayerInputData(Player player, String field) {
+      this.setPlayerInputData(player, field, null);
+      if (player != null && field != null) {
+         Map<String, String> legacyInputs = Commands.getUserInputData().get(player.getUniqueId());
+         if (legacyInputs != null) {
+            legacyInputs.remove(field);
+         }
+      }
+   }
+
+   public void clearPlayerInputData(Player player) {
+      if (player != null) {
+         this.userInputData.remove(player.getUniqueId());
+         Commands.getUserInputData().remove(player.getUniqueId());
+      }
+   }
+
+   public String applyInputPlaceholders(Player player, String text, boolean maskPasswords) {
+      if (text == null || player == null) {
+         return text;
+      }
+
+      Matcher matcher = INPUT_PLACEHOLDER_PATTERN.matcher(text);
+      StringBuffer out = new StringBuffer();
+      while (matcher.find()) {
+         String field = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+         String value = this.getPlayerInputValue(player, field);
+         if (maskPasswords && this.isPasswordInputField(field)) {
+            value = "*".repeat(Math.max(0, value.length()));
+         }
+
+         matcher.appendReplacement(out, Matcher.quoteReplacement(value));
+      }
+
+      matcher.appendTail(out);
+      return out.toString();
+   }
+
+   public boolean isPasswordInputField(String field) {
+      return field != null && ("password".equalsIgnoreCase(field) || "confirm_password".equalsIgnoreCase(field) || field.toLowerCase(Locale.ROOT).contains("password"));
    }
 
    public boolean getPasswordVisibility(Player var1) {
@@ -516,6 +986,14 @@ public class CursorMenuPlugin extends JavaPlugin {
             var0.remove();
          }
       });
+      this.playerMenuItemDisplays.values().forEach(var0 -> var0.forEach(var0x -> {
+         if (var0x != null && !var0x.isDead()) {
+            var0x.remove();
+         }
+      }));
+      this.playerMenuItemAnimationTasks.values().forEach(var0 -> var0.forEach(Bukkit.getScheduler()::cancelTask));
+      this.playerMenuItemDisplays.clear();
+      this.playerMenuItemAnimationTasks.clear();
       if (itemDisplayManager != null) {
          Bukkit.getOnlinePlayers().forEach(itemDisplayManager::hideItem);
       }
@@ -590,6 +1068,8 @@ public class CursorMenuPlugin extends JavaPlugin {
 
       this.reloadLangConfig();
       this.loadConfig();
+      this.menuApi = new CustomScreenMenuApiImpl(this);
+      Bukkit.getServicesManager().register(CustomScreenMenuApi.class, this.menuApi, this, ServicePriority.Normal);
       this.getServer().getPluginManager().registerEvents(new TeleportListener(this), this);
       this.getServer().getPluginManager().registerEvents(new WorldChangeListener(this), this);
       itemDisplayManager = new ItemDisplayManager(this);
@@ -650,6 +1130,10 @@ public class CursorMenuPlugin extends JavaPlugin {
    }
 
    public void onDisable() {
+      if (this.menuApi != null) {
+         Bukkit.getServicesManager().unregister(CustomScreenMenuApi.class, this.menuApi);
+      }
+
       WASDModule.shutdown();
       NPCModule.shutdown();
       if (this.chunkLoaderManager != null) {
@@ -717,6 +1201,8 @@ public class CursorMenuPlugin extends JavaPlugin {
                var6.remove();
             }
 
+            this.clearMenuItemDisplays(var3);
+
             Pig var7 = playerSit.remove(var3);
             if (var7 != null) {
                if (var7.getPassengers().contains(var3)) {
@@ -743,6 +1229,12 @@ public class CursorMenuPlugin extends JavaPlugin {
             this.currentPlayerInputFields.remove(var3.getUniqueId());
             this.userInputData.remove(var3.getUniqueId());
             this.passwordVisibility.remove(var3.getUniqueId());
+            this.playerLayoutToggleStates.remove(var3.getUniqueId());
+            this.playerLayoutClickTimes.remove(var3.getUniqueId());
+            this.playerLayoutCooldownUntil.remove(var3.getUniqueId());
+            this.playerMenuLayoutOverrides.remove(var3.getUniqueId());
+            this.playerMenuHiddenLayouts.remove(var3.getUniqueId());
+            this.playerMenuStates.remove(var3.getUniqueId());
             this.restoreBlocks(var3);
          }
 
@@ -769,6 +1261,8 @@ public class CursorMenuPlugin extends JavaPlugin {
       playerCursors.clear();
       this.playerDisplays.clear();
       this.playerItemDisplays.clear();
+      this.playerMenuItemDisplays.clear();
+      this.playerMenuItemAnimationTasks.clear();
       playerLocations.clear();
       playerSit.clear();
       cursorExactLocations.clear();
@@ -778,6 +1272,12 @@ public class CursorMenuPlugin extends JavaPlugin {
       sectionManager.clear();
       this.currentPlayerInputFields.clear();
       this.userInputData.clear();
+      this.playerLayoutToggleStates.clear();
+      this.playerLayoutClickTimes.clear();
+      this.playerLayoutCooldownUntil.clear();
+      this.playerMenuLayoutOverrides.clear();
+      this.playerMenuHiddenLayouts.clear();
+      this.playerMenuStates.clear();
       this.passwordVisibility.clear();
       this.loggedInPlayers.clear();
       this.loadConfig();
@@ -946,6 +1446,7 @@ public class CursorMenuPlugin extends JavaPlugin {
             this.getLangMessage("command.menu_not_found", "&c[CursorMenu] иЏњеЌ• '%menu%' жњЄж‰ѕе€°пјЊиЇ·жЈЂжџҐй…ЌзЅ®ж–‡д»¶пјЃ").replace("%menu%", var2)
          );
       } else {
+         String previousMenuForEvent = this.currentPlayerMenus.get(var1);
          Section var4 = com.cmenu.ui.section.PlayerLocationOverride.apply(var1, var3);
          if (playerCursors.containsKey(var1)) {
             String var5 = this.currentPlayerMenus.get(var1);
@@ -954,6 +1455,10 @@ public class CursorMenuPlugin extends JavaPlugin {
             Pig var8 = playerSit.get(var1);
             boolean var9 = var8 != null && var8.isValid() && var8.getPassengers().contains(var1);
             if (var9 && var7 != null && this.isSameLocation(var7, var4)) {
+               if (var5 != null && !var5.equals(var2)) {
+                  Bukkit.getPluginManager().callEvent(new MenuSwitchEvent(var1, var5, var2));
+               }
+
                this.refreshMenuContent(var1, var2, var5);
                return;
             }
@@ -976,6 +1481,12 @@ public class CursorMenuPlugin extends JavaPlugin {
                this.currentPlayerMenus.remove(var1);
                this.getLogger().warning("World " + var15.world + " not found!");
             } else {
+               if (previousMenuForEvent == null) {
+                  Bukkit.getPluginManager().callEvent(new MenuOpenEvent(var1, var2));
+               } else if (!previousMenuForEvent.equals(var2)) {
+                  Bukkit.getPluginManager().callEvent(new MenuSwitchEvent(var1, previousMenuForEvent, var2));
+               }
+
                playerLocations.put(var1, var1.getLocation());
                Location var17 = new Location(var16, var15.cameraX, var15.cameraY, var15.cameraZ, var15.yaw, var15.pitch);
                var16.getChunkAt(var17).load(true);
@@ -1043,10 +1554,20 @@ public class CursorMenuPlugin extends JavaPlugin {
                            ArmorStand var16x = this.spawnCursorArmorStand(var15x);
                            playerCursors.put(var1, var16x);
                            ArrayList<TextDisplay> var17x = new ArrayList<>();
+                           ArrayList<ItemDisplay> menuItemDisplays = new ArrayList<>();
 
-                           for (MenuLayout var19 : var15.layouts.values()) {
+                           Map<String, MenuLayout> visibleLayouts = this.getLayoutsForPlayer(var1, var2, var15);
+                           for (MenuLayout var19 : visibleLayouts.values()) {
                               Vector var20 = var7x.clone().multiply(var19.z).add(var8x.clone().multiply(var19.x)).add(var9x.clone().multiply(var19.y));
                               Location var21 = var6x.clone().add(var20);
+                              if (var19.isItemLayout()) {
+                                 ItemDisplay itemDisplay = this.spawnMenuItemDisplay(var1, var16, var21, var2, var19);
+                                 TextDisplay hitboxDisplay = this.spawnMenuItemHitbox(var1, var16, var21, var2, var19);
+                                 menuItemDisplays.add(itemDisplay);
+                                 var17x.add(hitboxDisplay);
+                                 continue;
+                              }
+
                               TextDisplay var22 = (TextDisplay)var16.spawn(var21, TextDisplay.class);
                               String var23 = var19.renderStyledName(var1, false, false);
                               if (var19.isTypewriterEnabled()) {
@@ -1087,6 +1608,7 @@ public class CursorMenuPlugin extends JavaPlugin {
                            }
 
                            this.playerDisplays.put(var1, var17x);
+                           this.playerMenuItemDisplays.put(var1, menuItemDisplays);
                            ItemDisplay var29 = this.spawnCursorItemDisplay(var1, var15x);
                            this.playerItemDisplays.put(var1, var29);
                            Pig var30 = this.spawnPlayerLocStand(var6x);
@@ -1115,7 +1637,7 @@ public class CursorMenuPlugin extends JavaPlugin {
                               ArrayList<String> var32 = new ArrayList<>();
                               ArrayList<Double> var33 = new ArrayList<>();
 
-                              for (MenuLayout var35 : var15.layouts.values()) {
+                              for (MenuLayout var35 : visibleLayouts.values()) {
                                  Vector var36 = var7x.clone().multiply(var35.z).add(var8x.clone().multiply(var35.x)).add(var9x.clone().multiply(var35.y));
                                  Location var37 = var6x.clone().add(var36);
                                  var31.add(var37);
@@ -1179,6 +1701,11 @@ public class CursorMenuPlugin extends JavaPlugin {
 
    public void stopCursor(Player var1, boolean var2) {
       foliaLib.scheduling().regionSpecificScheduler(var1.getLocation()).runDelayed(var3 -> {
+         String closingMenu = this.currentPlayerMenus.get(var1);
+         if (closingMenu != null) {
+            Bukkit.getPluginManager().callEvent(new MenuCloseEvent(var1, closingMenu));
+         }
+
          Pig var4 = playerSit.remove(var1);
          if (var4 != null) {
             if (var4.getPassengers().contains(var1)) {
@@ -1208,6 +1735,8 @@ public class CursorMenuPlugin extends JavaPlugin {
          if (var7 != null && !var7.isDead()) {
             var7.remove();
          }
+
+         this.clearMenuItemDisplays(var1);
 
          playingSound.remove(var1.getName());
          var1.stopAllSounds();
@@ -1253,6 +1782,10 @@ public class CursorMenuPlugin extends JavaPlugin {
          this.currentPlayerInputFields.remove(var1.getUniqueId());
          this.userInputData.remove(var1.getUniqueId());
          this.passwordVisibility.remove(var1.getUniqueId());
+         this.playerLayoutToggleStates.remove(var1.getUniqueId());
+         this.playerLayoutClickTimes.remove(var1.getUniqueId());
+         this.playerLayoutCooldownUntil.remove(var1.getUniqueId());
+         this.playerMenuStates.remove(var1.getUniqueId());
          Commands.getUserInputData().remove(var1.getUniqueId());
          NPCModule.onMenuClose(var1);
          WASDModule.onMenuClose(var1);
@@ -1313,6 +1846,104 @@ public class CursorMenuPlugin extends JavaPlugin {
       var1.showEntity(this, var3);
       this.setTeleportDurationSafe(var3, 2);
       return var3;
+   }
+
+   private ItemDisplay spawnMenuItemDisplay(Player player, World world, Location loc, String menuKey, MenuLayout layout) {
+      Material material = Material.matchMaterial(layout.getItemMaterial());
+      if (material == null) {
+         material = Material.DIAMOND;
+         this.getLogger().warning("Invalid item material for menu layout " + menuKey + ":" + layout.key + ": " + layout.getItemMaterial());
+      }
+
+      ItemStack stack = new ItemStack(material);
+      ItemMeta meta = stack.getItemMeta();
+      if (meta != null && layout.getItemCustomModelData() > 0) {
+         meta.setCustomModelData(layout.getItemCustomModelData());
+         stack.setItemMeta(meta);
+      }
+
+      ItemDisplay display = (ItemDisplay)world.spawn(loc, ItemDisplay.class);
+      display.setCustomName(menuKey + ":" + layout.key + ":item");
+      display.setCustomNameVisible(false);
+      display.setItemStack(stack);
+      display.setGlowing(layout.isItemGlow());
+      display.setViewRange(100.0F);
+      display.setPersistent(false);
+      display.setVisibleByDefault(false);
+      display.setBillboard(this.parseBillboard(layout.getItemBillboard()));
+      this.setTeleportDurationSafe(display, 2);
+      float tiltX = (float)Math.toRadians(layout.tiltX);
+      float tiltY = (float)Math.toRadians(layout.tiltY);
+      float tiltZ = (float)Math.toRadians(layout.tiltZ);
+      Transformation oldTrans = display.getTransformation();
+      display.setTransformation(
+         new Transformation(
+            oldTrans.getTranslation(),
+            oldTrans.getLeftRotation().rotationYXZ(tiltY, tiltX, tiltZ),
+            new Vector3f((float)layout.getItemScale(), (float)layout.getItemScale(), (float)layout.getItemScale()),
+            oldTrans.getRightRotation()
+         )
+      );
+      player.showEntity(this, display);
+      if (layout.isItemRotate()) {
+         int taskId = (new BukkitRunnable() {
+               public void run() {
+                  if (!player.isOnline()
+                     || !display.isValid()
+                     || !CursorMenuPlugin.this.playerMenuItemDisplays.getOrDefault(player, Collections.emptyList()).contains(display)) {
+                     this.cancel();
+                  } else {
+                     Transformation tr = display.getTransformation();
+                     display.setTransformation(
+                        new Transformation(
+                           tr.getTranslation(),
+                           tr.getLeftRotation().rotateAxis((float)Math.toRadians(layout.getItemRotateSpeed()), 0.0F, 1.0F, 0.0F),
+                           tr.getScale(),
+                           tr.getRightRotation()
+                        )
+                     );
+                  }
+               }
+            })
+            .runTaskTimer(this, 0L, 1L)
+            .getTaskId();
+         this.playerMenuItemAnimationTasks.computeIfAbsent(player, var0 -> new CopyOnWriteArrayList<>()).add(taskId);
+      }
+
+      return display;
+   }
+
+   private TextDisplay spawnMenuItemHitbox(Player player, World world, Location loc, String menuKey, MenuLayout layout) {
+      TextDisplay hitbox = (TextDisplay)world.spawn(loc, TextDisplay.class);
+      hitbox.setCustomName(menuKey + ":" + layout.key);
+      hitbox.setCustomNameVisible(false);
+      hitbox.setText(layout.getHitboxText());
+      hitbox.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+      hitbox.setDefaultBackground(false);
+      hitbox.setShadowed(false);
+      hitbox.setBillboard(Billboard.CENTER);
+      hitbox.setVisibleByDefault(false);
+      hitbox.addScoreboardTag(
+         String.format(Locale.US, "cmenu_hitbox:%.3f:%.3f:%.3f", layout.getHitboxWidth(), layout.getHitboxHeight(), layout.getHitboxDepth())
+      );
+      Transformation oldTrans = hitbox.getTransformation();
+      hitbox.setTransformation(
+         new Transformation(oldTrans.getTranslation(), oldTrans.getLeftRotation(), new Vector3f(1.0F, 1.0F, 1.0F), oldTrans.getRightRotation())
+      );
+      player.showEntity(this, hitbox);
+      return hitbox;
+   }
+
+   private Billboard parseBillboard(String value) {
+      if (value == null) {
+         return Billboard.CENTER;
+      }
+
+      try {
+         return Billboard.valueOf(value.trim().toUpperCase(Locale.ROOT));
+      } catch (IllegalArgumentException var3) {
+         return Billboard.CENTER;
+      }
    }
 
    private void sendCameraPacket(Player var1, Entity var2) {
@@ -1454,7 +2085,10 @@ public class CursorMenuPlugin extends JavaPlugin {
             }, null);
          }
 
+         this.clearMenuItemDisplays(var1);
+
          ArrayList var7 = new ArrayList();
+         ArrayList<ItemDisplay> menuItemDisplays = new ArrayList<>();
          World var8 = Bukkit.getWorld(var25.world);
          if (var8 != null) {
             Location var9 = new Location(var8, var25.cameraX, var25.cameraY, var25.cameraZ, var25.yaw, var25.pitch);
@@ -1462,9 +2096,17 @@ public class CursorMenuPlugin extends JavaPlugin {
             Vector var11 = new Vector(-var10.getZ(), 0.0, var10.getX()).normalize();
             Vector var12 = var10.getCrossProduct(var11).multiply(-1);
 
-            for (MenuLayout var14 : var25.layouts.values()) {
+            for (MenuLayout var14 : this.getLayoutsForPlayer(var1, var2, var25).values()) {
                Vector var15 = var10.clone().multiply(var14.z).add(var11.clone().multiply(var14.x)).add(var12.clone().multiply(var14.y));
                Location var16 = var9.clone().add(var15);
+               if (var14.isItemLayout()) {
+                  ItemDisplay itemDisplay = this.spawnMenuItemDisplay(var1, var8, var16, var2, var14);
+                  TextDisplay hitboxDisplay = this.spawnMenuItemHitbox(var1, var8, var16, var2, var14);
+                  menuItemDisplays.add(itemDisplay);
+                  var7.add(hitboxDisplay);
+                  continue;
+               }
+
                TextDisplay var17 = (TextDisplay)var8.spawn(var16, TextDisplay.class);
                String var18 = var14.renderStyledName(var1, false, false);
                String var19 = var18;
@@ -1500,6 +2142,7 @@ public class CursorMenuPlugin extends JavaPlugin {
             }
 
             this.playerDisplays.put(var1, var7);
+            this.playerMenuItemDisplays.put(var1, menuItemDisplays);
             if (var26 != null) {
                this.setCurrentPlayerInputField(var1, var26);
             }
@@ -1543,8 +2186,10 @@ public class CursorMenuPlugin extends JavaPlugin {
    }
 
    private void runLayout(Player var1, String var2) {
-      MenuLayout var3 = sectionManager.getLayout(var2);
-      var3.runCommand(var1);
+      MenuLayout var3 = this.getLayoutForPlayer(var1, var2);
+      if (var3 != null) {
+         var3.runCommand(var1);
+      }
    }
 
    private void handleCursorClick(Player var1) {
@@ -1563,7 +2208,7 @@ public class CursorMenuPlugin extends JavaPlugin {
                            TextDisplay var7 = null;
                            double var8 = Double.MAX_VALUE;
 
-                           for (MenuLayout var11 : var5.layouts.values()) {
+                           for (MenuLayout var11 : this.getLayoutsForPlayer(var1, var4, var5).values()) {
                               Location var12 = new Location(var6, var5.cameraX, var5.cameraY, var5.cameraZ, var5.yaw, var5.pitch);
                               Vector var13 = var12.getDirection().normalize();
                               Vector var14 = new Vector(-var13.getZ(), 0.0, var13.getX()).normalize();
@@ -1587,10 +2232,16 @@ public class CursorMenuPlugin extends JavaPlugin {
 
                            if (var7 != null) {
                               String var22 = var7.getCustomName();
-                              MenuLayout var23 = sectionManager.getLayout(var22);
+                              MenuLayout var23 = this.getLayoutForPlayer(var1, var22);
                               if (var23 != null) {
-                                 this.selectedLayouts.put(var1, var23);
-                                 var23.runCommand(var1);
+                                 if (this.tryAcquireLayoutClick(var1, var4, var23.key)) {
+                                    MenuClickEvent clickEvent = new MenuClickEvent(var1, var4, var23.key, var23);
+                                    Bukkit.getPluginManager().callEvent(clickEvent);
+                                    if (!clickEvent.isCancelled()) {
+                                       this.selectedLayouts.put(var1, var23);
+                                       var23.runCommand(var1);
+                                    }
+                                 }
                               }
                            }
                         }
@@ -1654,7 +2305,7 @@ public class CursorMenuPlugin extends JavaPlugin {
    public void handleTextDisplayHover(Player var1, TextDisplay var2) {
       String var3 = this.getCurrentPlayerMenu(var1);
       if (var3 != null && var2.getScoreboardTags().contains("hover_enlarge_processed")) {
-         MenuLayout var4 = sectionManager.getLayout(var2.getName());
+         MenuLayout var4 = this.getLayoutForPlayer(var1, var2.getName());
          if (var4 != null && var4.isHoverEnlargeEnabled()) {
             Transformation var5 = var2.getTransformation();
             Vector3f var6 = var5.getScale();
@@ -1669,7 +2320,7 @@ public class CursorMenuPlugin extends JavaPlugin {
       if (var2.getScoreboardTags().contains("hover_enlarge_processed")) {
          String var3 = this.getCurrentPlayerMenu(var1);
          if (var3 != null) {
-            MenuLayout var4 = sectionManager.getLayout(var2.getName());
+            MenuLayout var4 = this.getLayoutForPlayer(var1, var2.getName());
             if (var4 != null && var4.isHoverEnlargeEnabled()) {
                Transformation var5 = var2.getTransformation();
                Vector3f var6 = var5.getScale();
@@ -1742,7 +2393,8 @@ public class CursorMenuPlugin extends JavaPlugin {
       if (var1 == null) {
          return "";
       } else {
-         return hasPAPI && Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(var0, var1) : var1;
+         String parsed = hasPAPI && Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(var0, var1) : var1;
+         return plugin == null ? parsed : plugin.applyInputPlaceholders(var0, parsed, true);
       }
    }
 
@@ -1754,6 +2406,12 @@ public class CursorMenuPlugin extends JavaPlugin {
       this.currentPlayerInputFields.remove(var1.getUniqueId());
       this.userInputData.remove(var1.getUniqueId());
       this.passwordVisibility.remove(var1.getUniqueId());
+      this.playerLayoutToggleStates.remove(var1.getUniqueId());
+      this.playerLayoutClickTimes.remove(var1.getUniqueId());
+      this.playerLayoutCooldownUntil.remove(var1.getUniqueId());
+      this.playerMenuLayoutOverrides.remove(var1.getUniqueId());
+      this.playerMenuHiddenLayouts.remove(var1.getUniqueId());
+      this.playerMenuStates.remove(var1.getUniqueId());
       Commands.getUserInputData().remove(var1.getUniqueId());
       playingSound.remove(var1.getName());
       this.setPlayerLoggedIn(var1, false);
@@ -1854,7 +2512,7 @@ public class CursorMenuPlugin extends JavaPlugin {
    }
 
    private void saveDefaultMenuFiles() {
-      String[] var1 = new String[]{"menu/example.yml", "menu/login_register.yml", "menu/login_menu.yml"};
+      String[] var1 = new String[]{"menu/example.yml", "menu/login_register.yml", "menu/login_menu.yml", "menu/login.yml", "menu/mixed_elements_demo.yml"};
 
       for (String var5 : var1) {
          File var6 = new File(this.getDataFolder(), var5);
@@ -2041,6 +2699,8 @@ public class CursorMenuPlugin extends JavaPlugin {
                var6.remove();
             }
 
+            CursorMenuPlugin.this.clearMenuItemDisplays(var1);
+
             CursorMenuPlugin.playingSound.remove(var1.getName());
             var1.stopAllSounds();
             CursorMenuPlugin.this.restoreHelmet(var1);
@@ -2062,6 +2722,12 @@ public class CursorMenuPlugin extends JavaPlugin {
             CursorMenuPlugin.this.currentPlayerInputFields.remove(var1.getUniqueId());
             CursorMenuPlugin.this.userInputData.remove(var1.getUniqueId());
             CursorMenuPlugin.this.passwordVisibility.remove(var1.getUniqueId());
+            CursorMenuPlugin.this.playerLayoutToggleStates.remove(var1.getUniqueId());
+            CursorMenuPlugin.this.playerLayoutClickTimes.remove(var1.getUniqueId());
+            CursorMenuPlugin.this.playerLayoutCooldownUntil.remove(var1.getUniqueId());
+            CursorMenuPlugin.this.playerMenuLayoutOverrides.remove(var1.getUniqueId());
+            CursorMenuPlugin.this.playerMenuHiddenLayouts.remove(var1.getUniqueId());
+            CursorMenuPlugin.this.playerMenuStates.remove(var1.getUniqueId());
          }
       }
    }

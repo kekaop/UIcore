@@ -69,6 +69,14 @@ public class Section {
       this.layouts.put(key, layout);
    }
 
+   public MenuLayout remove(String key) {
+      return this.layouts.remove(key);
+   }
+
+   public boolean contains(String key) {
+      return this.layouts.containsKey(key);
+   }
+
    public Section copyWithCamera(String world, double cameraX, double cameraY, double cameraZ, float yaw, float pitch) {
       Section copy = new Section(
          this.distance,

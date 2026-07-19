@@ -62,65 +62,7 @@ public class MenuConfigLoader {
             for (String layoutKey : layoutSection.getKeys(false)) {
                ConfigurationSection layoutConfig = layoutSection.getConfigurationSection(layoutKey);
                if (layoutConfig != null) {
-                  String name = ChatColor.translateAlternateColorCodes('&', Objects.requireNonNull(layoutConfig.getString("name", layoutKey)));
-                  double lx = layoutConfig.getDouble("x", 0.0);
-                  double ly = layoutConfig.getDouble("y", 0.0);
-                  double lz = layoutConfig.getDouble("z", 0.0);
-                  List<String> commands = layoutConfig.getStringList("command");
-                  boolean stop = layoutConfig.getBoolean("stop-menu.enabled", false);
-                  boolean teleportEnabled = layoutConfig.getBoolean("stop-menu.teleport.enabled", false);
-                  boolean backOriginal = layoutConfig.getBoolean("stop-menu.teleport.back-original", false);
-                  String targetWorld = layoutConfig.getString("stop-menu.teleport.world", world);
-                  double targetX = layoutConfig.getDouble("stop-menu.teleport.x", 0.0);
-                  double targetY = layoutConfig.getDouble("stop-menu.teleport.y", 64.0);
-                  double targetZ = layoutConfig.getDouble("stop-menu.teleport.z", 0.0);
-                  boolean stopCmdEnabled = layoutConfig.getBoolean("stop-menu.command.enabled", false);
-                  List<String> stopCommands = layoutConfig.getStringList("stop-menu.command.list");
-                  ConfigurationSection tiltSection = layoutConfig.getConfigurationSection("tilt");
-                  float tiltX = 0.0F;
-                  float tiltY = 0.0F;
-                  float tiltZ = 0.0F;
-                  if (tiltSection != null) {
-                     tiltX = (float)tiltSection.getDouble("x", 0.0);
-                     tiltY = (float)tiltSection.getDouble("y", 0.0);
-                     tiltZ = (float)tiltSection.getDouble("z", 0.0);
-                  }
-
-                  boolean nextMenuEnabled = layoutConfig.getBoolean("next-menu.enabled", false);
-                  String nextMenuKey = layoutConfig.getString("next-menu.menu", "");
-                  String buttonPermission = layoutConfig.getString("permission", "");
-                  String linkCommand = layoutConfig.getString("link", "");
-                  World worldObj = Bukkit.getWorld(targetWorld);
-                  if (worldObj == null) {
-                     worldObj = Bukkit.getWorld(world);
-                     if (worldObj == null && !Bukkit.getWorlds().isEmpty()) {
-                        worldObj = (World)Bukkit.getWorlds().get(0);
-                     }
-                  }
-
-                  Location teleportLoc = new Location(worldObj, targetX, targetY, targetZ, 0.0F, 0.0F);
-                  MenuLayout layout = new MenuLayout(
-                     layoutKey,
-                     name,
-                     commands,
-                     stop,
-                     lx,
-                     ly,
-                     lz,
-                     teleportEnabled,
-                     backOriginal,
-                     teleportLoc,
-                     stopCmdEnabled,
-                     stopCommands,
-                     tiltX,
-                     tiltY,
-                     tiltZ,
-                     buttonPermission,
-                     nextMenuEnabled,
-                     nextMenuKey,
-                     linkCommand
-                  );
-                  layout.loadConfig(layoutConfig);
+                  MenuLayout layout = loadLayout(menuKey, layoutKey, layoutConfig, world);
                   section.add(layoutKey, layout);
                }
             }
@@ -128,5 +70,69 @@ public class MenuConfigLoader {
 
          sectionManager.addSection(menuKey, section);
       }
+   }
+
+   public static MenuLayout loadLayout(String menuKey, String layoutKey, ConfigurationSection layoutConfig, String defaultWorld) {
+      String name = ChatColor.translateAlternateColorCodes('&', Objects.requireNonNull(layoutConfig.getString("name", layoutKey)));
+      double lx = layoutConfig.getDouble("x", 0.0);
+      double ly = layoutConfig.getDouble("y", 0.0);
+      double lz = layoutConfig.getDouble("z", 0.0);
+      List<String> commands = layoutConfig.getStringList("command");
+      boolean stop = layoutConfig.getBoolean("stop-menu.enabled", false);
+      boolean teleportEnabled = layoutConfig.getBoolean("stop-menu.teleport.enabled", false);
+      boolean backOriginal = layoutConfig.getBoolean("stop-menu.teleport.back-original", false);
+      String targetWorld = layoutConfig.getString("stop-menu.teleport.world", defaultWorld);
+      double targetX = layoutConfig.getDouble("stop-menu.teleport.x", 0.0);
+      double targetY = layoutConfig.getDouble("stop-menu.teleport.y", 64.0);
+      double targetZ = layoutConfig.getDouble("stop-menu.teleport.z", 0.0);
+      boolean stopCmdEnabled = layoutConfig.getBoolean("stop-menu.command.enabled", false);
+      List<String> stopCommands = layoutConfig.getStringList("stop-menu.command.list");
+      ConfigurationSection tiltSection = layoutConfig.getConfigurationSection("tilt");
+      float tiltX = 0.0F;
+      float tiltY = 0.0F;
+      float tiltZ = 0.0F;
+      if (tiltSection != null) {
+         tiltX = (float)tiltSection.getDouble("x", 0.0);
+         tiltY = (float)tiltSection.getDouble("y", 0.0);
+         tiltZ = (float)tiltSection.getDouble("z", 0.0);
+      }
+
+      boolean nextMenuEnabled = layoutConfig.getBoolean("next-menu.enabled", false);
+      String nextMenuKey = layoutConfig.getString("next-menu.menu", "");
+      String buttonPermission = layoutConfig.getString("permission", "");
+      String linkCommand = layoutConfig.getString("link", "");
+      World worldObj = Bukkit.getWorld(targetWorld);
+      if (worldObj == null) {
+         worldObj = Bukkit.getWorld(defaultWorld);
+         if (worldObj == null && !Bukkit.getWorlds().isEmpty()) {
+            worldObj = (World)Bukkit.getWorlds().get(0);
+         }
+      }
+
+      Location teleportLoc = new Location(worldObj, targetX, targetY, targetZ, 0.0F, 0.0F);
+      MenuLayout layout = new MenuLayout(
+         layoutKey,
+         name,
+         commands,
+         stop,
+         lx,
+         ly,
+         lz,
+         teleportEnabled,
+         backOriginal,
+         teleportLoc,
+         stopCmdEnabled,
+         stopCommands,
+         tiltX,
+         tiltY,
+         tiltZ,
+         buttonPermission,
+         nextMenuEnabled,
+         nextMenuKey,
+         linkCommand
+      );
+      layout.setOwnerMenuKey(menuKey);
+      layout.loadConfig(layoutConfig);
+      return layout;
    }
 }

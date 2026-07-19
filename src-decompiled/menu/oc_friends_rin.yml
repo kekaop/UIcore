@@ -1,0 +1,100 @@
+﻿oc_friends_rin:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    distance: 1.5
+    world: world
+    x: -187
+    y: 100
+    z: 347
+    yaw: 190
+    pitch: 0.0
+  layout:
+    title:
+      name: "<gold><bold>FRIENDS</bold> <yellow>RinFox request selected"
+      x: 0.0
+      y: 1.25
+      z: 3.5
+      text-size: 0.82
+    row_alex:
+      name: "<green>AlexOnline   online   Valley"
+      x: -0.72
+      y: 0.36
+      z: 3.5
+      text-size: 0.62
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      next-menu:
+        enabled: true
+        menu: oc_friends_alex
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    row_mira:
+      name: "<gray>MiraStone    offline  Hidden"
+      x: -0.72
+      y: -0.04
+      z: 3.5
+      text-size: 0.62
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      next-menu:
+        enabled: true
+        menu: oc_friends_mira
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    row_rin:
+      name: "<yellow>[selected] RinFox       incoming request"
+      x: -0.72
+      y: -0.44
+      z: 3.5
+      text-size: 0.62
+    accept:
+      name: "<green>Accept"
+      x: 1.0
+      y: 0.28
+      z: 3.5
+      text-size: 0.68
+      hover-enlarge:
+        enabled: true
+        scale: 1.1
+      command:
+        - "[message] <green>Friend request accepted (demo)."
+      command-delay: 1
+      stop-menu:
+        enabled: false
+    decline:
+      name: "<red>Decline"
+      x: 1.0
+      y: -0.18
+      z: 3.5
+      text-size: 0.68
+      hover-enlarge:
+        enabled: true
+        scale: 1.1
+      command:
+        - "[message] <red>Friend request declined (demo)."
+      command-delay: 1
+      stop-menu:
+        enabled: false
+    back:
+      name: "<yellow>Back"
+      x: 0.0
+      y: -1.25
+      z: 3.5
+      text-size: 0.62
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      next-menu:
+        enabled: true
+        menu: oc_main_menu
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false

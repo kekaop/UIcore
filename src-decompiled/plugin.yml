@@ -1,8 +1,8 @@
 name: CustomScreenMenu
 main: com.cmenu.ui.CursorMenuPlugin
-version: 1.4.8
+version: 1.4.8-dev21
 api-version: '1.19'
-description: 由野比大雄基于框架UI菜单界面
+description: Fixed-camera world-space menu plugin.
 folia-supported: true
 
 commands:

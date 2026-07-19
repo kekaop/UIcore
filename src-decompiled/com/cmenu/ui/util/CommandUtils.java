@@ -16,8 +16,12 @@ public final class CommandUtils {
    public static void executeCommand(Player player, String cmd) {
       if (cmd != null && !cmd.trim().isEmpty()) {
          String processedCmd = cmd;
+         if (CursorMenuPlugin.plugin != null) {
+            processedCmd = CursorMenuPlugin.plugin.applyInputPlaceholders(player, processedCmd, false);
+         }
+
          if (CursorMenuPlugin.hasPAPI && Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            processedCmd = PlaceholderAPI.setPlaceholders(player, cmd);
+            processedCmd = PlaceholderAPI.setPlaceholders(player, processedCmd);
          }
 
          processedCmd = replaceBuiltinPlaceholders(player, processedCmd);
@@ -64,6 +68,10 @@ public final class CommandUtils {
    private static String replaceBuiltinPlaceholders(Player player, String text) {
       if (text != null && player != null) {
          text = text.replace("%player%", player.getName());
+          if (CursorMenuPlugin.plugin != null) {
+             text = CursorMenuPlugin.plugin.applyInputPlaceholders(player, text, false);
+          }
+
          text = text.replace("%player_name%", player.getName());
          text = text.replace("%player_uuid%", player.getUniqueId().toString());
          text = text.replace("%player_displayname%", player.getDisplayName());

@@ -11,6 +11,7 @@ import org.joml.Vector4f;
 public final class TextDisplayHitBox {
    private static final float LOCAL_HEIGHT = 0.2F;
    private static final float LOCAL_WIDTH_PER_CHAR = 0.12F;
+   private static final String HITBOX_TAG_PREFIX = "cmenu_hitbox:";
 
    public static boolean isInside(TextDisplay display, Location cursor) {
       if (!display.isValid()) {
@@ -18,9 +19,10 @@ public final class TextDisplayHitBox {
       } else {
          String text = display.getText() != null ? display.getText() : "";
          String strippedText = text.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
-         float localWidth = Math.max(0.1F, strippedText.length() * 0.12F);
-         float localHeight = 0.2F;
-         float localDepth = 0.05F;
+         float[] customHitbox = readCustomHitbox(display);
+         float localWidth = customHitbox != null ? customHitbox[0] : Math.max(0.1F, strippedText.length() * 0.12F);
+         float localHeight = customHitbox != null ? customHitbox[1] : 0.2F;
+         float localDepth = customHitbox != null ? customHitbox[2] : 0.05F;
          Transformation tr = display.getTransformation();
          Matrix4f worldMatrix = matrixFromTransformation(display, tr);
          Matrix4f invMatrix = new Matrix4f(worldMatrix).invert();
@@ -35,6 +37,27 @@ public final class TextDisplayHitBox {
          float hd = localDepth / 2.0F + expansion / Math.max(0.1F, scale.z);
          return Math.abs(localPos.x) <= hw && Math.abs(localPos.y) <= hh && Math.abs(localPos.z) <= hd;
       }
+   }
+
+   private static float[] readCustomHitbox(TextDisplay display) {
+      for (String tag : display.getScoreboardTags()) {
+         if (tag.startsWith(HITBOX_TAG_PREFIX)) {
+            String[] parts = tag.substring(HITBOX_TAG_PREFIX.length()).split(":");
+            if (parts.length == 3) {
+               try {
+                  return new float[]{
+                     Math.max(0.05F, Float.parseFloat(parts[0])),
+                     Math.max(0.05F, Float.parseFloat(parts[1])),
+                     Math.max(0.05F, Float.parseFloat(parts[2]))
+                  };
+               } catch (NumberFormatException var5) {
+                  return null;
+               }
+            }
+         }
+      }
+
+      return null;
    }
 
    private static Matrix4f matrixFromTransformation(TextDisplay td, Transformation tr) {

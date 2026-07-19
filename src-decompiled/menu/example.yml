@@ -1,4 +1,4 @@
-
+﻿
 example:
   # 打开整个 test 菜单所需的权限，不写则任何人可开
   permission: cursormenu.menu.example

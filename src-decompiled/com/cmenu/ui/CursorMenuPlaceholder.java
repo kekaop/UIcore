@@ -122,12 +122,12 @@ public class CursorMenuPlaceholder extends PlaceholderExpansion {
    }
 
    private String getUserInput(Player player, String field) {
-      Map<String, String> newUserData = this.plugin.getPlayerInputData(player);
+      Map<String, String> newUserData = this.plugin.getPlayerInputSnapshot(player);
       if (newUserData == null || !newUserData.containsKey(field)) {
          Map<UUID, Map<String, String>> userInputData = Commands.getUserInputData();
          Map<String, String> userData = userInputData.get(player.getUniqueId());
          if (userData != null && userData.containsKey(field)) {
-            if (!"password".equals(field) && !"confirm_password".equals(field)) {
+            if (!this.plugin.isPasswordInputField(field)) {
                return userData.get(field);
             } else {
                String value = userData.get(field);
@@ -138,13 +138,13 @@ public class CursorMenuPlaceholder extends PlaceholderExpansion {
                   return !isVisible ? "*".repeat(Math.max(0, value.length())) : value;
                }
             }
-         } else if (!"password".equals(field) && !"confirm_password".equals(field)) {
+         } else if (!this.plugin.isPasswordInputField(field)) {
             return "";
          } else {
             boolean isVisible = this.plugin.getPasswordVisibility(player);
             return !isVisible ? "*".repeat(1) : "";
          }
-      } else if (!"password".equals(field) && !"confirm_password".equals(field)) {
+      } else if (!this.plugin.isPasswordInputField(field)) {
          return newUserData.get(field);
       } else {
          String value = newUserData.get(field);
