@@ -1,44 +1,16 @@
-# Smoke Checklist
+# UIcore Smoke Checklist
 
-Use this checklist on `test1` after installing the built JAR.
+Run on Paper 26.1.2 with Java 25 and PacketEvents installed.
 
-## Basic
+1. Start the server and confirm UIcore enables without errors.
+2. Run `/uicore reload` and verify menus reload once.
+3. Open `demo_main`; verify camera lock, cursor movement, hover, and both clicks.
+4. Switch to another menu; verify no blank transition and no stale cursor.
+5. Test hover, pressed, permission, tooltip, and hover-cursor styles.
+6. Toggle an element twice; verify text/style state and on/off commands.
+7. Focus an input field; verify chat is cancelled and the value appears in the menu.
+8. Verify `visible-if`, cooldown text, item displays, and animations.
+9. Test `/uicore slot` and player-scoped API mutations.
+10. Close the menu and quit; verify camera, entities, metadata, and tasks are cleaned up.
 
-- Start server on Java 25 with Paper 26.1.2.
-- Confirm PacketEvents loads before CustomScreenMenu.
-- Confirm CustomScreenMenu enables without dependency or plugin.yml warnings.
-- Run `/cmenu reload`.
-
-## Menu Runtime
-
-- `/cmenu run demo_main`
-- Confirm fixed camera is stable.
-- Confirm cursor is visible and moves.
-- Confirm left click works.
-- Confirm right click does not disconnect the player.
-- Confirm hover enlarge/style works.
-- Confirm pressed-style duration is visible.
-- Confirm menu switch keeps cursor movement and clicks.
-- Confirm no blank-screen flicker is worse than dev21 baseline.
-- Confirm `/cmenu stop` restores player state.
-- Quit while menu is open and confirm cleanup.
-
-## Feature Demos
-
-- `demo_styles`: hover style, permission style, cooldown.
-- `demo_toggle_input`: toggle-content, toggle-style, input field, pressed text.
-- `demo_items_api`: TextDisplay + ItemDisplay mixed menu and custom-model-data.
-- `demo_conditions`: visible-if and condition examples.
-- `login` / `login_menu`: password input is captured from chat, cancelled, masked in feedback, and not logged by the plugin.
-
-## API
-
-- Install a test plugin against `org.orvencraft.customscreenmenu:customscreenmenu-api:1.4.8-orven.1-SNAPSHOT`.
-- Resolve API through Bukkit `ServicesManager`.
-- Test open/close, player-scoped add/edit/remove element, input read/write, state, refresh, and events.
-
-## Security
-
-- Confirm `[op]` commands do not grant temporary OP.
-- Confirm `[console]` commands are denied by default.
-- If console commands are needed, enable `security.allow-console-commands` and configure `security.console-command-allowlist`.
+Also test quoted YAML keys `"on"`/`"off"` and legacy boolean-parsed equivalents.

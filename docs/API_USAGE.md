@@ -1,13 +1,13 @@
-# CustomScreenMenu Runtime API
+# UIcore Runtime API
 
-Full GitBook-style documentation is available in `docs/CustomScreenMenu_GitBook.html`.
+Full GitBook-style documentation is available in `docs/UIcore_GitBook.html`.
 
 This API is for other plugins that need to open menus or mutate loaded menus at runtime.
 
 The service is registered through Bukkit Services:
 
 ```java
-CustomScreenMenuApi api = CustomScreenMenuProvider.get();
+UIcoreApi api = UIcoreProvider.get();
 if (api != null) {
     api.openMenu(player, "demo_main");
 }
@@ -16,15 +16,15 @@ if (api != null) {
 Direct access is also available from the plugin instance:
 
 ```java
-CursorMenuPlugin plugin = JavaPlugin.getPlugin(CursorMenuPlugin.class);
-CustomScreenMenuApi api = plugin.getMenuApi();
+UIcorePlugin plugin = JavaPlugin.getPlugin(UIcorePlugin.class);
+UIcoreApi api = plugin.getMenuApi();
 ```
 
 ## Mutation Scope
 
 There are two mutation scopes:
 
-- Global calls do not take a `Player`. They mutate the loaded in-memory menu and affect every current/future viewer until `/cmenu reload`.
+- Global calls do not take a `Player`. They mutate the loaded in-memory menu and affect every current/future viewer until `/uicore reload`.
 - Player calls take a `Player`. They create an in-memory overlay for that player only and refresh only that player's active menu.
 
 ```java
@@ -132,7 +132,7 @@ When the player types in chat while a menu input field is focused, the chat mess
 Supported placeholders:
 
 ```text
-%cursormenu_input_nickname%
+%uicore_input_nickname%
 %input_nickname%
 {input.nickname}
 {menu.input.nickname}
@@ -421,7 +421,7 @@ being stored.
 ## Notes
 
 - Runtime mutations change the loaded in-memory menu only.
-- `/cmenu reload` reloads menu YAML files from disk and discards runtime mutations.
+- `/uicore reload` reloads menu YAML files from disk and discards runtime mutations.
 - API calls should be made from normal server/plugin logic, not from arbitrary async threads.
-- For persistent changes, edit the YAML file and run `/cmenu reload`.
+- For persistent changes, edit the YAML file and run `/uicore reload`.
 - `refreshMenu(menuId)` can be used after external state changes to redraw active viewers.

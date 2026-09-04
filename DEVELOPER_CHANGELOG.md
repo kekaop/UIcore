@@ -1,4 +1,4 @@
-# CustomScreenMenu local changes for upstream
+# UIcore local changes for upstream
 
 This folder contains a local patch based on the current server jar. The changes are small and focused on menu text styling, hover feedback, and MiniMessage chat output.
 
@@ -82,10 +82,10 @@ layout:
 
 ## Files changed
 
-- `src-decompiled/com/cmenu/ui/style/TextStyleConfig.java`
-- `src-decompiled/com/cmenu/ui/layout/MenuLayout.java`
-- `src-decompiled/com/cmenu/ui/HoverEnlargeManager.java`
-- `src-decompiled/com/cmenu/ui/util/CommandUtils.java`
-- `src-decompiled/com/cmenu/ui/CursorMenuPlugin.java`
-- `src-decompiled/com/cmenu/ui/TextDisplayManager.java`
+- `src-decompiled/com/uicore/ui/style/TextStyleConfig.java`
+- `src-decompiled/com/uicore/ui/layout/MenuLayout.java`
+- `src-decompiled/com/uicore/ui/HoverEnlargeManager.java`
+- `src-decompiled/com/uicore/ui/util/CommandUtils.java`
+- `src-decompiled/com/uicore/ui/UIcorePlugin.java`
+- `src-decompiled/com/uicore/ui/TextDisplayManager.java`
 - Demo menu configs under `server-data-current/menu/` and `src-decompiled/menu/`

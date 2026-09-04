@@ -1,12 +1,12 @@
-﻿# CustomScreenMenu local dev change list
+# UIcore local dev change list
 
 This is the full local change list prepared on top of the original
-CustomScreenMenu 1.4.8 test tree.
+UIcore 1.4.8 test tree.
 
 Current packaged jar:
 
 ```text
-dist/CustomScreenMenu-1.4.8-dev12.jar
+dist/UIcore-1.4.8-dev12.jar
 ```
 
 Important note: this workspace is based on decompiled source. Treat these
@@ -18,7 +18,7 @@ source tree, not as a clean upstream branch.
 Baseline commit:
 
 ```text
-384477d Initial CustomScreenMenu test1 baseline
+384477d Initial UIcore test1 baseline
 ```
 
 Local commits already present in the repo:
@@ -74,14 +74,14 @@ Added demo menu file:
 ```text
 src-decompiled/menu/dev12_showcase.yml
 server-data-current/menu/dev12_showcase.yml
-E:\Minecraft servers\OrvenCraft\test1\plugins\CustomScreenMenu\menu\dev12_showcase.yml
+E:\Minecraft servers\OrvenCraft\test1\plugins\UIcore\menu\dev12_showcase.yml
 ```
 
 Open with:
 
 ```text
-/cmenu reload
-/cmenu run dev12_showcase
+/uicore reload
+/uicore run dev12_showcase
 ```
 
 Included menus:
@@ -94,13 +94,13 @@ Included menus:
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
-src-decompiled/com/cmenu/ui/HoverEnlargeManager.java
-src-decompiled/com/cmenu/ui/MenuListener.java
-src-decompiled/com/cmenu/ui/api/CustomScreenMenuApi.java
-src-decompiled/com/cmenu/ui/api/CustomScreenMenuApiImpl.java
-src-decompiled/com/cmenu/ui/api/event/*.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
+src-decompiled/com/uicore/ui/HoverEnlargeManager.java
+src-decompiled/com/uicore/ui/MenuListener.java
+src-decompiled/com/uicore/ui/api/UIcoreApi.java
+src-decompiled/com/uicore/ui/api/UIcoreApiImpl.java
+src-decompiled/com/uicore/ui/api/event/*.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
 ```
 
 ### 1. Hover and text styles
@@ -136,10 +136,10 @@ Notes:
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/style/TextStyleConfig.java
-src-decompiled/com/cmenu/ui/HoverEnlargeManager.java
-src-decompiled/com/cmenu/ui/TextDisplayManager.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/style/TextStyleConfig.java
+src-decompiled/com/uicore/ui/HoverEnlargeManager.java
+src-decompiled/com/uicore/ui/TextDisplayManager.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
 ```
 
 ### 2. Permission style and permission denied actions
@@ -172,8 +172,8 @@ actions run instead.
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
-src-decompiled/com/cmenu/ui/HoverEnlargeManager.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/HoverEnlargeManager.java
 ```
 
 ### 3. Hover cursor and hover tooltip
@@ -207,9 +207,9 @@ chat
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/HoverEnlargeManager.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
+src-decompiled/com/uicore/ui/HoverEnlargeManager.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
 ```
 
 ### 4. MiniMessage chat and actionbar output
@@ -229,7 +229,7 @@ clickable URL.
 Main file:
 
 ```text
-src-decompiled/com/cmenu/ui/util/CommandUtils.java
+src-decompiled/com/uicore/ui/util/CommandUtils.java
 ```
 
 ### 5. Universal input fields
@@ -258,7 +258,7 @@ input-field: nickname
 Supported placeholders:
 
 ```text
-%cursormenu_input_nickname%
+%uicore_input_nickname%
 %input_nickname%
 {input.nickname}
 {menu.input.nickname}
@@ -270,12 +270,12 @@ commands.
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
-src-decompiled/com/cmenu/ui/MenuListener.java
-src-decompiled/com/cmenu/ui/Commands.java
-src-decompiled/com/cmenu/ui/CursorMenuPlaceholder.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
-src-decompiled/com/cmenu/ui/util/CommandUtils.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
+src-decompiled/com/uicore/ui/MenuListener.java
+src-decompiled/com/uicore/ui/Commands.java
+src-decompiled/com/uicore/ui/UIcorePlaceholder.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/util/CommandUtils.java
 ```
 
 ### 6. Toggle content on click
@@ -299,8 +299,8 @@ player session.
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
 ```
 
 ### 7. Click requirements
@@ -335,7 +335,7 @@ not_contains
 Main file:
 
 ```text
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
 ```
 
 ### 8. Refresh menu after click
@@ -360,8 +360,8 @@ example permission updates or placeholder updates.
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
 ```
 
 ### 9. Item elements in normal menus
@@ -393,9 +393,9 @@ elements.
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
-src-decompiled/com/cmenu/ui/TextDisplayHitBox.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/TextDisplayHitBox.java
 ```
 
 ### 10. Custom TextDisplay hitbox sizes
@@ -403,7 +403,7 @@ src-decompiled/com/cmenu/ui/TextDisplayHitBox.java
 Added scoreboard-tag based custom hitbox dimensions:
 
 ```text
-cmenu_hitbox:<width>:<height>:<depth>
+uicore_hitbox:<width>:<height>:<depth>
 ```
 
 This is used by item elements and can also improve click detection for small
@@ -412,7 +412,7 @@ or visually wide elements.
 Main file:
 
 ```text
-src-decompiled/com/cmenu/ui/TextDisplayHitBox.java
+src-decompiled/com/uicore/ui/TextDisplayHitBox.java
 ```
 
 ### 11. Runtime API
@@ -420,13 +420,13 @@ src-decompiled/com/cmenu/ui/TextDisplayHitBox.java
 Added public API package:
 
 ```text
-src-decompiled/com/cmenu/ui/api/CustomScreenMenuApi.java
-src-decompiled/com/cmenu/ui/api/CustomScreenMenuApiImpl.java
-src-decompiled/com/cmenu/ui/api/CustomScreenMenuProvider.java
-src-decompiled/com/cmenu/ui/api/MenuElementEditor.java
-src-decompiled/com/cmenu/ui/api/MenuElementSnapshot.java
-src-decompiled/com/cmenu/ui/api/MenuElementSpec.java
-src-decompiled/com/cmenu/ui/api/MenuMutationResult.java
+src-decompiled/com/uicore/ui/api/UIcoreApi.java
+src-decompiled/com/uicore/ui/api/UIcoreApiImpl.java
+src-decompiled/com/uicore/ui/api/UIcoreProvider.java
+src-decompiled/com/uicore/ui/api/MenuElementEditor.java
+src-decompiled/com/uicore/ui/api/MenuElementSnapshot.java
+src-decompiled/com/uicore/ui/api/MenuElementSpec.java
+src-decompiled/com/uicore/ui/api/MenuMutationResult.java
 ```
 
 API capabilities:
@@ -450,7 +450,7 @@ API capabilities:
 Example:
 
 ```java
-CustomScreenMenuApi api = CustomScreenMenuProvider.get();
+UIcoreApi api = UIcoreProvider.get();
 api.openMenu(player, "demo_main");
 
 // Global mutation: visible to everyone using this loaded menu.
@@ -491,7 +491,7 @@ api.closeMenu(player);
 Main file registering the service:
 
 ```text
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
 ```
 
 Scope behavior:
@@ -526,10 +526,10 @@ Areas touched:
 Main files:
 
 ```text
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
-src-decompiled/com/cmenu/ui/wasd/WASDModule.java
-src-decompiled/com/cmenu/ui/npc/NPCModule.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/wasd/WASDModule.java
+src-decompiled/com/uicore/ui/npc/NPCModule.java
 ```
 
 ## Menu/config examples added
@@ -606,13 +606,13 @@ Main demo areas:
 
 ```text
 docs/API_USAGE.md
-docs/CustomScreenMenu_GitBook.html
+docs/UIcore_GitBook.html
 docs/DEV12_CHANGE_LIST.md
 UPSTREAM_HANDOFF.md
 ORVENCRAFT_TZ_TEST_MENU_NOTES.md
 ```
 
-`docs/CustomScreenMenu_GitBook.html` is a standalone GitBook-like HTML file
+`docs/UIcore_GitBook.html` is a standalone GitBook-like HTML file
 with:
 
 - English / Chinese language switch.
@@ -630,19 +630,19 @@ with:
 ## Packaged jars produced
 
 ```text
-dist/CustomScreenMenu-1.4.8-dev2.jar
-dist/CustomScreenMenu-1.4.8-dev3.jar
-dist/CustomScreenMenu-1.4.8-dev4.jar
-dist/CustomScreenMenu-1.4.8-dev5.jar
-dist/CustomScreenMenu-1.4.8-dev6.jar
-dist/CustomScreenMenu-1.4.8-dev7.jar
-dist/CustomScreenMenu-1.4.8-dev8.jar
-dist/CustomScreenMenu-1.4.8-dev9.jar
-dist/CustomScreenMenu-1.4.8-dev10.jar
-dist/CustomScreenMenu-1.4.8-dev11.jar
-dist/CustomScreenMenu-1.4.8-dev12.jar
-dist/CustomScreenMenu-1.4.8-login-input.jar
-dist/CustomScreenMenu-1.4.8-hover-styles-minimessage.jar
+dist/UIcore-1.4.8-dev2.jar
+dist/UIcore-1.4.8-dev3.jar
+dist/UIcore-1.4.8-dev4.jar
+dist/UIcore-1.4.8-dev5.jar
+dist/UIcore-1.4.8-dev6.jar
+dist/UIcore-1.4.8-dev7.jar
+dist/UIcore-1.4.8-dev8.jar
+dist/UIcore-1.4.8-dev9.jar
+dist/UIcore-1.4.8-dev10.jar
+dist/UIcore-1.4.8-dev11.jar
+dist/UIcore-1.4.8-dev12.jar
+dist/UIcore-1.4.8-login-input.jar
+dist/UIcore-1.4.8-hover-styles-minimessage.jar
 ```
 
 Latest dev12 SHA256:
@@ -656,15 +656,15 @@ Calculated after packaging; see build handoff/final response.
 Modified tracked files:
 
 ```text
-src-decompiled/com/cmenu/ui/Commands.java
-src-decompiled/com/cmenu/ui/CursorMenuPlaceholder.java
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
-src-decompiled/com/cmenu/ui/MenuListener.java
-src-decompiled/com/cmenu/ui/TextDisplayHitBox.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
-src-decompiled/com/cmenu/ui/section/MenuConfigLoader.java
-src-decompiled/com/cmenu/ui/section/Section.java
-src-decompiled/com/cmenu/ui/util/CommandUtils.java
+src-decompiled/com/uicore/ui/Commands.java
+src-decompiled/com/uicore/ui/UIcorePlaceholder.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
+src-decompiled/com/uicore/ui/MenuListener.java
+src-decompiled/com/uicore/ui/TextDisplayHitBox.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/section/MenuConfigLoader.java
+src-decompiled/com/uicore/ui/section/Section.java
+src-decompiled/com/uicore/ui/util/CommandUtils.java
 src-decompiled/plugin.yml
 ```
 
@@ -674,7 +674,7 @@ New untracked source/API/docs/menu files are listed in the sections above.
 
 - Auth was intentionally kept. Login/register/password systems were not
   removed in this workspace.
-- Runtime API mutations are in-memory only. `/cmenu reload` reloads YAML and
+- Runtime API mutations are in-memory only. `/uicore reload` reloads YAML and
   discards runtime changes.
 - OP players still pass ordinary permission checks because that is existing
   plugin behavior.

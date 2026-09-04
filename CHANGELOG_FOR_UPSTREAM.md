@@ -1,4 +1,4 @@
-# CustomScreenMenu local patch notes for upstream
+# UIcore local patch notes for upstream
 
 This is a short list of the local changes made in this test workspace.
 
@@ -67,7 +67,7 @@ Example:
 ```yaml
 click-requirements:
   permissions:
-    - customscreenmenu.demo.click
+    - uicore.demo.click
   placeholders:
     - placeholder: "%player_world%"
       operator: "=="
@@ -112,7 +112,7 @@ Input fields can now be used in any menu, not only password/login menus.
 Supported placeholders:
 
 ```text
-%cursormenu_input_field%
+%uicore_input_field%
 %input_field%
 {input.field}
 {menu.input.field}
@@ -253,7 +253,7 @@ demo_conditions.yml
 Open the hub:
 
 ```text
-/cmenu run demo_main
+/uicore run demo_main
 ```
 
 Each demo uses:
@@ -272,22 +272,22 @@ layout:
 Core behavior:
 
 ```text
-src-decompiled/com/cmenu/ui/CursorMenuPlugin.java
-src-decompiled/com/cmenu/ui/HoverEnlargeManager.java
-src-decompiled/com/cmenu/ui/layout/MenuLayout.java
-src-decompiled/com/cmenu/ui/TextDisplayHitBox.java
-src-decompiled/com/cmenu/ui/util/CommandUtils.java
-src-decompiled/com/cmenu/ui/MenuListener.java
-src-decompiled/com/cmenu/ui/Commands.java
-src-decompiled/com/cmenu/ui/CursorMenuPlaceholder.java
-src-decompiled/com/cmenu/ui/section/MenuConfigLoader.java
-src-decompiled/com/cmenu/ui/section/Section.java
+src-decompiled/com/uicore/ui/UIcorePlugin.java
+src-decompiled/com/uicore/ui/HoverEnlargeManager.java
+src-decompiled/com/uicore/ui/layout/MenuLayout.java
+src-decompiled/com/uicore/ui/TextDisplayHitBox.java
+src-decompiled/com/uicore/ui/util/CommandUtils.java
+src-decompiled/com/uicore/ui/MenuListener.java
+src-decompiled/com/uicore/ui/Commands.java
+src-decompiled/com/uicore/ui/UIcorePlaceholder.java
+src-decompiled/com/uicore/ui/section/MenuConfigLoader.java
+src-decompiled/com/uicore/ui/section/Section.java
 ```
 
 API:
 
 ```text
-src-decompiled/com/cmenu/ui/api/
+src-decompiled/com/uicore/ui/api/
 ```
 
 Configs and docs:
@@ -298,7 +298,7 @@ docs/API_USAGE.md
 docs/DEV12_CHANGE_LIST.md
 docs/DEV18_CHANGE_LIST.md
 docs/CURSOR_RANGE_NOTES.md
-docs/CustomScreenMenu_GitBook.html
+docs/UIcore_GitBook.html
 ```
 
 Demo menus:
@@ -325,8 +325,8 @@ src-decompiled/menu/demo_conditions.yml
 ## Local smoke test checklist
 
 ```text
-/cmenu reload
-/cmenu run demo_main
+/uicore reload
+/uicore run demo_main
 ```
 
 Check:

@@ -1,4 +1,4 @@
-# CustomScreenMenu 1.4.8-dev18 changes
+# UIcore 1.4.8-dev18 changes
 
 This file lists the local dev18 additions that should be easy to port into the
 original source tree.
@@ -106,7 +106,7 @@ server-data-current/menu/dev18_features.yml
 Open with:
 
 ```text
-/cmenu run dev18_features
+/uicore run dev18_features
 ```
 
 The demo includes:
