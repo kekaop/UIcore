@@ -16,8 +16,8 @@
 # Java/build outputs.
 /target/
 /build/
-customscreenmenu-api/target/
-customscreenmenu-plugin/target/
+uicore-api/target/
+uicore-plugin/target/
 
 # Local server runtime state.
 /server-data-current/

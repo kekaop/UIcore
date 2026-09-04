@@ -1,0 +1,13 @@
+# Необязательный русский шаблон. Активный файл: lang.yml.
+permission:
+  no_permission: "&c[UIcore] Недостаточно прав."
+  no_permission_button: "&c[UIcore] Этот элемент вам недоступен."
+  no_permission_menu: "&c[UIcore] Это меню вам недоступно."
+  player_only: "&c[UIcore] Команда доступна только игроку."
+input:
+  field_set: "&a[UIcore] Поле ввода: %field%."
+  data_saved: "&a[UIcore] %field%: %value%"
+menu:
+  condition_not_met: "&c[UIcore] Условие не выполнено."
+  cursor_activated: "&a[UIcore] Курсор меню активирован."
+  cursor_deactivated: "&c[UIcore] Меню закрыто."

@@ -21,9 +21,10 @@ No exact upstream `1.4.8` source tag was found during normalization. The archive
 The normalized source build uses:
 
 - Maven multi-module layout.
-- `customscreenmenu-api`: public API artifact.
-- `customscreenmenu-plugin`: Paper plugin implementation and bundled resources.
-- Version: `1.4.8-orven.1-SNAPSHOT`.
+- `uicore-api`: public API artifact.
+- `uicore-plugin`: Paper plugin implementation and bundled resources.
+- Runtime name: `UIcore`.
+- Version: `1.4.8-uicore.1-SNAPSHOT`.
 - Target Java: 25.
 - Target server API: Paper `26.1.2.build.72-stable`.
 

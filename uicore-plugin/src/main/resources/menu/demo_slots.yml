@@ -1,0 +1,135 @@
+demo_slots:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: player
+    distance: 1.5
+    offset:
+      right: 0.0
+      up: 0.0
+      forward: 0.0
+    yaw-offset: 0.0
+    pitch-offset: 0.0
+
+  # Templates are complete normal elements. They are not rendered by themselves.
+  templates:
+    guardian:
+      type: item
+      material: SHIELD
+      custom-model-data: 0
+      scale: 0.48
+      glow: true
+      rotate: true
+      rotate-speed: 1.0
+      billboard: center
+      hitbox:
+        width: 0.75
+        height: 0.75
+        depth: 0.3
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-tooltip:
+        type: actionbar
+        text: "<aqua>Guardian: defensive perk"
+      command:
+        - "[message] <green>Guardian template selected from a slot."
+      stop-menu:
+        enabled: false
+
+    haste:
+      type: item
+      material: GOLDEN_PICKAXE
+      custom-model-data: 0
+      scale: 0.48
+      glow: true
+      rotate: true
+      rotate-speed: 1.4
+      billboard: center
+      hitbox:
+        width: 0.75
+        height: 0.75
+        depth: 0.3
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-tooltip:
+        type: actionbar
+        text: "<yellow>Haste: mining perk"
+      command:
+        - "[message] <gold>Haste template selected from a slot."
+      stop-menu:
+        enabled: false
+
+    vampirism:
+      type: item
+      material: RED_DYE
+      custom-model-data: 0
+      scale: 0.48
+      glow: true
+      rotate: true
+      rotate-speed: 1.2
+      billboard: center
+      hitbox:
+        width: 0.75
+        height: 0.75
+        depth: 0.3
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-tooltip:
+        type: actionbar
+        text: "<red>Vampirism: offensive perk"
+      command:
+        - "[message] <red>Vampirism template selected from a slot."
+      stop-menu:
+        enabled: false
+
+  # A slot contributes position only. content resolves to a template id.
+  slots:
+    perk_left:
+      x: -1.15
+      y: 0.0
+      z: 3.5
+      content: guardian
+      fallback: guardian
+    perk_center:
+      x: 0.0
+      y: 0.0
+      z: 3.5
+      content: "%orvenperks_roll_2%"
+      fallback: haste
+    perk_right:
+      x: 1.15
+      y: 0.0
+      z: 3.5
+      content: "{state.selected_perk}"
+      fallback: vampirism
+
+  layout:
+    title:
+      name: "<gold><bold>Template slots</bold>"
+      x: 0.0
+      y: 1.15
+      z: 3.5
+      text-size: 0.72
+    description:
+      name: "<gray>Literal, PlaceholderAPI and menu-state selection"
+      x: 0.0
+      y: 0.72
+      z: 3.5
+      text-size: 0.42
+    close:
+      name: "<red>Close"
+      x: 0.0
+      y: -1.0
+      z: 3.5
+      text-size: 0.58
+      hover-style:
+        color: "#ff7777"
+        underlined: true
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true

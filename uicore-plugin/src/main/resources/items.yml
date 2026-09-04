@@ -1,0 +1,14 @@
+# Item display configuration.
+display-items:
+  # Item id used by commands and menu elements.
+  example_item:
+    material: "DIAMOND_SWORD"  # Bukkit material.
+    custom-model-data: 0        # Resource-pack custom model data.
+    scale: 0.3                   # Display scale.
+    offset:                      # Offset relative to the player view.
+      x: 0.5
+      y: 0
+      z: 2.0
+    glow: true
+    rotate: true
+    rotate-speed: 2.0            # Higher values rotate faster.

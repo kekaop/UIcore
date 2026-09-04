@@ -1,0 +1,13 @@
+# Optional English language template. The active file is lang.yml.
+permission:
+  no_permission: "&c[UIcore] You do not have permission."
+  no_permission_button: "&c[UIcore] You cannot use this element."
+  no_permission_menu: "&c[UIcore] You cannot open this menu."
+  player_only: "&c[UIcore] Player only."
+input:
+  field_set: "&a[UIcore] Input field: %field%."
+  data_saved: "&a[UIcore] %field% set to: %value%"
+menu:
+  condition_not_met: "&c[UIcore] The condition was not met."
+  cursor_activated: "&a[UIcore] Menu cursor activated."
+  cursor_deactivated: "&c[UIcore] Menu closed."

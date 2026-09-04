@@ -1,0 +1,8 @@
+
+# Commands allowed while the menu camera is active (without a leading slash).
+allowed-commands:
+  - "help"
+  - "spawn"
+  - "warp"
+  - "uicore stop"
+  - "ui stop"

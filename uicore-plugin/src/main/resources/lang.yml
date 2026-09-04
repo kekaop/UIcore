@@ -1,0 +1,46 @@
+permission:
+  no_permission: "&c[UIcore] You do not have permission to use this command."
+  no_permission_button: "&c[UIcore] You cannot use this element."
+  no_permission_menu: "&c[UIcore] You cannot open this menu."
+  player_only: "&c[UIcore] This command can only be used by a player."
+
+command:
+  unknown_argument: "&c[UIcore] Unknown argument."
+  reload: "&a[UIcore] Configuration reloaded."
+  reload_complete: "&a[UIcore] Reload complete."
+  menu_not_found: "&c[UIcore] Menu '%menu%' was not found."
+  menu_opened: "&a[UIcore] Opened menu %menu% for %player%."
+  menu_option_not_found: "&c[UIcore] Menu not found."
+  input_menu_hint: "&c[UIcore] Specify a menu id."
+  item_disabled: "&a[UIcore] Item display hidden."
+  item_not_found: "&c[UIcore] Item display not found: %item_id%."
+  text_display_opened: "&a[UIcore] Opened text display %text_id% for %player%."
+  text_display_not_found: "&c[UIcore] Text display not found: %text_id%."
+
+input:
+  field_set: "&a[UIcore] Input field: %field%. Type the value in chat."
+  data_saved: "&a[UIcore] %field% set to: %value%"
+  incomplete: "&c[UIcore] Input value is missing."
+
+player:
+  not_found: "&c[UIcore] Player not found: %player%."
+
+menu:
+  condition_not_met: "&c[UIcore] The condition was not met."
+  cursor_activated: "&a[UIcore] Menu cursor activated."
+  cursor_deactivated: "&c[UIcore] Menu closed."
+
+system:
+  server_transfer_failed: "&c[UIcore] Server transfer failed: %error%"
+  config_reloaded: "&a[UIcore] Configuration reloaded."
+
+npc:
+  toggle_on: "&a[UIcore] NPC mirror enabled."
+  toggle_off: "&c[UIcore] NPC mirror disabled."
+  status_enabled: "&a[UIcore] NPC mirror is enabled."
+  status_disabled: "&c[UIcore] NPC mirror is disabled."
+  reloaded: "&a[UIcore] NPC configuration reloaded."
+  rotated: "&a[UIcore] NPC rotated by %angle% degrees."
+  rotate_usage: "&c[UIcore] Usage: /uicore npc rotate <degrees>"
+  invalid_angle: "&c[UIcore] Invalid angle: %angle%"
+  system_disabled: "&e[UIcore] NPC mirror requires FancyNpcs."

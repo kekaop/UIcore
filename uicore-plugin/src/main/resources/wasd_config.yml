@@ -1,0 +1,41 @@
+# ===========================================
+# UIcore WASD navigation configuration.
+# ===========================================
+#
+# enabled: enables WASD navigation.
+# debug-mode: writes detailed diagnostics to the server log.
+#
+# navigation: navigation settings.
+#   horizontal-threshold: horizontal selection threshold.
+#   dot-product-threshold: left/right dot-product threshold.
+#   selection-cooldown: selection cooldown in milliseconds.
+#
+# sound: selection sound settings.
+# menu-settings: controls which menus use WASD navigation.
+# disabled-players: lowercase player names excluded from WASD navigation.
+
+enabled: true
+debug-mode: false
+
+navigation:
+  horizontal-threshold: 0.5
+  dot-product-threshold: 0.5
+  selection-cooldown: 500
+
+sound:
+  enabled: true
+  selection-sound: "minecraft:entity.experience_orb.pickup"
+  volume: 1.0
+  pitch: 1.0
+
+# Menu assignment settings.
+menu-settings:
+  # Enable WASD navigation for every menu.
+  enable-for-all-menus: true
+  # Menu ids affected by the selected list mode.
+  enabled-menus: []
+  # true: only listed menus are enabled. false: listed menus are disabled.
+  use-whitelist-mode: false
+
+# Lowercase player names for which WASD navigation is disabled.
+disabled-players: []

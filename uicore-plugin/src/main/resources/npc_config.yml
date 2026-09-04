@@ -1,0 +1,35 @@
+# Global defaults for the optional NPC mirror integration.
+# A menu can override these values with its own top-level `npc:` section.
+enabled: true
+debug-mode: false
+
+offset:
+  x: 2.0
+  y: 0.0
+  z: -4.0
+
+# Default yaw offset relative to the menu camera and fallback pitch.
+default-yaw: 180.0
+default-pitch: 0.0
+
+auto-rotate:
+  enabled: false
+  speed: 1.0
+
+sync:
+  equipment: true
+  skin: true
+
+disabled-worlds: []
+disabled-players: []
+
+# Used only when a menu has no explicit `npc.enabled` setting.
+menu-settings:
+  enable-for-all-menus: false
+  enabled-menus: ["demo_entrance_npc"]
+  use-whitelist-mode: true
+
+name-display:
+  show: true
+  format: "&e%player%"
+  always-visible: true

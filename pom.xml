@@ -4,16 +4,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.orvencraft.customscreenmenu</groupId>
-    <artifactId>customscreenmenu-parent</artifactId>
-    <version>1.4.8-orven.1-SNAPSHOT</version>
+    <groupId>org.orvencraft.uicore</groupId>
+    <artifactId>uicore-parent</artifactId>
+    <version>1.4.8-uicore.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>CustomScreenMenu Orven Build</name>
+    <name>UIcore</name>
 
     <modules>
-        <module>customscreenmenu-api</module>
-        <module>customscreenmenu-plugin</module>
+        <module>uicore-api</module>
+        <module>uicore-plugin</module>
     </modules>
 
     <properties>

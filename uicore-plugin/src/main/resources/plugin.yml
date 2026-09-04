@@ -1,0 +1,51 @@
+name: UIcore
+main: org.orvencraft.uicore.UIcorePlugin
+version: ${project.version}
+api-version: '1.21'
+description: UIcore Orven custom build for fixed-camera world-space menus.
+authors: [JSGDJD, OrvenCraft]
+
+commands:
+  uicore:
+    aliases: [ui]
+    description: Opens and manages UIcore menus.
+    usage: /uicore <run|stop|reload|items|itemsstop|text|input|npc|slot>
+permissions:
+  uicore.start:
+    default: op
+  uicore.stop:
+    default: op
+  uicore.reload:
+    default: op
+  uicore.items:
+    default: op
+  uicore.itemsstop:
+    default: op
+  uicore.text:
+    default: op
+  uicore.close:
+    default: true
+  uicore.set_input_field:
+    default: true
+  uicore.input:
+    default: true
+  uicore.npc.toggle:
+    default: op
+  uicore.npc.status:
+    default: op
+  uicore.npc.reload:
+    default: op
+  uicore.npc.rotate:
+    default: op
+  uicore.slot:
+    default: op
+
+depend:
+  - packetevents
+
+softdepend:
+  - PlaceholderAPI
+  - FancyNpcs
+  - FancyNpcsModel
+  - SkinsRestorer
+  - CraftEngine

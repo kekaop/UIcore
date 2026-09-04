@@ -1,0 +1,143 @@
+demo_styles:
+  permission: ""
+  wasd-enabled: true
+  camera-position:
+    distance: 1.5
+    world: world
+    x: -187
+    y: 100
+    z: 347
+    yaw: 190
+    pitch: 0.0
+  layout:
+    title:
+      name: "<aqua><bold>Styles and hover states</bold>"
+      x: 0.0
+      y: 1.18
+      z: 3.5
+      text-size: 0.82
+    smooth_hover:
+      name: "<gray>Smooth hover color"
+      x: -0.95
+      y: 0.55
+      z: 3.5
+      text-size: 0.54
+      style:
+        color: "#8ab4ff"
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+        transition:
+          type: smooth
+          duration: 8
+      pressed-style:
+        text: "<green>Pressed feedback"
+        color: "#62e67a"
+        duration: 5
+      hover-cursor:
+        enabled: true
+        material: AMETHYST_SHARD
+        custom-model-data: 0
+        scale: 1.15
+      hover-tooltip:
+        type: actionbar
+        text: "<aqua>Smooth hover transition and cursor override."
+      command:
+        - "[message] <green>Smooth hover button clicked."
+      stop-menu:
+        enabled: false
+    permission_gate:
+      permission: uicore.demo.secret
+      name: "<yellow>Permission style"
+      x: 0.95
+      y: 0.55
+      z: 3.5
+      text-size: 0.54
+      permission-style:
+        allowed:
+          color: "#62e67a"
+          bold: true
+        denied:
+          color: "#777777"
+          strikethrough: true
+      permission-denied:
+        message: "<red>Missing permission: <yellow>uicore.demo.secret"
+        actionbar: "<gray>permission-denied.commands can run here."
+        commands:
+          - "[message] <gray>Denied command example."
+      command:
+        - "[message] <green>Permission accepted."
+      stop-menu:
+        enabled: false
+    cooldown:
+      name: "<light_purple>Cooldown button"
+      x: 0.0
+      y: 0.08
+      z: 3.5
+      text-size: 0.58
+      hover-enlarge:
+        enabled: true
+        scale: 1.1
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+      pressed-style:
+        text: "<green>Accepted"
+        duration: 5
+      cooldown:
+        key: demo_styles_cooldown
+        time: 5s
+        denied:
+          actionbar: "<red>Wait {cooldown.left}s before clicking again."
+          message: "<gray>This click is on cooldown for {cooldown.left}s."
+      command:
+        - "[message] <green>Cooldown button command executed."
+      stop-menu:
+        enabled: false
+    progress:
+      type: bar-text
+      x: 0.0
+      y: -0.36
+      z: 3.5
+      text-size: 0.48
+      value: "%player_health%"
+      max: "20"
+      segments: 20
+      filled: "<green>|"
+      empty: "<dark_gray>|"
+      prefix: "<red>Health "
+      suffix: " <gray>{value}/{max} ({percent}%)"
+      stop-menu:
+        enabled: false
+    back:
+      name: "<yellow>Back"
+      x: -0.45
+      y: -0.88
+      z: 3.5
+      text-size: 0.62
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      next-menu:
+        enabled: true
+        menu: demo_main
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
+    close:
+      name: "<red>Close"
+      x: 0.55
+      y: -0.88
+      z: 3.5
+      text-size: 0.62
+      hover-enlarge:
+        enabled: true
+        scale: 1.08
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
