@@ -5,6 +5,7 @@ import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType.Play.Client;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerInput;
+import org.orvencraft.uicore.UIcorePlugin;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -12,8 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 public class WASDNavigationManager {
@@ -27,9 +28,13 @@ public class WASDNavigationManager {
    private final Map<UUID, Location[]> playerTextLocations = new ConcurrentHashMap<>();
    private final Map<UUID, Integer> playerSelectedIndex = new ConcurrentHashMap<>();
    private final Map<UUID, Boolean> playerSelectionCooldown = new ConcurrentHashMap<>();
-   private final Map<UUID, List<String>> playerTextCommands = new ConcurrentHashMap<>();
+   private final Map<UUID, List<String>> playerElementIds = new ConcurrentHashMap<>();
+   private final Map<UUID, Boolean> playerJumpPressed = new ConcurrentHashMap<>();
    private final Map<UUID, String> playerCurrentMenus = new ConcurrentHashMap<>();
-   private static final long SELECTION_COOLDOWN_MS = 500L;
+   private record PendingInput(Player player, long generation, float forward, float sideways, boolean jump) {}
+   private final Map<UUID, PendingInput> pendingInputs = new ConcurrentHashMap<>();
+   private final Map<UUID, Long> selectionCooldownUntil = new ConcurrentHashMap<>();
+
 
    private WASDNavigationManager(JavaPlugin plugin) {
       this.plugin = plugin;
@@ -48,6 +53,10 @@ public class WASDNavigationManager {
       return instance;
    }
 
+   static synchronized void clearInstance() {
+      instance = null;
+   }
+
    public void initialize() {
       if (!this.registered) {
          this.registerPacketListener();
@@ -55,6 +64,21 @@ public class WASDNavigationManager {
          this.registered = true;
          this.plugin.getLogger().info("[WASDNavigation] WASD navigation module initialized.");
       }
+   }
+
+   /** Drain only this player's latest packet while on the owning entity region. */
+   public void drainInput(Player player) {
+      if (player == null) {
+         return;
+      }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         player.getScheduler().execute(this.plugin, () -> this.drainInput(player), null, 0L);
+         return;
+      }
+      UUID id = player.getUniqueId();
+      PendingInput input = this.pendingInputs.remove(id);
+      if (input != null && ((UIcorePlugin)this.plugin).isMenuSessionCurrent(player, input.generation()) && this.isWASDEnabledForPlayer(id))
+         this.handlePlayerInput(player, input.forward(), input.sideways(), input.jump());
    }
 
    private void registerPAPIExpansion() {
@@ -77,42 +101,13 @@ public class WASDNavigationManager {
    private void registerPacketListener() {
       this.packetListener = new PacketListenerAbstract() {
          public void onPacketReceive(PacketReceiveEvent event) {
-            if (event.getUser() != null && event.getUser().getName() != null) {
-               if (event.getPacketType() == Client.PLAYER_INPUT) {
-                  String playerName = event.getUser().getName();
-                  WrapperPlayClientPlayerInput inputPacket = new WrapperPlayClientPlayerInput(event);
-                  boolean jump = inputPacket.isJump();
-                  float sideways = 0.0F;
-                  float forward = 0.0F;
-                  if (inputPacket.isForward()) {
-                     forward++;
-                  }
-
-                  if (inputPacket.isBackward()) {
-                     forward--;
-                  }
-
-                  if (inputPacket.isLeft()) {
-                     sideways++;
-                  }
-
-                  if (inputPacket.isRight()) {
-                     sideways--;
-                  }
-
-                  float finalForward = forward;
-                  float finalSideways = sideways;
-                  Bukkit.getScheduler().runTask(WASDNavigationManager.this.plugin, () -> {
-                     Player player = Bukkit.getPlayerExact(playerName);
-                     if (player != null && player.isOnline()) {
-                        UUID playerId = player.getUniqueId();
-                        if (WASDNavigationManager.this.isWASDEnabledForPlayer(playerId)) {
-                           WASDNavigationManager.this.handlePlayerInput(player, finalForward, finalSideways, jump);
-                        }
-                     }
-                  });
-               }
-            }
+            if (event.getPacketType() != Client.PLAYER_INPUT || !(event.getPlayer() instanceof Player player)) return;
+            UUID playerId = player.getUniqueId();
+            if (!WASDNavigationManager.this.isWASDEnabledForPlayer(playerId)) return;
+            WrapperPlayClientPlayerInput packet = new WrapperPlayClientPlayerInput(event);
+            float forward = (packet.isForward() ? 1F : 0F) - (packet.isBackward() ? 1F : 0F);
+            float sideways = (packet.isLeft() ? 1F : 0F) - (packet.isRight() ? 1F : 0F);
+            pendingInputs.put(playerId, new PendingInput(player, ((UIcorePlugin)plugin).getMenuSessionGeneration(player), forward, sideways, packet.isJump()));
          }
       };
       PacketEvents.getAPI().getEventManager().registerListener(this.packetListener);
@@ -121,7 +116,9 @@ public class WASDNavigationManager {
    private void handlePlayerInput(Player player, float forward, float sideways, boolean jump) {
       UUID playerId = player.getUniqueId();
       if (this.playerSessions.containsKey(playerId)) {
-         if (jump) {
+         boolean wasJumpPressed = this.playerJumpPressed.getOrDefault(playerId, false);
+         this.playerJumpPressed.put(playerId, jump);
+         if (jump && !wasJumpPressed) {
             this.executeSelectedCommand(player);
          }
 
@@ -318,30 +315,25 @@ public class WASDNavigationManager {
       UUID playerId = player.getUniqueId();
       int selectedIndex = this.playerSelectedIndex.getOrDefault(playerId, -1);
       if (selectedIndex >= 0) {
-         List<String> commands = this.playerTextCommands.get(playerId);
-         if (commands != null && selectedIndex < commands.size()) {
-            String command = commands.get(selectedIndex);
-            if (command != null && !command.isEmpty()) {
-               WASDSession session = this.playerSessions.get(playerId);
-               if (session != null) {
-                  session.onExecuteCommand(player, command, selectedIndex);
+         List<String> elementIds = this.playerElementIds.get(playerId);
+         if (elementIds != null && selectedIndex < elementIds.size()) {
+            String elementId = elementIds.get(selectedIndex);
+            if (elementId != null && !elementId.isBlank() && this.playerSessions.containsKey(playerId) && UIcorePlugin.plugin != null) {
+               if (this.config.isDebugMode()) {
+                  this.plugin.getLogger().info("[WASDNavigation] Player " + player.getName() + " activates element " + elementId + ".");
                }
+               UIcorePlugin.plugin.activateMenuElement(player, elementId);
             }
          }
       }
    }
 
    private boolean isOnCooldown(UUID playerId) {
-      return this.playerSelectionCooldown.getOrDefault(playerId, false);
+      return this.selectionCooldownUntil.getOrDefault(playerId, 0L) > System.nanoTime();
    }
 
-   private void startCooldown(final UUID playerId) {
-      this.playerSelectionCooldown.put(playerId, true);
-      (new BukkitRunnable() {
-         public void run() {
-            WASDNavigationManager.this.playerSelectionCooldown.put(playerId, false);
-         }
-      }).runTaskLater(this.plugin, 10L);
+   private void startCooldown(UUID playerId) {
+      this.selectionCooldownUntil.put(playerId, System.nanoTime() + Math.max(1L, this.config.getSelectionCooldown()) * 1_000_000L);
    }
 
    private boolean isWASDEnabledForPlayer(UUID playerId) {
@@ -372,18 +364,35 @@ public class WASDNavigationManager {
       }
    }
 
-   public void startSession(Player player, Location[] textLocations, List<String> commands, int initialIndex) {
-      this.startSession(player, null, textLocations, commands, initialIndex);
+   public void startSession(Player player, Location[] textLocations, List<String> elementIds, int initialIndex) {
+      this.startSession(player, null, textLocations, elementIds, null, null, initialIndex);
    }
 
-   public void startSession(Player player, String menuKey, Location[] textLocations, List<String> commands, int initialIndex) {
+   public void startSession(Player player, String menuKey, Location[] textLocations, List<String> elementIds, TextDisplay[] textDisplays, List<Double> scales, int initialIndex) {
+      final int requestedInitialIndex = initialIndex;
+      if (!this.runOnPlayerRegion(player, () -> this.startSession(player, menuKey, textLocations, elementIds, textDisplays, scales, requestedInitialIndex))) {
+         return;
+      }
       UUID playerId = player.getUniqueId();
+      if (menuKey != null && menuKey.equals(this.playerCurrentMenus.get(playerId))) {
+         List<String> oldIds = this.playerElementIds.getOrDefault(playerId, List.of());
+         int oldIndex = this.playerSelectedIndex.getOrDefault(playerId, -1);
+         if (oldIndex >= 0 && oldIndex < oldIds.size() && elementIds != null) {
+            int matched = elementIds.indexOf(oldIds.get(oldIndex));
+            if (matched >= 0) initialIndex = matched;
+         }
+      }
+      initialIndex = textLocations == null || textLocations.length == 0 ? -1 : Math.max(0, Math.min(initialIndex, textLocations.length - 1));
+      WASDSession previous = this.playerSessions.get(playerId);
+      if (previous != null) previous.restoreDisplays();
       WASDSession session = new WASDSession(this.plugin, player, true);
+      session.setTextDisplays(textDisplays == null ? new TextDisplay[0] : textDisplays, scales);
       this.playerSessions.put(playerId, session);
       this.playerTextLocations.put(playerId, textLocations);
-      this.playerTextCommands.put(playerId, commands);
+      this.playerElementIds.put(playerId, elementIds == null ? List.of() : List.copyOf(elementIds));
       this.playerSelectedIndex.put(playerId, initialIndex);
       this.playerSelectionCooldown.put(playerId, false);
+      this.playerJumpPressed.put(playerId, false);
       if (menuKey != null) {
          this.playerCurrentMenus.put(playerId, menuKey);
          if (this.papiExpansion != null && textLocations != null && textLocations.length > 0) {
@@ -396,19 +405,31 @@ public class WASDNavigationManager {
       }
    }
 
-   public void updateTextLocations(Player player, Location[] textLocations, List<String> commands) {
+   public void updateTextLocations(Player player, Location[] textLocations, List<String> elementIds) {
+      if (!this.runOnPlayerRegion(player, () -> this.updateTextLocations(player, textLocations, elementIds))) {
+         return;
+      }
       UUID playerId = player.getUniqueId();
       this.playerTextLocations.put(playerId, textLocations);
-      this.playerTextCommands.put(playerId, commands);
+      this.playerElementIds.put(playerId, elementIds == null ? List.of() : List.copyOf(elementIds));
    }
 
    public void stopSession(Player player) {
+      if (!this.runOnPlayerRegion(player, () -> this.stopSession(player))) {
+         return;
+      }
       UUID playerId = player.getUniqueId();
-      this.playerSessions.remove(playerId);
+      WASDSession session = this.playerSessions.remove(playerId);
+      if (session != null) {
+         session.restoreDisplays();
+      }
       this.playerTextLocations.remove(playerId);
       this.playerSelectedIndex.remove(playerId);
       this.playerSelectionCooldown.remove(playerId);
-      this.playerTextCommands.remove(playerId);
+      this.selectionCooldownUntil.remove(playerId);
+      this.pendingInputs.remove(playerId);
+      this.playerElementIds.remove(playerId);
+      this.playerJumpPressed.remove(playerId);
       this.playerCurrentMenus.remove(playerId);
       if (this.papiExpansion != null) {
          this.papiExpansion.clearPlayerMenu(playerId);
@@ -432,6 +453,9 @@ public class WASDNavigationManager {
    }
 
    public void shutdown() {
+
+      this.pendingInputs.clear();
+      this.selectionCooldownUntil.clear();
       if (this.packetListener != null && this.registered) {
          PacketEvents.getAPI().getEventManager().unregisterListener(this.packetListener);
       }
@@ -443,12 +467,26 @@ public class WASDNavigationManager {
          }
       }
 
+      this.playerSessions.values().forEach(WASDSession::restoreDisplays);
       this.playerSessions.clear();
       this.playerTextLocations.clear();
       this.playerSelectedIndex.clear();
       this.playerSelectionCooldown.clear();
-      this.playerTextCommands.clear();
+      this.playerElementIds.clear();
+      this.playerJumpPressed.clear();
       this.playerCurrentMenus.clear();
       this.registered = false;
+   }
+
+   /** Returns true only when the caller already owns the player's region. */
+   private boolean runOnPlayerRegion(Player player, Runnable action) {
+      if (player == null) {
+         return false;
+      }
+      if (Bukkit.isOwnedByCurrentRegion(player)) {
+         return true;
+      }
+      player.getScheduler().execute(this.plugin, action, null, 0L);
+      return false;
    }
 }

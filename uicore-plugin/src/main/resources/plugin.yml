@@ -1,9 +1,10 @@
 name: UIcore
 main: org.orvencraft.uicore.UIcorePlugin
 version: ${project.version}
-api-version: '1.21'
-description: UIcore Orven custom build for fixed-camera world-space menus.
-authors: [JSGDJD, OrvenCraft]
+api-version: '1.20'
+folia-supported: true
+description: Fixed-camera world-space menus with player-scoped elements, states, and schematic previews.
+authors: [wuhaoxian123, Orven]
 
 commands:
   uicore:
@@ -49,3 +50,5 @@ softdepend:
   - FancyNpcsModel
   - SkinsRestorer
   - CraftEngine
+  - Vault
+  - LuckPerms

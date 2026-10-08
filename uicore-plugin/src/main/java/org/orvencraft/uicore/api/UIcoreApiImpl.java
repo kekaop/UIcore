@@ -4,6 +4,12 @@ import org.orvencraft.uicore.UIcorePlugin;
 import org.orvencraft.uicore.layout.MenuLayout;
 import org.orvencraft.uicore.section.MenuConfigLoader;
 import org.orvencraft.uicore.section.Section;
+import org.orvencraft.uicore.api.extension.ActionService;
+import org.orvencraft.uicore.api.extension.DataService;
+import org.orvencraft.uicore.api.extension.ConditionService;
+import org.orvencraft.uicore.api.extension.ComponentService;
+import org.orvencraft.uicore.api.state.MenuState;
+import org.orvencraft.uicore.api.state.StateKey;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -13,7 +19,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 public final class UIcoreApiImpl implements UIcoreApi {
@@ -23,13 +28,95 @@ public final class UIcoreApiImpl implements UIcoreApi {
       this.plugin = plugin;
    }
 
+   @Override public MenuService menus() {
+      return new MenuService() {
+         public boolean open(Player player, String menuId) { return UIcoreApiImpl.this.openMenu(player, menuId); }
+         public boolean close(Player player) { return UIcoreApiImpl.this.closeMenu(player); }
+         public Optional<String> current(Player player) { return UIcoreApiImpl.this.getOpenMenu(player); }
+         public boolean exists(String menuId) { return UIcoreApiImpl.this.hasMenu(menuId); }
+         public Set<String> ids() { return UIcoreApiImpl.this.getMenuIds(); }
+      };
+   }
+
+   @Override public ElementService elements() {
+      return new ElementService() {
+         public List<String> ids(String menuId) { return UIcoreApiImpl.this.getElementIds(menuId); }
+         public Optional<MenuElementSnapshot> get(String menuId, String elementId) { return UIcoreApiImpl.this.getElement(menuId, elementId); }
+         public Optional<MenuElementSnapshot> get(Player player, String menuId, String elementId) { return UIcoreApiImpl.this.getElement(player, menuId, elementId); }
+         public MenuMutationResult add(String menuId, MenuElementSpec element) { return UIcoreApiImpl.this.addElement(menuId, element); }
+         public MenuMutationResult add(Player player, String menuId, MenuElementSpec element) { return UIcoreApiImpl.this.addElement(player, menuId, element); }
+         public MenuMutationResult remove(String menuId, String elementId) { return UIcoreApiImpl.this.removeElement(menuId, elementId); }
+         public MenuMutationResult remove(Player player, String menuId, String elementId) { return UIcoreApiImpl.this.removeElement(player, menuId, elementId); }
+         public MenuMutationResult edit(String menuId, String elementId, Consumer<MenuElementEditor> editor) { return UIcoreApiImpl.this.editElement(menuId, elementId, editor); }
+         public MenuMutationResult edit(Player player, String menuId, String elementId, Consumer<MenuElementEditor> editor) { return UIcoreApiImpl.this.editElement(player, menuId, elementId, editor); }
+      };
+   }
+
+   @Override public InputService inputs() {
+      return new InputService() {
+         public Optional<String> get(Player player, String field) { return UIcoreApiImpl.this.getInput(player, field); }
+         public Map<String, String> all(Player player) { return UIcoreApiImpl.this.getInputs(player); }
+         public void set(Player player, String field, String value) { UIcoreApiImpl.this.setInput(player, field, value); }
+         public void clear(Player player, String field) { UIcoreApiImpl.this.clearInput(player, field); }
+         public void clear(Player player) { UIcoreApiImpl.this.clearInputs(player); }
+         public Optional<String> focused(Player player) { return UIcoreApiImpl.this.getFocusedInputField(player); }
+         public void focus(Player player, String field) { UIcoreApiImpl.this.focusInputField(player, field); }
+         public void clearFocus(Player player) { UIcoreApiImpl.this.clearFocusedInputField(player); }
+      };
+   }
+
+   @Override public SlotService slots() {
+      return new SlotService() {
+         public Set<String> ids(String menuId) { return UIcoreApiImpl.this.getSlotIds(menuId); }
+         public Set<String> templateIds(String menuId) { return UIcoreApiImpl.this.getTemplateIds(menuId); }
+         public Optional<String> get(String menuId, String slotId) { return UIcoreApiImpl.this.getSlot(menuId, slotId); }
+         public Optional<String> get(Player player, String menuId, String slotId) { return UIcoreApiImpl.this.getSlot(player, menuId, slotId); }
+         public MenuMutationResult set(String menuId, String slotId, String templateId) { return UIcoreApiImpl.this.setSlot(menuId, slotId, templateId); }
+         public MenuMutationResult set(Player player, String menuId, String slotId, String templateId) { return UIcoreApiImpl.this.setSlot(player, menuId, slotId, templateId); }
+         public MenuMutationResult clear(String menuId, String slotId) { return UIcoreApiImpl.this.clearSlot(menuId, slotId); }
+         public MenuMutationResult clear(Player player, String menuId, String slotId) { return UIcoreApiImpl.this.clearSlot(player, menuId, slotId); }
+         public MenuMutationResult reset(String menuId, String slotId) { return UIcoreApiImpl.this.resetSlot(menuId, slotId); }
+         public MenuMutationResult reset(Player player, String menuId, String slotId) { return UIcoreApiImpl.this.resetSlot(player, menuId, slotId); }
+      };
+   }
+
+   @Override public ActionService actions() { return this.plugin.getExtensionManager().actions(); }
+   @Override public DataService data() { return this.plugin.getExtensionManager().data(); }
+   @Override public ConditionService conditions() { return this.plugin.getExtensionManager().conditions(); }
+   @Override public ComponentService components() { return this.plugin.getExtensionManager().components(); }
+
+   @Override public MenuState state(Player player, String menuId) {
+      return new MenuState() {
+         public <T> T get(StateKey<T> key) {
+            String raw = UIcoreApiImpl.this.getState(player, menuId, key.name()).orElse(null);
+            if (raw == null) return key.defaultValue();
+            try { return key.parse(raw); }
+            catch (IllegalArgumentException exception) { return key.defaultValue(); }
+         }
+         public <T> void set(StateKey<T> key, T value) {
+            UIcoreApiImpl.this.setState(player, menuId, key.name(), key.format(value));
+         }
+         public void clear(StateKey<?> key) {
+            UIcoreApiImpl.this.clearState(player, menuId, key.name());
+         }
+      };
+   }
+
+   @Override public String apiVersion() { return "1.2"; }
+
+   @Override public Set<String> capabilities() {
+      Set<String> capabilities = new LinkedHashSet<>(UIcoreApi.super.capabilities());
+      capabilities.addAll(Set.of("extension-actions", "extension-data", "extension-conditions",
+         "extension-components", "typed-state", "service-groups"));
+      return Set.copyOf(capabilities);
+   }
+
    public boolean openMenu(Player player, String menuId) {
       if (player == null || !player.isOnline() || !this.hasMenu(menuId)) {
          return false;
       }
 
-      this.plugin.setupCursor(player, menuId);
-      return true;
+      return this.runPlayerAction(player, () -> this.plugin.setupCursor(player, menuId));
    }
 
    public boolean closeMenu(Player player) {
@@ -37,10 +124,19 @@ public final class UIcoreApiImpl implements UIcoreApi {
    }
 
    public boolean closeMenu(Player player, boolean restoreLocation) {
-      if (player == null || !player.isOnline() || !this.isMenuOpen(player)) {
+      if (player == null || !player.isOnline()) {
          return false;
       }
-
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.runPlayerAction(player, () -> {
+            if (this.plugin.getCurrentPlayerMenu(player) != null) {
+               this.plugin.stopCursor(player, restoreLocation);
+            }
+         });
+      }
+      if (!this.isMenuOpen(player)) {
+         return false;
+      }
       this.plugin.stopCursor(player, restoreLocation);
       return true;
    }
@@ -110,15 +206,15 @@ public final class UIcoreApiImpl implements UIcoreApi {
    }
 
    public void setInput(Player player, String field, String value) {
-      this.plugin.setPlayerInputData(player, field, value);
+      this.runPlayerAction(player, () -> this.plugin.submitMenuInput(player, field, value));
    }
 
    public void clearInput(Player player, String field) {
-      this.plugin.clearPlayerInputData(player, field);
+      this.runPlayerAction(player, () -> this.plugin.clearPlayerInputData(player, field));
    }
 
    public void clearInputs(Player player) {
-      this.plugin.clearPlayerInputData(player);
+      this.runPlayerAction(player, () -> this.plugin.clearPlayerInputData(player));
    }
 
    public Optional<String> getFocusedInputField(Player player) {
@@ -126,11 +222,11 @@ public final class UIcoreApiImpl implements UIcoreApi {
    }
 
    public void focusInputField(Player player, String field) {
-      this.plugin.setCurrentPlayerInputField(player, field);
+      this.runPlayerAction(player, () -> this.plugin.setCurrentPlayerInputField(player, field));
    }
 
    public void clearFocusedInputField(Player player) {
-      this.plugin.setCurrentPlayerInputField(player, "");
+      this.runPlayerAction(player, () -> this.plugin.setCurrentPlayerInputField(player, ""));
    }
 
    public Optional<String> getState(Player player, String menuId, String key) {
@@ -147,18 +243,24 @@ public final class UIcoreApiImpl implements UIcoreApi {
    }
 
    public void setState(Player player, String menuId, String key, String value) {
-      this.plugin.setPlayerMenuState(player, menuId, key, value);
-      this.refreshPlayerMenu(player, menuId);
+      this.runPlayerAction(player, () -> {
+         this.plugin.setPlayerMenuState(player, menuId, key, value);
+         this.refreshPlayerMenu(player, menuId);
+      });
    }
 
    public void clearState(Player player, String menuId, String key) {
-      this.plugin.clearPlayerMenuState(player, menuId, key);
-      this.refreshPlayerMenu(player, menuId);
+      this.runPlayerAction(player, () -> {
+         this.plugin.clearPlayerMenuState(player, menuId, key);
+         this.refreshPlayerMenu(player, menuId);
+      });
    }
 
    public void clearState(Player player, String menuId) {
-      this.plugin.clearPlayerMenuState(player, menuId);
-      this.refreshPlayerMenu(player, menuId);
+      this.runPlayerAction(player, () -> {
+         this.plugin.clearPlayerMenuState(player, menuId);
+         this.refreshPlayerMenu(player, menuId);
+      });
    }
 
    public Set<String> getSlotIds(String menuId) {
@@ -189,7 +291,7 @@ public final class UIcoreApiImpl implements UIcoreApi {
       }
 
       this.plugin.setGlobalMenuSlot(menuId, slotId, templateId);
-      int refreshed = this.refreshMenu(menuId);
+      int refreshed = this.replaceMenuElement(menuId, slotId);
       return MenuMutationResult.success("Global slot set: " + menuId + ":" + slotId + " -> " + templateId, refreshed);
    }
 
@@ -197,13 +299,16 @@ public final class UIcoreApiImpl implements UIcoreApi {
       if (!this.isValidPlayer(player)) {
          return MenuMutationResult.failure("Player is not online");
       }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.queuePlayerMutation(player, () -> this.setSlot(player, menuId, slotId, templateId));
+      }
       MenuMutationResult validation = this.validateSlotAndTemplate(menuId, slotId, templateId);
       if (validation != null) {
          return validation;
       }
 
       this.plugin.setPlayerMenuSlot(player, menuId, slotId, templateId);
-      int refreshed = this.refreshPlayerMenu(player, menuId);
+      int refreshed = this.replacePlayerMenuElement(player, menuId, slotId);
       return MenuMutationResult.success("Player slot set: " + player.getName() + " " + menuId + ":" + slotId + " -> " + templateId, refreshed);
    }
 
@@ -214,7 +319,7 @@ public final class UIcoreApiImpl implements UIcoreApi {
       }
 
       this.plugin.setGlobalMenuSlot(menuId, slotId, "");
-      int refreshed = this.refreshMenu(menuId);
+      int refreshed = this.replaceMenuElement(menuId, slotId);
       return MenuMutationResult.success("Global slot cleared: " + menuId + ":" + slotId, refreshed);
    }
 
@@ -222,13 +327,16 @@ public final class UIcoreApiImpl implements UIcoreApi {
       if (!this.isValidPlayer(player)) {
          return MenuMutationResult.failure("Player is not online");
       }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.queuePlayerMutation(player, () -> this.clearSlot(player, menuId, slotId));
+      }
       MenuMutationResult validation = this.validateSlot(menuId, slotId);
       if (validation != null) {
          return validation;
       }
 
       this.plugin.setPlayerMenuSlot(player, menuId, slotId, "");
-      int refreshed = this.refreshPlayerMenu(player, menuId);
+      int refreshed = this.replacePlayerMenuElement(player, menuId, slotId);
       return MenuMutationResult.success("Player slot cleared: " + player.getName() + " " + menuId + ":" + slotId, refreshed);
    }
 
@@ -239,7 +347,7 @@ public final class UIcoreApiImpl implements UIcoreApi {
       }
 
       this.plugin.resetGlobalMenuSlot(menuId, slotId);
-      int refreshed = this.refreshMenu(menuId);
+      int refreshed = this.replaceMenuElement(menuId, slotId);
       return MenuMutationResult.success("Global slot reset: " + menuId + ":" + slotId, refreshed);
    }
 
@@ -247,13 +355,16 @@ public final class UIcoreApiImpl implements UIcoreApi {
       if (!this.isValidPlayer(player)) {
          return MenuMutationResult.failure("Player is not online");
       }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.queuePlayerMutation(player, () -> this.resetSlot(player, menuId, slotId));
+      }
       MenuMutationResult validation = this.validateSlot(menuId, slotId);
       if (validation != null) {
          return validation;
       }
 
       this.plugin.resetPlayerMenuSlot(player, menuId, slotId);
-      int refreshed = this.refreshPlayerMenu(player, menuId);
+      int refreshed = this.replacePlayerMenuElement(player, menuId, slotId);
       return MenuMutationResult.success("Player slot reset: " + player.getName() + " " + menuId + ":" + slotId, refreshed);
    }
 
@@ -269,15 +380,18 @@ public final class UIcoreApiImpl implements UIcoreApi {
          return MenuMutationResult.failure("Element already exists: " + menuId + ":" + element.id());
       }
 
-      MenuLayout layout = MenuConfigLoader.loadLayout(menuId, element.id(), element.toConfiguration(), section.world);
+      MenuLayout layout = MenuConfigLoader.loadLayout(menuId, element.id(), element.model(), section.world);
       section.add(element.id(), layout);
-      int refreshed = this.refreshMenu(menuId);
+      int refreshed = this.refreshMenuElement(menuId, element.id());
       return MenuMutationResult.success("Element added: " + menuId + ":" + element.id(), refreshed);
    }
 
    public MenuMutationResult addElement(Player player, String menuId, MenuElementSpec element) {
       if (!this.isValidPlayer(player)) {
          return MenuMutationResult.failure("Player is not online");
+      }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.queuePlayerMutation(player, () -> this.addElement(player, menuId, element));
       }
       Section section = UIcorePlugin.sectionManager.get(menuId);
       if (section == null) {
@@ -290,9 +404,9 @@ public final class UIcoreApiImpl implements UIcoreApi {
          return MenuMutationResult.failure("Element already exists for player: " + player.getName() + " " + menuId + ":" + element.id());
       }
 
-      MenuLayout layout = MenuConfigLoader.loadLayout(menuId, element.id(), element.toConfiguration(), section.world);
+      MenuLayout layout = MenuConfigLoader.loadLayout(menuId, element.id(), element.model(), section.world);
       this.plugin.putPlayerMenuLayout(player, menuId, element.id(), layout);
-      int refreshed = this.refreshPlayerMenu(player, menuId);
+      int refreshed = this.refreshPlayerMenuElement(player, menuId, element.id());
       return MenuMutationResult.success("Player element added: " + player.getName() + " " + menuId + ":" + element.id(), refreshed);
    }
 
@@ -305,13 +419,16 @@ public final class UIcoreApiImpl implements UIcoreApi {
          return MenuMutationResult.failure("Element not found: " + menuId + ":" + elementId);
       }
 
-      int refreshed = this.refreshMenu(menuId);
+      int refreshed = this.replaceMenuElement(menuId, elementId);
       return MenuMutationResult.success("Element removed: " + menuId + ":" + elementId, refreshed);
    }
 
    public MenuMutationResult removeElement(Player player, String menuId, String elementId) {
       if (!this.isValidPlayer(player)) {
          return MenuMutationResult.failure("Player is not online");
+      }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.queuePlayerMutation(player, () -> this.removeElement(player, menuId, elementId));
       }
       if (UIcorePlugin.sectionManager.get(menuId) == null) {
          return MenuMutationResult.failure("Menu not found: " + menuId);
@@ -321,7 +438,7 @@ public final class UIcoreApiImpl implements UIcoreApi {
       }
 
       this.plugin.hidePlayerMenuLayout(player, menuId, elementId);
-      int refreshed = this.refreshPlayerMenu(player, menuId);
+      int refreshed = this.replacePlayerMenuElement(player, menuId, elementId);
       return MenuMutationResult.success("Player element removed: " + player.getName() + " " + menuId + ":" + elementId, refreshed);
    }
 
@@ -341,20 +458,21 @@ public final class UIcoreApiImpl implements UIcoreApi {
 
       MenuElementEditor mutable = new MenuElementEditor(existing.copySourceConfig());
       editor.accept(mutable);
-      YamlConfiguration updated = mutable.toConfiguration();
-      if (!updated.contains("name")) {
-         updated.set("name", existing.name);
-      }
+      org.orvencraft.uicore.api.model.UiElementModel updated = mutable.model();
+      if (!updated.contains("name")) updated = updated.with("name", existing.name);
 
       MenuLayout replacement = MenuConfigLoader.loadLayout(menuId, elementId, updated, section.world);
       section.add(elementId, replacement);
-      int refreshed = this.refreshMenu(menuId);
+      int refreshed = this.replaceMenuElement(menuId, elementId);
       return MenuMutationResult.success("Element edited: " + menuId + ":" + elementId, refreshed);
    }
 
    public MenuMutationResult editElement(Player player, String menuId, String elementId, Consumer<MenuElementEditor> editor) {
       if (!this.isValidPlayer(player)) {
          return MenuMutationResult.failure("Player is not online");
+      }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.queuePlayerMutation(player, () -> this.editElement(player, menuId, elementId, editor));
       }
       Section section = UIcorePlugin.sectionManager.get(menuId);
       if (section == null) {
@@ -371,29 +489,34 @@ public final class UIcoreApiImpl implements UIcoreApi {
 
       MenuElementEditor mutable = new MenuElementEditor(existing.copySourceConfig());
       editor.accept(mutable);
-      YamlConfiguration updated = mutable.toConfiguration();
-      if (!updated.contains("name")) {
-         updated.set("name", existing.name);
-      }
+      org.orvencraft.uicore.api.model.UiElementModel updated = mutable.model();
+      if (!updated.contains("name")) updated = updated.with("name", existing.name);
 
       MenuLayout replacement = MenuConfigLoader.loadLayout(menuId, elementId, updated, section.world);
       this.plugin.putPlayerMenuLayout(player, menuId, elementId, replacement);
-      int refreshed = this.refreshPlayerMenu(player, menuId);
+      int refreshed = this.replacePlayerMenuElement(player, menuId, elementId);
       return MenuMutationResult.success("Player element edited: " + player.getName() + " " + menuId + ":" + elementId, refreshed);
    }
 
    public void clearPlayerElements(Player player, String menuId) {
-      this.plugin.clearPlayerMenuLayouts(player, menuId);
-      this.refreshPlayerMenu(player, menuId);
+      this.runPlayerAction(player, () -> {
+         this.plugin.clearPlayerMenuLayouts(player, menuId);
+         this.refreshPlayerMenu(player, menuId);
+      });
    }
 
    public void clearPlayerElements(Player player) {
-      this.plugin.clearPlayerMenuLayouts(player, null);
-      this.plugin.refreshCurrentMenu(player);
+      this.runPlayerAction(player, () -> {
+         this.plugin.clearPlayerMenuLayouts(player, null);
+         this.plugin.refreshCurrentMenu(player);
+      });
    }
 
    public void refresh(Player player) {
-      this.plugin.refreshCurrentMenu(player);
+      this.runPlayerAction(player, () -> {
+         this.plugin.getExtensionManager().invalidateData(player);
+         this.plugin.refreshCurrentMenu(player);
+      });
    }
 
    public int refreshMenu(String menuId) {
@@ -459,11 +582,82 @@ public final class UIcoreApiImpl implements UIcoreApi {
    }
 
    private int refreshPlayerMenu(Player player, String menuId) {
-      if (this.isValidPlayer(player) && menuId != null && menuId.equals(this.plugin.getCurrentPlayerMenu(player))) {
+      if (!this.isValidPlayer(player) || menuId == null) {
+         return 0;
+      }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.runPlayerAction(player, () -> this.refreshPlayerMenu(player, menuId)) ? 1 : 0;
+      }
+      if (menuId.equals(this.plugin.getCurrentPlayerMenu(player))) {
          this.plugin.refreshCurrentMenu(player);
          return 1;
       }
 
       return 0;
+   }
+
+   private int refreshPlayerMenuElement(Player player, String menuId, String elementId) {
+      if (!this.isValidPlayer(player) || menuId == null) {
+         return 0;
+      }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.runPlayerAction(player, () -> this.refreshPlayerMenuElement(player, menuId, elementId)) ? 1 : 0;
+      }
+      if (menuId.equals(this.plugin.getCurrentPlayerMenu(player)) && this.plugin.refreshMenuElement(player, menuId, elementId)) {
+         return 1;
+      }
+      return 0;
+   }
+
+   private int replacePlayerMenuElement(Player player, String menuId, String elementId) {
+      if (!this.isValidPlayer(player) || menuId == null) {
+         return 0;
+      }
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         return this.runPlayerAction(player, () -> this.replacePlayerMenuElement(player, menuId, elementId)) ? 1 : 0;
+      }
+      if (menuId.equals(this.plugin.getCurrentPlayerMenu(player)) && this.plugin.replaceMenuElement(player, menuId, elementId)) {
+         return 1;
+      }
+      return 0;
+   }
+
+   private int refreshMenuElement(String menuId, String elementId) {
+      int refreshed = 0;
+      for (Player player : Bukkit.getOnlinePlayers()) {
+         refreshed += this.refreshPlayerMenuElement(player, menuId, elementId);
+      }
+      return refreshed;
+   }
+
+   private int replaceMenuElement(String menuId, String elementId) {
+      int refreshed = 0;
+      for (Player player : Bukkit.getOnlinePlayers()) {
+         refreshed += this.replacePlayerMenuElement(player, menuId, elementId);
+      }
+      return refreshed;
+   }
+
+   /**
+    * UIcoreApi is safe to call from a global, async or foreign region thread.
+    * Player-affecting mutations are queued to the player's entity scheduler;
+    * a successful boolean/result means the work was accepted when it had to be
+    * queued, while refresh counts include scheduled players.
+    */
+   private boolean runPlayerAction(Player player, Runnable action) {
+      if (!this.isValidPlayer(player)) {
+         return false;
+      }
+      if (Bukkit.isOwnedByCurrentRegion(player)) {
+         action.run();
+         return true;
+      }
+      return player.getScheduler().execute(this.plugin, action, null, 0L);
+   }
+
+   private MenuMutationResult queuePlayerMutation(Player player, Runnable action) {
+      return this.runPlayerAction(player, action)
+         ? MenuMutationResult.success("Player menu mutation scheduled: " + player.getUniqueId(), 0)
+         : MenuMutationResult.failure("Player is not available for menu mutation");
    }
 }

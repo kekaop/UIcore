@@ -37,8 +37,9 @@ public class WASDModule {
    public static synchronized void shutdown() {
       if (instance != null) {
          instance.navigationHook.cleanup();
-         instance.navigationManager.shutdown();
          instance = null;
+         WASDNavigationHook.clearInstance();
+         WASDNavigationManager.clearInstance();
       }
    }
 
@@ -51,10 +52,10 @@ public class WASDModule {
    }
 
    public static void onMenuOpen(
-      Player player, String menuKey, Location[] textLocations, List<String> commands, TextDisplay[] textDisplays, List<Double> scales
+      Player player, String menuKey, Location[] textLocations, List<String> elementIds, TextDisplay[] textDisplays, List<Double> scales
    ) {
-      if (instance != null && instance.enabled) {
-         instance.navigationHook.onMenuOpen(player, menuKey, textLocations, commands, textDisplays, scales);
+      if (instance != null) {
+         instance.navigationHook.onMenuOpen(player, menuKey, textLocations, elementIds, textDisplays, scales);
       }
    }
 
@@ -65,10 +66,10 @@ public class WASDModule {
    }
 
    public static void onMenuSwitch(
-      Player player, String newMenuKey, Location[] textLocations, List<String> commands, TextDisplay[] textDisplays, List<Double> scales
+      Player player, String newMenuKey, Location[] textLocations, List<String> elementIds, TextDisplay[] textDisplays, List<Double> scales
    ) {
-      if (instance != null && instance.enabled) {
-         instance.navigationHook.onMenuSwitch(player, newMenuKey, textLocations, commands, textDisplays, scales);
+      if (instance != null) {
+         instance.navigationHook.onMenuSwitch(player, newMenuKey, textLocations, elementIds, textDisplays, scales);
       }
    }
 

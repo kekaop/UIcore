@@ -2,6 +2,7 @@ package org.orvencraft.uicore.section;
 
 import org.orvencraft.uicore.layout.MenuLayout;
 import org.orvencraft.uicore.npc.NPCMenuSettings;
+import org.orvencraft.uicore.schematic.SchematicPlacement;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ public class Section {
    public final LinkedHashMap<String, MenuSlot> slots;
    private final Map<String, MenuLayout> materializedSlots;
    public NPCMenuSettings npcSettings;
+   public List<SchematicPlacement> schematics = List.of();
    public MenuPositionType positionType = MenuPositionType.FIXED;
    public double playerOffsetRight;
    public double playerOffsetUp;
@@ -141,6 +143,7 @@ public class Section {
       );
       copy.key = this.key;
       copy.npcSettings = this.npcSettings;
+      copy.schematics = this.schematics;
       copy.positionType = this.positionType;
       copy.playerOffsetRight = this.playerOffsetRight;
       copy.playerOffsetUp = this.playerOffsetUp;
@@ -151,6 +154,27 @@ public class Section {
       copy.templates.putAll(this.templates);
       copy.slots.putAll(this.slots);
       return copy;
+   }
+
+   /**
+    * Runtime player-relative sections only own camera coordinates.  Their menu
+    * definition remains the canonical section definition and must be refreshed
+    * after a global API mutation.
+    */
+   public synchronized void syncDefinitionFrom(Section definition) {
+      if (definition == null || definition == this) {
+         return;
+      }
+
+      this.layouts.clear();
+      this.layouts.putAll(definition.layouts);
+      this.templates.clear();
+      this.templates.putAll(definition.templates);
+      this.slots.clear();
+      this.slots.putAll(definition.slots);
+      this.materializedSlots.clear();
+      this.npcSettings = definition.npcSettings;
+      this.schematics = definition.schematics;
    }
 
    public boolean isPlayerRelative() {

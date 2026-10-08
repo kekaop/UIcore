@@ -7,11 +7,11 @@ import org.orvencraft.uicore.section.Section;
 import org.orvencraft.uicore.style.TextStyleConfig;
 import org.orvencraft.uicore.util.CommandUtils;
 import org.orvencraft.uicore.util.HoverSoundManager;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -20,10 +20,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.joml.Vector3f;
+import net.kyori.adventure.text.Component;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 public class HoverEnlargeManager {
    private final UIcorePlugin plugin;
@@ -32,25 +32,23 @@ public class HoverEnlargeManager {
    private final HoverSoundManager hoverSoundManager;
    private final Map<UUID, TextDisplay> currentHovered = new ConcurrentHashMap<>();
    private final Map<UUID, MenuLayout> currentHoveredLayout = new ConcurrentHashMap<>();
-   private final Map<UUID, BukkitTask> textStyleTasks = new ConcurrentHashMap<>();
+   private final Map<UUID, ScheduledTask> textStyleTasks = new ConcurrentHashMap<>();
    private final Map<UUID, ItemStack> originalCursorItems = new ConcurrentHashMap<>();
    private final Map<UUID, Vector3f> originalCursorScales = new ConcurrentHashMap<>();
-   private BukkitRunnable hoverDetectionTask;
+
 
    public HoverEnlargeManager(UIcorePlugin plugin) {
       this.plugin = plugin;
       this.hoverSoundManager = new HoverSoundManager(plugin);
-      this.startHoverDetection();
+
    }
 
    public HoverSoundManager getHoverSoundManager() {
       return this.hoverSoundManager;
    }
 
-   private void startHoverDetection() {
-      this.hoverDetectionTask = new BukkitRunnable() {
-         public void run() {
-            for (Player player : Bukkit.getOnlinePlayers()) {
+   /** Called on the viewer entity scheduler every two ticks. */
+   public void tickPlayer(Player player) {
                if (UIcorePlugin.playerCursors.containsKey(player)) {
                   Location cursorLoc = UIcorePlugin.cursorExactLocations.get(player);
                   if (cursorLoc != null) {
@@ -69,7 +67,9 @@ public class HoverEnlargeManager {
                                  || layout.hasLeaveCommands()
                                  || layout.hasHoverVisualEffect()) {
                                  TextDisplay display = HoverEnlargeManager.this.plugin.getTextDisplayByKeys(player, menuKey, layout.key);
-                                 if (display != null && display.isValid() && TextDisplayHitBox.isInside(display, cursorLoc)) {
+                                 if (display != null
+                                    && display.isValid()
+                                    && HoverEnlargeManager.this.plugin.isCursorInsideMenuDisplay(player, section, display, cursorLoc)) {
                                     double distance = display.getLocation().distanceSquared(cursorLoc);
                                     if (distance < minDistance) {
                                        minDistance = distance;
@@ -162,10 +162,6 @@ public class HoverEnlargeManager {
                      }
                   }
                }
-            }
-         }
-      };
-      this.hoverDetectionTask.runTaskTimer(this.plugin, 0L, 2L);
    }
 
    private void enlargeTextDisplay(TextDisplay textDisplay, MenuLayout layout) {
@@ -203,7 +199,7 @@ public class HoverEnlargeManager {
 
    private void applyTextStyle(Player player, TextDisplay display, MenuLayout layout, boolean hovered) {
       if (player != null && display != null && display.isValid() && layout != null && layout.hasAnyTextStyle()) {
-         BukkitTask previousTask = this.textStyleTasks.remove(display.getUniqueId());
+         ScheduledTask previousTask = this.textStyleTasks.remove(display.getUniqueId());
          if (previousTask != null) {
             previousTask.cancel();
          }
@@ -214,30 +210,39 @@ public class HoverEnlargeManager {
          int[] to = TextStyleConfig.parseRgb(targetColor);
          if (hovered && layout.hasSmoothHoverTransition() && from != null && to != null) {
             int duration = Math.max(1, layout.getHoverTransitionDuration());
-            BukkitRunnable task = new BukkitRunnable() {
-               private int tick = 0;
-
-               public void run() {
-                  if (!display.isValid()) {
-                     this.cancel();
-                     HoverEnlargeManager.this.textStyleTasks.remove(display.getUniqueId());
-                     return;
-                  }
-
-                  double progress = Math.min(1.0, (double)this.tick / (double)duration);
-                  int red = (int)Math.round(from[0] + (to[0] - from[0]) * progress);
-                  int green = (int)Math.round(from[1] + (to[1] - from[1]) * progress);
-                  int blue = (int)Math.round(from[2] + (to[2] - from[2]) * progress);
-                  display.setText(layout.renderStyledName(player, true, false, TextStyleConfig.toHex(red, green, blue)));
-                  if (this.tick++ >= duration) {
-                     this.cancel();
-                     HoverEnlargeManager.this.textStyleTasks.remove(display.getUniqueId());
-                  }
+            UUID displayId = display.getUniqueId();
+            List<Component> frames = new ArrayList<>(duration + 1);
+            for (int frame = 0; frame <= duration; frame++) {
+               double progress = Math.min(1.0, (double) frame / duration);
+               int red = (int) Math.round(from[0] + (to[0] - from[0]) * progress);
+               int green = (int) Math.round(from[1] + (to[1] - from[1]) * progress);
+               int blue = (int) Math.round(from[2] + (to[2] - from[2]) * progress);
+               frames.add(layout.renderStyledComponent(player, true, false, TextStyleConfig.toHex(red, green, blue)));
+            }
+            int[] tick = {0};
+            ScheduledTask[] taskReference = new ScheduledTask[1];
+            ScheduledTask task = UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(display).runAtFixedRate(() -> {
+               if (!display.isValid()) {
+                  if (taskReference[0] != null) taskReference[0].cancel();
+                  HoverEnlargeManager.this.textStyleTasks.remove(displayId);
+                  return;
                }
-            };
-            this.textStyleTasks.put(display.getUniqueId(), task.runTaskTimer(this.plugin, 0L, 1L));
+               display.text(frames.get(tick[0]));
+               if (tick[0]++ >= duration) {
+                  if (taskReference[0] != null) taskReference[0].cancel();
+                  HoverEnlargeManager.this.textStyleTasks.remove(displayId);
+               }
+            }, () -> HoverEnlargeManager.this.textStyleTasks.remove(displayId), 1L, 1L);
+            if (task != null) {
+               taskReference[0] = task;
+               this.textStyleTasks.put(displayId, task);
+            }
          } else {
-            display.setText(layout.renderStyledName(player, hovered, false));
+            Component styled = layout.renderStyledComponent(player, hovered, false);
+            UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(display).run(
+               () -> { if (display.isValid()) display.text(styled); },
+               () -> { }
+            );
          }
       }
    }
@@ -250,34 +255,38 @@ public class HoverEnlargeManager {
          }
 
          for (TextDisplay display : menuKey == null ? List.<TextDisplay>of() : this.plugin.getTextDisplaysByKeys(player, menuKey, layout.key)) {
-            BukkitTask previousTask = this.textStyleTasks.remove(display.getUniqueId());
+            ScheduledTask previousTask = this.textStyleTasks.remove(display.getUniqueId());
             if (previousTask != null) {
                previousTask.cancel();
             }
 
-            BukkitRunnable task = new BukkitRunnable() {
-               public void run() {
-                  if (display.isValid()) {
-                     String rendered = layout.renderStyledName(player, HoverEnlargeManager.this.isCurrentHovered(player, layout), false);
-                     display.setText(rendered);
-                     display.text(ColorParser.parse(rendered));
-                  }
-
-                  HoverEnlargeManager.this.textStyleTasks.remove(display.getUniqueId());
+            UUID displayId = display.getUniqueId();
+            Component releasedStyle = layout.renderStyledComponent(player, this.isCurrentHovered(player, layout), false);
+            ScheduledTask task = UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(display).runDelayed(() -> {
+               if (display.isValid()) {
+                  display.text(releasedStyle);
                }
-            };
-            this.textStyleTasks.put(display.getUniqueId(), task.runTaskLater(this.plugin, Math.max(1, layout.getPressedStyleDuration())));
+               HoverEnlargeManager.this.textStyleTasks.remove(displayId);
+            }, () -> HoverEnlargeManager.this.textStyleTasks.remove(displayId), Math.max(1, layout.getPressedStyleDuration()));
+            if (task != null) {
+               this.textStyleTasks.put(displayId, task);
+            }
          }
       }
    }
 
-   private boolean isCurrentHovered(Player player, MenuLayout layout) {
+   public String getHoveredElementId(Player player) {
+      MenuLayout layout = player == null ? null : this.currentHoveredLayout.get(player.getUniqueId());
+      return layout == null || !layout.isVisible(player) ? "" : layout.key;
+   }
+
+   public boolean isCurrentHovered(Player player, MenuLayout layout) {
       return player != null && layout != null && this.currentHoveredLayout.get(player.getUniqueId()) == layout;
    }
 
    private void showHoverTooltip(Player player, MenuLayout layout) {
       if (player != null && layout != null && layout.hasHoverTooltip()) {
-         String text = UIcorePlugin.parsePlaceholders(player, layout.getHoverTooltipText());
+         String text = layout.getHoverTooltipText();
          if ("message".equalsIgnoreCase(layout.getHoverTooltipType()) || "chat".equalsIgnoreCase(layout.getHoverTooltipType())) {
             CommandUtils.sendChatMessage(player, text);
          } else {
@@ -358,7 +367,7 @@ public class HoverEnlargeManager {
 
       TextDisplay hoveredDisplay = this.currentHovered.get(playerId);
       if (hoveredDisplay != null) {
-         BukkitTask styleTask = this.textStyleTasks.remove(hoveredDisplay.getUniqueId());
+         ScheduledTask styleTask = this.textStyleTasks.remove(hoveredDisplay.getUniqueId());
          if (styleTask != null) {
             styleTask.cancel();
          }
@@ -371,16 +380,13 @@ public class HoverEnlargeManager {
    }
 
    public void cleanup() {
-      if (this.hoverDetectionTask != null) {
-         this.hoverDetectionTask.cancel();
-         this.hoverDetectionTask = null;
-      }
+
 
       for (TextDisplay display : this.enlargedTextDisplays.values()) {
          this.resetTextDisplaySize(display);
       }
 
-      for (BukkitTask task : this.textStyleTasks.values()) {
+      for (ScheduledTask task : this.textStyleTasks.values()) {
          task.cancel();
       }
 
@@ -396,12 +402,7 @@ public class HoverEnlargeManager {
 
    private void executeCommands(Player player, List<String> commands) {
       for (String cmd : commands) {
-         String processedCmd = cmd;
-         if (UIcorePlugin.hasPAPI) {
-            processedCmd = PlaceholderAPI.setPlaceholders(player, cmd);
-         }
-
-         CommandUtils.executeCommand(player, processedCmd);
+         CommandUtils.executeCommand(player, cmd);
       }
    }
 }

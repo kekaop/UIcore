@@ -39,7 +39,7 @@ public class WASDConfig {
          this.createDefaultConfig();
       }
 
-      this.config = YamlConfiguration.loadConfiguration(this.configFile);
+      this.config = org.orvencraft.uicore.config.ConfigFiles.loadStrict(this.configFile);
       this.readConfig();
    }
 
@@ -114,13 +114,18 @@ public class WASDConfig {
    }
 
    public boolean isMenuEnabled(String menuKey) {
-      if (!this.enabled) {
+      return isMenuEnabled(this.enabled, this.enableForAllMenus, this.useWhitelistMode, this.enabledMenus, menuKey);
+   }
+
+   static boolean isMenuEnabled(boolean enabled, boolean enableForAllMenus, boolean useWhitelistMode, List<String> enabledMenus, String menuKey) {
+      if (!enabled || menuKey == null) {
          return false;
-      } else if (this.enableForAllMenus) {
-         return this.useWhitelistMode ? this.enabledMenus.contains(menuKey) : !this.enabledMenus.contains(menuKey);
-      } else {
-         return this.useWhitelistMode ? this.enabledMenus.contains(menuKey) : !this.enabledMenus.contains(menuKey);
       }
+      boolean listed = enabledMenus != null && enabledMenus.contains(menuKey);
+      if (enableForAllMenus) {
+         return useWhitelistMode ? listed : !listed;
+      }
+      return listed;
    }
 
    public boolean isPlayerDisabled(String playerName) {

@@ -1,14 +1,11 @@
 package org.orvencraft.uicore;
 
-import org.orvencraft.uicore.api.event.MenuInputEvent;
 import org.bukkit.ChatColor;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.vehicle.VehicleExitEvent;
 
@@ -40,9 +37,9 @@ public class MenuListener implements Listener {
       if (UIcorePlugin.playerSit.containsKey(player)) {
          String message = event.getMessage().toLowerCase().trim();
          String command = message.startsWith("/") ? message.substring(1) : message;
-         if (!command.startsWith("uicore")) {
+         if (!matchesCommandLabel(command, "uicore") && !matchesCommandLabel(command, "ui") && !matchesCommandLabel(command, "uicore:uicore") && !matchesCommandLabel(command, "uicore:ui")) {
             for (String allowed : UIcorePlugin.allowedCommands) {
-               if (command.startsWith(allowed)) {
+               if (matchesCommandLabel(command, allowed)) {
                   return;
                }
             }
@@ -55,43 +52,45 @@ public class MenuListener implements Listener {
       }
    }
 
+   private static boolean matchesCommandLabel(String command, String allowed) {
+      if (command == null || allowed == null) {
+         return false;
+      }
+      String normalized = command.trim();
+      String allowedLabel = allowed.trim();
+      if (normalized.isEmpty() || allowedLabel.isEmpty()) {
+         return false;
+      }
+      int commandEnd = normalized.indexOf(' ');
+      int allowedEnd = allowedLabel.indexOf(' ');
+      String commandLabel = commandEnd < 0 ? normalized : normalized.substring(0, commandEnd);
+      String expectedLabel = allowedEnd < 0 ? allowedLabel : allowedLabel.substring(0, allowedEnd);
+      return commandLabel.equalsIgnoreCase(expectedLabel)
+         && (allowedEnd < 0 || normalized.equalsIgnoreCase(allowedLabel) || normalized.regionMatches(true, 0, allowedLabel + " ", 0, allowedLabel.length() + 1));
+   }
+
    @EventHandler
    public void onPlayerChat(AsyncPlayerChatEvent event) {
       Player player = event.getPlayer();
-      String currentMenu = this.plugin.getCurrentPlayerMenu(player);
       String inputField = this.plugin.getCurrentPlayerInputField(player);
-      if (currentMenu != null && inputField != null && !inputField.isEmpty()) {
-         event.setCancelled(true);
-         String inputValue = event.getMessage();
-         MenuInputEvent inputEvent = new MenuInputEvent(player, currentMenu, inputField, inputValue);
-         Bukkit.getPluginManager().callEvent(inputEvent);
-         if (inputEvent.isCancelled()) {
+      if (inputField == null || inputField.isBlank()) {
+         return;
+      }
+      long sessionGeneration = this.plugin.getMenuSessionGeneration(player);
+      String inputValue = event.getMessage();
+      event.setCancelled(true);
+      UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(() -> {
+         if (!this.plugin.isMenuSessionCurrent(player, sessionGeneration) || !inputField.equals(this.plugin.getCurrentPlayerInputField(player))) {
             return;
          }
-
-         inputValue = inputEvent.getValue();
-         this.plugin.setPlayerInputData(player, inputField, inputValue);
-         Commands.getUserInputData().computeIfAbsent(player.getUniqueId(), var0 -> new java.util.concurrent.ConcurrentHashMap<>()).put(inputField, inputValue);
-         this.plugin.setCurrentPlayerInputField(player, "");
-         String shownValue = this.plugin.isPasswordInputField(inputField) ? "*****" : inputValue;
-         player.sendMessage(ChatColor.GREEN + "[UIcore] " + inputField + " saved: " + shownValue);
-         UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(() -> this.plugin.setupCursor(player, currentMenu), null);
-      }
+         if (this.plugin.submitMenuInput(player, inputField, inputValue)) {
+            this.plugin.setCurrentPlayerInputField(player, "");
+            this.plugin.refreshCurrentMenu(player);
+            this.plugin.setCurrentPlayerInputField(player, "");
+            String shownValue = this.plugin.isPasswordInputField(inputField) ? "*****" : inputValue;
+            player.sendMessage(ChatColor.GREEN + "[UIcore] " + inputField + " saved: " + shownValue);
+         }
+      }, null);
    }
 
-   @EventHandler
-   public void onAdminJoin(PlayerJoinEvent event) {
-      Player player = event.getPlayer();
-      if (player.isOp()) {
-         player.sendMessage(
-            ChatColor.translateAlternateColorCodes(
-               '&',
-               "&a[UIcore] &fThis is an independently maintained custom build.\n&fPlugin version: &e"
-                  + this.plugin.getDescription().getVersion()
-                  + "\n&fAuthors: &e"
-                  + this.plugin.getDescription().getAuthors()
-            )
-         );
-      }
-   }
 }

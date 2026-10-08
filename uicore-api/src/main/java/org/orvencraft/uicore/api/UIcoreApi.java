@@ -5,9 +5,33 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import org.orvencraft.uicore.api.extension.ActionService;
+import org.orvencraft.uicore.api.extension.DataService;
+import org.orvencraft.uicore.api.extension.ConditionService;
+import org.orvencraft.uicore.api.state.MenuState;
 import org.bukkit.entity.Player;
 
 public interface UIcoreApi {
+   default MenuService menus() { throw new UnsupportedOperationException("Menu service is unavailable"); }
+
+   default ElementService elements() { throw new UnsupportedOperationException("Element service is unavailable"); }
+
+   default InputService inputs() { throw new UnsupportedOperationException("Input service is unavailable"); }
+
+   default SlotService slots() { throw new UnsupportedOperationException("Slot service is unavailable"); }
+
+   default ActionService actions() { throw new UnsupportedOperationException("Action extensions are unavailable"); }
+
+   default DataService data() { throw new UnsupportedOperationException("Data extensions are unavailable"); }
+
+   default ConditionService conditions() { throw new UnsupportedOperationException("Condition extensions are unavailable"); }
+
+   default org.orvencraft.uicore.api.extension.ComponentService components() {
+      throw new UnsupportedOperationException("Component extensions are unavailable");
+   }
+
+   default MenuState state(Player player, String menuId) { throw new UnsupportedOperationException("Typed state is unavailable"); }
+
    default String apiVersion() {
       return "1.1";
    }

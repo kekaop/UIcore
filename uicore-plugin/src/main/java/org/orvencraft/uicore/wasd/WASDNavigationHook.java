@@ -29,6 +29,10 @@ public class WASDNavigationHook {
       return instance;
    }
 
+   static synchronized void clearInstance() {
+      instance = null;
+   }
+
    public void initialize() {
       if (!this.navigationManager.getConfig().isEnabled()) {
          this.plugin.getLogger().info("[WASDHook] WASD navigation is disabled; initialization skipped.");
@@ -45,17 +49,15 @@ public class WASDNavigationHook {
       }
    }
 
-   public void onMenuOpen(Player player, String menuKey, Location[] textLocations, List<String> commands, TextDisplay[] textDisplays, List<Double> scales) {
+   public void onMenuOpen(Player player, String menuKey, Location[] textLocations, List<String> elementIds, TextDisplay[] textDisplays, List<Double> scales) {
       if (this.initialized && this.navigationManager.getConfig().isMenuEnabled(menuKey)) {
          if (!this.navigationManager.getConfig().isPlayerDisabled(player.getName())) {
-            WASDSession session = new WASDSession(this.plugin, player, true);
-            session.setTextDisplays(textDisplays, scales);
-            this.navigationManager.startSession(player, menuKey, textLocations, commands, 0);
+            this.navigationManager.startSession(player, menuKey, textLocations, elementIds, textDisplays, scales, 0);
             if (this.navigationManager.getConfig().isDebugMode()) {
                this.plugin.getLogger().info("[WASDHook] Enabled WASD navigation for " + player.getName() + ", menu: " + menuKey);
             }
-         }
-      }
+         } else this.navigationManager.stopSession(player);
+      } else this.navigationManager.stopSession(player);
    }
 
    public void onMenuClose(Player player) {
@@ -64,14 +66,10 @@ public class WASDNavigationHook {
       }
    }
 
-   public void onMenuSwitch(Player player, String newMenuKey, Location[] textLocations, List<String> commands, TextDisplay[] textDisplays, List<Double> scales) {
-      if (this.initialized) {
-         this.navigationManager.stopSession(player);
-         if (this.navigationManager.getConfig().isMenuEnabled(newMenuKey) && !this.navigationManager.getConfig().isPlayerDisabled(player.getName())) {
-            WASDSession session = new WASDSession(this.plugin, player, true);
-            session.setTextDisplays(textDisplays, scales);
-            this.navigationManager.startSession(player, newMenuKey, textLocations, commands, 0);
-         }
+   public void onMenuSwitch(Player player, String newMenuKey, Location[] textLocations, List<String> elementIds, TextDisplay[] textDisplays, List<Double> scales) {
+      this.navigationManager.stopSession(player);
+      if (this.initialized && this.navigationManager.getConfig().isMenuEnabled(newMenuKey) && !this.navigationManager.getConfig().isPlayerDisabled(player.getName())) {
+         this.navigationManager.startSession(player, newMenuKey, textLocations, elementIds, textDisplays, scales, 0);
       }
    }
 
@@ -102,6 +100,12 @@ public class WASDNavigationHook {
    public void reload() {
       if (this.navigationManager != null) {
          this.navigationManager.reloadConfig();
+         this.initialized = this.navigationManager.getConfig().isEnabled();
+         if (!this.initialized) {
+            this.navigationManager.shutdown();
+         } else if (!this.navigationManager.isRegistered()) {
+            this.navigationManager.initialize();
+         }
       }
    }
 }

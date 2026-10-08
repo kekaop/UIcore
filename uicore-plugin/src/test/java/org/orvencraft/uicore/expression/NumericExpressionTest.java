@@ -29,7 +29,21 @@ class NumericExpressionTest {
    }
 
    @Test
+   void resolvesNamespacedDataReferencesInCoordinates() {
+      NumericExpression expression = NumericExpression.compile("{example:balance} / 100");
+      assertEquals(0.75, expression.evaluate(0, reference -> {
+         assertEquals("{example:balance}", reference);
+         return 75.0;
+      }), 1.0E-9);
+   }
+
+   @Test
    void rejectsUnknownCode() {
       assertThrows(IllegalArgumentException.class, () -> NumericExpression.compile("System.exit(0)"));
+   }
+
+   @Test
+   void rejectsNonFiniteLiteralAtCompileTime() {
+      assertThrows(IllegalArgumentException.class, () -> NumericExpression.compile("1e309"));
    }
 }

@@ -1,0 +1,70 @@
+demo_drag:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: player
+    distance: 1.5
+  layout:
+    title:
+      name: "<gold><bold>Drag demo</bold>"
+      x: 0.0
+      y: 1.0
+      z: 3.5
+      text-size: 0.7
+    list_first:
+      name: "<green>First entry"
+      drag-group: sample-list
+      x: -0.7
+      y: 0.35
+      z: 3.5
+      text-size: 0.55
+    list_second:
+      name: "<aqua>Second entry"
+      drag-group: sample-list
+      x: -0.7
+      y: 0.0
+      z: 3.5
+      text-size: 0.55
+    move_list:
+      name: "<yellow>Hold to move list"
+      x: -0.7
+      y: -0.5
+      z: 3.5
+      text-size: 0.48
+      hitbox: { width: 1.3, height: 0.5, depth: 0.3 }
+      drag:
+        mode: move-group
+        group: sample-list
+        sensitivity: 1.0
+    model:
+      type: item
+      material: DIAMOND_SWORD
+      transform: fixed
+      billboard: fixed
+      scale: 0.7
+      x: 0.8
+      y: 0.15
+      z: 3.5
+      hitbox: { width: 0.8, height: 0.8, depth: 0.3 }
+    turn_model:
+      name: "<yellow>Hold to rotate"
+      x: 0.8
+      y: -0.5
+      z: 3.5
+      text-size: 0.48
+      hitbox: { width: 1.3, height: 0.5, depth: 0.3 }
+      drag:
+        mode: rotate-element
+        target: model
+        sensitivity: 1.0
+    close:
+      name: "<red>Close"
+      x: 0.0
+      y: -0.95
+      z: 3.5
+      text-size: 0.5
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true

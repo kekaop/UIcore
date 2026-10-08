@@ -1,0 +1,87 @@
+demo_element_states:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: player
+    distance: 1.5
+  layout:
+    title:
+      name: "<gold><bold>Element states</bold>"
+      x: 0.0
+      y: 0.8
+      z: 3.5
+      text-size: 0.7
+    panel:
+      name: "This text is hidden at first"
+      x: 0.0
+      y: 0.25
+      z: 3.5
+      text-size: 0.5
+      initial-state: hidden
+      states:
+        hidden:
+          visible: false
+        shown:
+          visible: true
+          text: "Panel is visible"
+          style:
+            color: "#67e88a"
+    badge:
+      type: item
+      material: COAL
+      x: 1.1
+      y: 0.25
+      z: 3.5
+      scale: 0.45
+      initial-state: idle
+      states:
+        idle:
+          material: COAL
+        active:
+          material: EMERALD
+          glow: true
+      hitbox:
+        width: 0.9
+        height: 0.9
+        depth: 0.4
+    show:
+      name: "<green>Show"
+      x: -0.55
+      y: -0.35
+      z: 3.5
+      text-size: 0.55
+      hitbox:
+        width: 0.9
+        height: 0.9
+        depth: 0.4
+      set-states:
+        panel: shown
+        badge: active
+    hide:
+      name: "<red>Hide"
+      x: 0.55
+      y: -0.35
+      z: 3.5
+      text-size: 0.55
+      hitbox:
+        width: 0.9
+        height: 0.9
+        depth: 0.4
+      set-states:
+        panel: hidden
+        badge: idle
+    close:
+      name: "<gray>Close"
+      x: 0.0
+      y: -0.85
+      z: 3.5
+      text-size: 0.5
+      hitbox:
+        width: 0.9
+        height: 0.9
+        depth: 0.4
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true

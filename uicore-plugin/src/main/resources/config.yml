@@ -1,4 +1,4 @@
-version: "1.4.8" # Do not edit manually.
+version: "1.0.0" # Do not edit manually.
 Debug: false
 
 # Show a pumpkin overlay while the player is inside a menu.
@@ -19,7 +19,7 @@ creature-spawn-limits:
   enabled: false
   radius: 10
 
-# Checks blocks around the camera/player to avoid blocked camera view.
+# Hides blocking blocks only for the menu viewer; the world is never modified.
 camera-block-check:
   enabled: true
   radius: 1
@@ -32,7 +32,7 @@ security:
   # Console commands from menu configuration are disabled by default.
   # Set this to true only for trusted private configs.
   allow-console-commands: false
-  # Optional prefix allowlist. Empty list means all console commands are allowed
+  # Optional command/token allowlist. Empty list means all console commands are allowed
   # only when allow-console-commands is true.
   console-command-allowlist: []
   # Legacy OP-prefixed commands never grant temporary OP. If this is true,
@@ -54,7 +54,7 @@ sound:
 join-run:
   enabled: false
   delay: 3
-  menu: "test"
+  menu: "demo_main"
   commands:
     - "[console] say Welcome %player% to the server!"
     - "[player] msg %player% Welcome to the server!"
@@ -86,7 +86,8 @@ cursor-item:
   # Extra distance from the camera/menu plane along the camera forward vector.
   z-offset: 0.0
 
-  # Gently moves the fixed camera toward the cursor near the screen edges.
+  # Gently shifts the player's client-side fixed camera toward the cursor near the screen edges.
+  # The server-side camera mount remains fixed, so edge pan does not move or dismount the player.
   # The central threshold is stationary; movement ramps up smoothly outside it.
   edge-pan:
     enabled: true
@@ -99,7 +100,9 @@ cursor-item:
     # Per-tick interpolation amount. Lower is smoother and slower.
     smoothing: 0.08
 
-  # Optional hard clamp for cursor coordinates on the menu plane.
+  # Optional custom hard clamp for cursor coordinates on the menu plane.
+  # The cursor is always clamped: with this disabled, max-x/max-y define the bounds.
+  # Reaching a boundary never wraps the cursor to the opposite side.
   # These are world-space offsets relative to the menu camera basis:
   # X = horizontal offset on the camera right vector.
   # Y = vertical offset on the camera up vector.

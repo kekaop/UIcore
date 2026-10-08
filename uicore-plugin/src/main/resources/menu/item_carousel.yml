@@ -1,0 +1,178 @@
+item_carousel:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: player
+    distance: 1.5
+    offset:
+      right: 0.0
+      up: 0.0
+      forward: 0.0
+    yaw-offset: 0.0
+    pitch-offset: 0.0
+
+  # UIcore slot commands or an external plugin select a template for the showcase slot.
+  templates:
+    item_1_from_right:
+      type: item
+      material: DIAMOND
+      scale: 0.72
+      glow: false
+      rotate: true
+      rotate-speed: 1.2
+      billboard: center
+      entrance-animation:
+        enabled: true
+        from: right
+        duration: 12
+        distance: 2.4
+        easing: ease-out-back
+    item_1_from_left:
+      type: item
+      material: DIAMOND
+      scale: 0.72
+      glow: false
+      rotate: true
+      rotate-speed: 1.2
+      billboard: center
+      entrance-animation:
+        enabled: true
+        from: left
+        duration: 12
+        distance: 2.4
+        easing: ease-out-back
+    item_2_from_right:
+      type: item
+      material: EMERALD
+      scale: 0.72
+      glow: false
+      rotate: true
+      rotate-speed: 1.5
+      billboard: center
+      entrance-animation:
+        enabled: true
+        from: right
+        duration: 12
+        distance: 2.4
+        easing: ease-out-back
+    item_2_from_left:
+      type: item
+      material: EMERALD
+      scale: 0.72
+      glow: false
+      rotate: true
+      rotate-speed: 1.5
+      billboard: center
+      entrance-animation:
+        enabled: true
+        from: left
+        duration: 12
+        distance: 2.4
+        easing: ease-out-back
+    item_3_from_right:
+      type: item
+      material: NETHER_STAR
+      scale: 0.72
+      glow: false
+      rotate: true
+      rotate-speed: 1.8
+      billboard: center
+      entrance-animation:
+        enabled: true
+        from: right
+        duration: 12
+        distance: 2.4
+        easing: ease-out-back
+    item_3_from_left:
+      type: item
+      material: NETHER_STAR
+      scale: 0.72
+      glow: false
+      rotate: true
+      rotate-speed: 1.8
+      billboard: center
+      entrance-animation:
+        enabled: true
+        from: left
+        duration: 12
+        distance: 2.4
+        easing: ease-out-back
+
+  slots:
+    showcase:
+      x: 0.0
+      y: 0.18
+      z: 3.5
+      content: item_1_from_right
+      fallback: item_1_from_right
+
+  layout:
+    title:
+      name: "<gold><bold>ITEM CAROUSEL</bold>"
+      x: 0.0
+      y: 1.18
+      z: 3.5
+      text-size: 0.72
+    previous:
+      name: "<yellow><bold>PREVIOUS</bold>"
+      x: -1.05
+      y: -0.78
+      z: 3.5
+      text-size: 0.58
+      hitbox:
+        width: 1.2
+        height: 0.45
+        depth: 0.3
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+      pressed-style:
+        color: "#ffdd55"
+        duration: 4
+      command:
+        - "[player] uicarousel previous"
+      stop-menu:
+        enabled: false
+    next:
+      name: "<yellow><bold>NEXT</bold>"
+      x: 1.05
+      y: -0.78
+      z: 3.5
+      text-size: 0.58
+      hitbox:
+        width: 1.2
+        height: 0.45
+        depth: 0.3
+      hover-enlarge:
+        enabled: true
+        scale: 1.12
+      hover-style:
+        color: "#ffffff"
+        underlined: true
+      pressed-style:
+        color: "#ffdd55"
+        duration: 4
+      command:
+        - "[player] uicarousel next"
+      stop-menu:
+        enabled: false
+    close:
+      name: "<red>Close"
+      x: 0.0
+      y: -1.25
+      z: 3.5
+      text-size: 0.48
+      hitbox:
+        width: 0.8
+        height: 0.4
+        depth: 0.3
+      hover-style:
+        color: "#ff7777"
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true

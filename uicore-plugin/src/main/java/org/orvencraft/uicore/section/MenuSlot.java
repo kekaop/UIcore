@@ -1,6 +1,7 @@
 package org.orvencraft.uicore.section;
 
 import org.orvencraft.uicore.layout.MenuLayout;
+import org.orvencraft.uicore.api.ConfigurationCopy;
 import java.util.Map;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -93,7 +94,7 @@ public final class MenuSlot {
       config.set("z", this.rawZ);
       for (Map.Entry<String, Object> entry : this.sourceConfig.getValues(true).entrySet()) {
          if (entry.getKey().startsWith("position-update.") && !(entry.getValue() instanceof ConfigurationSection)) {
-            config.set(entry.getKey(), entry.getValue());
+            config.set(entry.getKey(), ConfigurationCopy.mutableValue(entry.getValue()));
          }
       }
       config.set("runtime-slot-id", this.id);
@@ -106,12 +107,6 @@ public final class MenuSlot {
    }
 
    private static YamlConfiguration copyConfig(ConfigurationSection section) {
-      YamlConfiguration copy = new YamlConfiguration();
-      for (Map.Entry<String, Object> entry : section.getValues(true).entrySet()) {
-         if (!(entry.getValue() instanceof ConfigurationSection)) {
-            copy.set(entry.getKey(), entry.getValue());
-         }
-      }
-      return copy;
+      return ConfigurationCopy.configuration(section);
    }
 }

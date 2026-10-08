@@ -2,7 +2,7 @@
 
 Full GitBook-style documentation is available in `docs/UIcore_GitBook.html`.
 
-This API is for other plugins that need to open menus or mutate loaded menus at runtime.
+This API is for other plugins that need to open menus or mutate loaded menus at runtime. Call it on the Bukkit main thread. See [runtime contracts](RUNTIME_CONTRACTS.md) for session, input, and snapshot guarantees.
 
 The service is registered through Bukkit Services:
 

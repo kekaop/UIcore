@@ -1,6 +1,6 @@
 # UIcore Smoke Checklist
 
-Run on Paper 26.1.2 with Java 25 and PacketEvents installed.
+Run on each target Minecraft/server combination with its required Java version and PacketEvents 2.14.0 installed. The combinations in the [compatibility matrix](COMPATIBILITY_RU.md) passed local startup, `/uicore reload`, and shutdown checks. A test client also ran `/uicore run demo_main` and `/uicore stop` on Paper and Folia 1.20.1 and Folia 1.21.11. A one-block Sponge schematic preview appeared and restored on Paper and Folia 1.20.1; switching from the preview menu on Folia restored it too. A temporary test plugin activated `show` and `hide` in `demo_element_states`, confirming hidden → shown → hidden visibility. The detailed visual and interaction checks below remain pending.
 
 1. Start the server and confirm UIcore enables without errors.
 2. Run `/uicore reload` and verify menus reload once.
@@ -14,3 +14,17 @@ Run on Paper 26.1.2 with Java 25 and PacketEvents installed.
 10. Close the menu and quit; verify camera, entities, metadata, and tasks are cleaned up.
 
 Also test quoted YAML keys `"on"`/`"off"` and legacy boolean-parsed equivalents.
+
+## Audit regression checks
+
+These are pending server checks, not a record of passed integration tests.
+
+- Open/switch/close from each game mode with nondefault invisibility/collision. Cancel the camera and return teleports; verify retained recovery journals.
+- Switch to a different camera position, reopen during mounting, die before activation, lose the mount, disconnect, kick, disable, and restart before respawn.
+- Use two players in one scene; verify independent clicks, cooldowns, hover, personal NPCs, and API overrides.
+- Hold/release WASD jump and send rapid input while closing; a stale action must not reach a new visit.
+- Repeat typewriter, slots, temporary text groups, and pumpkin overlay; compare entities/tasks/tickets with baseline after each close.
+- Keep a foreign hologram, force-loaded chunk, and PacketEvents listener active through UIcore disable.
+- Test damaged YAML reload without rewriting the file; check invalid material/world/numbers and recovery journal conflicts.
+- Enter MiniMessage tags, RGB codes, Unicode, and a password. Check literal display, raw configured action arguments, and absence of arguments in denied logs.
+- Run FancyNpcs/SkinsRestorer/CraftEngine both present and absent, then profile 1/10/50 viewers and unrelated displays.

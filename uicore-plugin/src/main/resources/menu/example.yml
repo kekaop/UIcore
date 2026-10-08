@@ -108,7 +108,7 @@ example:
         start-delay: 10
         cursor-char: "|"
       command:
-        - "[message] <yellow>UIcore custom build for OrvenCraft.</yellow>"
+        - "[message] <yellow>UIcore menu example.</yellow>"
       next-menu:
         enabled: false
         menu: example

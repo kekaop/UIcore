@@ -291,7 +291,7 @@ public final class NumericExpression {
          }
          try {
             return requireFinite(Double.parseDouble(this.source.substring(start, this.position)), this.source);
-         } catch (NumberFormatException exception) {
+         } catch (NumberFormatException | ArithmeticException exception) {
             throw this.error("Invalid number");
          }
       }
@@ -322,8 +322,8 @@ public final class NumericExpression {
          }
          this.position = end + 1;
          String reference = this.source.substring(start, this.position);
-         if (!reference.startsWith("{state.")) {
-            throw this.error("Only {state.key} references are supported");
+         if (!reference.startsWith("{state.") && !reference.matches("\\{[a-z][a-z0-9_.-]*:[a-z][a-z0-9_.-]*\\}")) {
+            throw this.error("Expected {state.key} or {namespace:key} reference");
          }
          return reference;
       }

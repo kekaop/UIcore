@@ -3,21 +3,28 @@ package org.orvencraft.uicore.layout;
 import org.orvencraft.uicore.ColorParser;
 import org.orvencraft.uicore.UIcorePlugin;
 import org.orvencraft.uicore.HoverEnlargeManager;
+import org.orvencraft.uicore.api.ConfigurationCopy;
+import org.orvencraft.uicore.api.model.UiElementModel;
 import org.orvencraft.uicore.position.DynamicPositionSpec;
 import org.orvencraft.uicore.style.TextStyleConfig;
 import org.orvencraft.uicore.util.CommandUtils;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 public class MenuLayout {
@@ -28,7 +35,7 @@ public class MenuLayout {
    public final double x;
    public final double y;
    public final double z;
-   private boolean isClick = false;
+   private final Set<UUID> pendingClickPlayers = ConcurrentHashMap.newKeySet();
    private final boolean teleportBool;
    private final boolean teleportOriginal;
    private final Location teleportLoc;
@@ -71,6 +78,7 @@ public class MenuLayout {
    private long entranceAnimationDelay = 0L;
    private int entranceAnimationDuration = 10;
    private double entranceAnimationDistance = 1.0;
+   private String entranceAnimationEasing = "linear";
    private TextStyleConfig baseStyle = TextStyleConfig.empty();
    private TextStyleConfig hoverStyle = TextStyleConfig.empty();
    private TextStyleConfig pressedStyle = TextStyleConfig.empty();
@@ -100,10 +108,18 @@ public class MenuLayout {
    private boolean itemRotate = false;
    private double itemRotateSpeed = 1.0;
    private String itemBillboard = "center";
+   private String itemDisplayTransform = "none";
+   private String avatarPlayer = "self";
+   private boolean avatarFaceOnly;
    private String hitboxText = "      ";
    private double hitboxWidth = 0.7;
    private double hitboxHeight = 0.7;
    private double hitboxDepth = 0.25;
+   private boolean customHitboxConfigured;
+   private String dragGroup = "";
+   private String dragMode = "";
+   private String dragTarget = "";
+   private double dragSensitivity = 1.0;
    private List<String> clickRequiredPermissions = Collections.emptyList();
    private List<PlaceholderRequirement> clickPlaceholderRequirements = Collections.emptyList();
    private VisibilityCondition visibleIf = VisibilityCondition.always();
@@ -134,10 +150,24 @@ public class MenuLayout {
    private boolean refreshMenuEnabled = false;
    private long refreshMenuDelay = 2L;
    private String ownerMenuKey = "";
-   private YamlConfiguration sourceConfig = new YamlConfiguration();
+   private UiElementModel sourceModel = UiElementModel.empty();
    private String inputFieldName = "";
    private String inputFieldPrompt = "";
    private DynamicPositionSpec dynamicPositionSpec;
+   private String initialElementState = "";
+   private Map<String, ElementStateVariant> elementStateVariants = Collections.emptyMap();
+   private Map<String, String> clickElementStates = Collections.emptyMap();
+   private String extensionActionId = "";
+   private Map<String, Object> extensionActionArgs = Map.of();
+
+   private record ElementStateVariant(
+      boolean visible,
+      String text,
+      TextStyleConfig style,
+      String material,
+      Integer customModelData,
+      Boolean glow
+   ) {}
 
    public MenuLayout(
       String var1,
@@ -190,7 +220,6 @@ public class MenuLayout {
       this.x = var5;
       this.y = var7;
       this.z = var9;
-      this.isClick = false;
       this.teleportBool = var11;
       this.teleportLoc = var13;
       this.stopCommandBool = var14;
@@ -224,7 +253,13 @@ public class MenuLayout {
    }
 
    public boolean isItemLayout() {
-      return "item".equalsIgnoreCase(this.type);
+      return "item".equalsIgnoreCase(this.type) || this.isPlayerAvatarLayout();
+   }
+
+   public boolean isPlayerAvatarLayout() {
+      return "player-avatar".equalsIgnoreCase(this.type)
+         || "player-head".equalsIgnoreCase(this.type)
+         || "avatar".equalsIgnoreCase(this.type);
    }
 
    public boolean isBarTextLayout() {
@@ -239,8 +274,29 @@ public class MenuLayout {
       return this.itemMaterial;
    }
 
+   public String resolveItemMaterial(Player player) {
+      ElementStateVariant variant = this.resolveElementStateVariant(player);
+      String configured = variant != null && variant.material() != null ? variant.material() : this.itemMaterial;
+      return this.resolveDataBinding(player, configured);
+   }
+
    public int getItemCustomModelData() {
       return this.itemCustomModelData;
+   }
+
+   public int resolveItemCustomModelData(Player player) {
+      ElementStateVariant variant = this.resolveElementStateVariant(player);
+      if (variant != null && variant.customModelData() != null) return variant.customModelData();
+      int fallback = this.itemCustomModelData;
+      Object raw = this.sourceModel.get(this.sourceModel.contains("custom-model-data") ? "custom-model-data" : "item.custom-model-data");
+      if (!(raw instanceof String reference) || !this.isDataBinding(reference)) return fallback;
+      try {
+         double resolved = Double.parseDouble(this.resolveDataBinding(player, reference));
+         return Double.isFinite(resolved) && resolved >= 0 && resolved <= Integer.MAX_VALUE && resolved == Math.rint(resolved)
+            ? (int)resolved : fallback;
+      } catch (NumberFormatException exception) {
+         return fallback;
+      }
    }
 
    public double getItemScale() {
@@ -249,6 +305,26 @@ public class MenuLayout {
 
    public boolean isItemGlow() {
       return this.itemGlow;
+   }
+
+   public boolean resolveItemGlow(Player player) {
+      ElementStateVariant variant = this.resolveElementStateVariant(player);
+      if (variant != null && variant.glow() != null) return variant.glow();
+      boolean fallback = this.itemGlow;
+      Object raw = this.sourceModel.get(this.sourceModel.contains("glow") ? "glow" : "item.glow");
+      if (!(raw instanceof String reference) || !this.isDataBinding(reference)) return fallback;
+      String resolved = this.resolveDataBinding(player, reference);
+      return "true".equalsIgnoreCase(resolved) || "false".equalsIgnoreCase(resolved)
+         ? Boolean.parseBoolean(resolved) : fallback;
+   }
+
+   private boolean isDataBinding(String value) {
+      return value != null && value.matches("\\{[a-z][a-z0-9_.-]*:[a-z][a-z0-9_.-]*\\}");
+   }
+
+   private String resolveDataBinding(Player player, String value) {
+      return this.isDataBinding(value)
+         ? UIcorePlugin.resolveDataValue(player, this.ownerMenuKey, this.key, value) : value;
    }
 
    public boolean isItemRotate() {
@@ -261,6 +337,18 @@ public class MenuLayout {
 
    public String getItemBillboard() {
       return this.itemBillboard;
+   }
+
+   public String getItemDisplayTransform() {
+      return this.itemDisplayTransform;
+   }
+
+   public String getAvatarPlayer() {
+      return this.avatarPlayer;
+   }
+
+   public boolean isAvatarFaceOnly() {
+      return this.isPlayerAvatarLayout() && this.avatarFaceOnly;
    }
 
    public String getHitboxText() {
@@ -277,6 +365,15 @@ public class MenuLayout {
 
    public double getHitboxDepth() {
       return this.hitboxDepth;
+   }
+
+   public String getDragGroup() { return this.dragGroup; }
+   public String getDragMode() { return this.dragMode; }
+   public String getDragTarget() { return this.dragTarget; }
+   public double getDragSensitivity() { return this.dragSensitivity; }
+
+   public boolean hasCustomHitbox() {
+      return this.customHitboxConfigured;
    }
 
    public boolean hasToggleContent() {
@@ -322,8 +419,10 @@ public class MenuLayout {
    }
 
    public YamlConfiguration copySourceConfig() {
-      return copyConfig(this.sourceConfig);
+      return ConfigurationCopy.configuration(this.sourceModel.properties());
    }
+
+   public UiElementModel sourceModel() { return this.sourceModel; }
 
    public String getToggleContentOff() {
       return this.toggleContentOff;
@@ -417,16 +516,45 @@ public class MenuLayout {
       return this.entranceAnimationDistance;
    }
 
+   public String getEntranceAnimationEasing() {
+      return this.entranceAnimationEasing;
+   }
+
    public List<String> getCommands() {
       return this.command;
    }
+
+   public String getExtensionActionId() { return this.extensionActionId; }
+
+   public Map<String, Object> getExtensionActionArguments() { return this.extensionActionArgs; }
 
    public boolean hasPermission(Player player) {
       return this.permission == null || this.permission.isEmpty() || player.hasPermission(this.permission) || player.isOp();
    }
 
    public boolean isVisible(Player player) {
-      return this.visibleIf == null || this.visibleIf.matches(player, this);
+      ElementStateVariant variant = this.resolveElementStateVariant(player);
+      return (variant == null || variant.visible()) && (this.visibleIf == null || this.visibleIf.matches(player, this));
+   }
+
+   public boolean hasElementState(String state) {
+      return state != null && this.elementStateVariants.containsKey(state);
+   }
+
+   public String getInitialElementState() {
+      return this.initialElementState;
+   }
+
+   public Map<String, String> getClickElementStates() {
+      return this.clickElementStates;
+   }
+
+   private ElementStateVariant resolveElementStateVariant(Player player) {
+      if (this.elementStateVariants.isEmpty()) return null;
+      String state = player == null || UIcorePlugin.plugin == null
+         ? ""
+         : UIcorePlugin.plugin.getPlayerElementStateOverride(player, this.ownerMenuKey, this.key);
+      return this.elementStateVariants.get(this.elementStateVariants.containsKey(state) ? state : this.initialElementState);
    }
 
    public boolean hasHoverStyle() {
@@ -486,7 +614,8 @@ public class MenuLayout {
    }
 
    public boolean hasAnyTextStyle() {
-      return !this.baseStyle.isEmpty() || this.hasPermissionStyle() || this.hasToggleStyle() || this.hasHoverStyle() || this.hasPressedStyle();
+      return !this.baseStyle.isEmpty() || this.hasPermissionStyle() || this.hasToggleStyle() || this.hasHoverStyle() || this.hasPressedStyle()
+         || this.elementStateVariants.values().stream().anyMatch(variant -> !variant.style().isEmpty());
    }
 
    public TextStyleConfig resolveTextStyle(Player player, boolean hovered, boolean pressed) {
@@ -499,6 +628,11 @@ public class MenuLayout {
       if (this.toggleContentEnabled && player != null) {
          boolean toggled = UIcorePlugin.plugin.getLayoutToggleState(player, this.ownerMenuKey, this.key);
          style = style.merge(toggled ? this.toggleOnStyle : this.toggleOffStyle);
+      }
+
+      ElementStateVariant variant = this.resolveElementStateVariant(player);
+      if (variant != null) {
+         style = style.merge(variant.style());
       }
 
       if (hovered) {
@@ -537,6 +671,10 @@ public class MenuLayout {
    }
 
    private String resolveDisplayName(Player player) {
+      ElementStateVariant variant = this.resolveElementStateVariant(player);
+      if (variant != null && variant.text() != null) {
+         return variant.text();
+      }
       if (this.isBarTextLayout()) {
          return this.renderBarText(player);
       }
@@ -557,8 +695,21 @@ public class MenuLayout {
       return this.resolveTextStyle(player, hovered, pressed).render(parsedText, colorOverride);
    }
 
+   public net.kyori.adventure.text.Component renderStyledComponent(Player player, boolean hovered, boolean pressed) {
+      return this.renderStyledComponent(player, this.resolveDisplayName(player), hovered, pressed, null);
+   }
+
+   public net.kyori.adventure.text.Component renderStyledComponent(Player player, boolean hovered, boolean pressed, String colorOverride) {
+      return this.renderStyledComponent(player, this.resolveDisplayName(player), hovered, pressed, colorOverride);
+   }
+
+   public net.kyori.adventure.text.Component renderStyledComponent(Player player, String text, boolean hovered, boolean pressed, String colorOverride) {
+      return this.resolveTextStyle(player, hovered, pressed).renderComponent(text == null ? "" : text, colorOverride,
+         source -> UIcorePlugin.renderDisplayComponent(player, this.ownerMenuKey, this.key, source));
+   }
+
    public void loadConfig(ConfigurationSection var1) {
-      this.sourceConfig = copyConfig(var1);
+      this.sourceModel = ConfigurationCopy.model(var1);
       this.dynamicPositionSpec = DynamicPositionSpec.from(var1, this.x, this.y, this.z);
       for (String error : this.dynamicPositionSpec.configurationErrors()) {
          String location = (this.ownerMenuKey == null || this.ownerMenuKey.isBlank() ? "<unknown>" : this.ownerMenuKey) + ":" + this.key;
@@ -567,6 +718,53 @@ public class MenuLayout {
          }
       }
       this.type = var1.getString("type", "text");
+      ConfigurationSection states = var1.getConfigurationSection("states");
+      if (states != null) {
+         Map<String, ElementStateVariant> variants = new LinkedHashMap<>();
+         for (String state : states.getKeys(false)) {
+            ConfigurationSection variant = states.getConfigurationSection(state);
+            if (state.isBlank() || variant == null) {
+               throw new IllegalArgumentException(this.ownerMenuKey + ":" + this.key + " has an invalid element state: " + state);
+            }
+            variants.put(state, new ElementStateVariant(
+               variant.getBoolean("visible", true),
+               variant.contains("text") ? variant.getString("text", "") : null,
+               TextStyleConfig.from(variant.getConfigurationSection("style")),
+               variant.contains("material") ? variant.getString("material", "") : null,
+               variant.contains("custom-model-data") ? Math.max(0, variant.getInt("custom-model-data")) : null,
+               variant.contains("glow") ? variant.getBoolean("glow") : null
+            ));
+         }
+         if (variants.isEmpty()) {
+            throw new IllegalArgumentException(this.ownerMenuKey + ":" + this.key + " has no element states");
+         }
+         this.elementStateVariants = Collections.unmodifiableMap(variants);
+         String configuredInitial = var1.getString("initial-state", "");
+         if (!configuredInitial.isBlank() && !variants.containsKey(configuredInitial)) {
+            throw new IllegalArgumentException(this.ownerMenuKey + ":" + this.key + " has unknown initial state: " + configuredInitial);
+         }
+         this.initialElementState = variants.containsKey(configuredInitial) ? configuredInitial
+            : variants.containsKey("default") ? "default"
+            : variants.keySet().iterator().next();
+      }
+
+      Map<String, String> stateChanges = new LinkedHashMap<>();
+      if (var1.isString("set-state")) {
+         stateChanges.put(this.key, var1.getString("set-state", ""));
+      } else {
+         ConfigurationSection setState = var1.getConfigurationSection("set-state");
+         if (setState != null) {
+            stateChanges.put(setState.getString("element", this.key), setState.getString("state", ""));
+         }
+      }
+      ConfigurationSection setStates = var1.getConfigurationSection("set-states");
+      if (setStates != null) {
+         for (Map.Entry<String, Object> change : setStates.getValues(false).entrySet()) {
+            stateChanges.put(change.getKey(), String.valueOf(change.getValue()));
+         }
+      }
+      stateChanges.entrySet().removeIf(change -> change.getKey().isBlank() || change.getValue().isBlank());
+      this.clickElementStates = Collections.unmodifiableMap(stateChanges);
       if (var1.contains("command-delay")) {
          this.setCommandDelay(var1.getLong("command-delay", 20L));
       }
@@ -641,13 +839,19 @@ public class MenuLayout {
       }
 
       if (var1.contains("visible-if")) {
-         ConfigurationSection visibleIfSection = var1.getConfigurationSection("visible-if");
          Object visibleIfValue = var1.get("visible-if");
-         if (visibleIfSection != null) {
-            this.visibleIf = VisibilityCondition.from(visibleIfSection);
-         } else if (visibleIfValue instanceof Boolean) {
-            this.visibleIf = (Boolean)visibleIfValue ? VisibilityCondition.always() : VisibilityCondition.never();
-         }
+         this.visibleIf = VisibilityCondition.fromValue(visibleIfValue);
+      }
+
+      ConfigurationSection action = var1.getConfigurationSection("action");
+      if (action != null) {
+         this.extensionActionId = action.getString("type", "");
+         if (this.extensionActionId.isBlank()) throw new IllegalArgumentException(this.ownerMenuKey + ":" + this.key + " action.type is required");
+         Map<String, Object> arguments = new LinkedHashMap<>(action.getValues(false));
+         arguments.remove("type");
+         if (arguments.values().stream().anyMatch(value -> !(value instanceof String || value instanceof Number || value instanceof Boolean)))
+            throw new IllegalArgumentException(this.ownerMenuKey + ":" + this.key + " action arguments must be scalar values");
+         this.extensionActionArgs = Map.copyOf(arguments);
       }
 
       ConfigurationSection toggleContent = var1.getConfigurationSection("toggle-content");
@@ -707,7 +911,7 @@ public class MenuLayout {
          ConfigurationSection bar = var1.getConfigurationSection("bar");
          this.barValue = var1.getString("value", bar != null ? bar.getString("value", this.barValue) : this.barValue);
          this.barMax = var1.getString("max", bar != null ? bar.getString("max", this.barMax) : this.barMax);
-         this.barSegments = Math.max(1, var1.getInt("segments", bar != null ? bar.getInt("segments", this.barSegments) : this.barSegments));
+         this.barSegments = Math.max(1, Math.min(256, var1.getInt("segments", bar != null ? bar.getInt("segments", this.barSegments) : this.barSegments)));
          this.barFilled = var1.getString("filled", bar != null ? bar.getString("filled", this.barFilled) : this.barFilled);
          this.barEmpty = var1.getString("empty", bar != null ? bar.getString("empty", this.barEmpty) : this.barEmpty);
          this.barPrefix = var1.getString("prefix", bar != null ? bar.getString("prefix", this.barPrefix) : this.barPrefix);
@@ -735,16 +939,47 @@ public class MenuLayout {
          this.textSize = var1.getDouble("text-size", 1.0);
       }
 
+      ConfigurationSection configuredHitbox = var1.getConfigurationSection("hitbox");
+      this.dragGroup = var1.getString("drag-group", "").trim();
+      ConfigurationSection drag = var1.getConfigurationSection("drag");
+      if (drag != null) {
+         this.dragMode = drag.getString("mode", "").trim().toLowerCase(Locale.ROOT);
+         this.dragTarget = drag.getString("target", drag.getString("group", "")).trim();
+         double sensitivity = drag.getDouble("sensitivity", 1.0);
+         this.dragSensitivity = Double.isFinite(sensitivity) ? Math.max(0.01, Math.min(10.0, sensitivity)) : 1.0;
+      }
+      if (configuredHitbox != null) {
+         this.customHitboxConfigured = true;
+         this.hitboxText = configuredHitbox.getString("text", this.hitboxText);
+         this.hitboxWidth = Math.max(0.05, configuredHitbox.getDouble("width", this.hitboxWidth));
+         this.hitboxHeight = Math.max(0.05, configuredHitbox.getDouble("height", this.hitboxHeight));
+         this.hitboxDepth = Math.max(0.05, configuredHitbox.getDouble("depth", this.hitboxDepth));
+      }
+
       if (this.isItemLayout()) {
          ConfigurationSection itemSection = var1.getConfigurationSection("item");
-         this.itemMaterial = var1.getString("material", itemSection != null ? itemSection.getString("material", "DIAMOND") : "DIAMOND");
+         ConfigurationSection avatarSection = var1.getConfigurationSection("avatar");
+         this.itemMaterial = this.isPlayerAvatarLayout()
+            ? "PLAYER_HEAD"
+            : var1.getString("material", itemSection != null ? itemSection.getString("material", "DIAMOND") : "DIAMOND");
          this.itemCustomModelData = Math.max(0, var1.getInt("custom-model-data", itemSection != null ? itemSection.getInt("custom-model-data", 0) : 0));
          this.itemScale = Math.max(0.01, var1.getDouble("scale", itemSection != null ? itemSection.getDouble("scale", 0.5) : 0.5));
          this.itemGlow = var1.getBoolean("glow", itemSection != null && itemSection.getBoolean("glow", false));
          this.itemRotate = var1.getBoolean("rotate", itemSection != null && itemSection.getBoolean("rotate", false));
          this.itemRotateSpeed = var1.getDouble("rotate-speed", itemSection != null ? itemSection.getDouble("rotate-speed", 1.0) : 1.0);
          this.itemBillboard = var1.getString("billboard", itemSection != null ? itemSection.getString("billboard", "center") : "center");
-         ConfigurationSection hitboxSection = var1.getConfigurationSection("hitbox");
+         this.itemDisplayTransform = var1.getString(
+            "transform",
+            itemSection != null ? itemSection.getString("transform", this.isPlayerAvatarLayout() ? "head" : "none") : this.isPlayerAvatarLayout() ? "head" : "none"
+         );
+         if (this.isPlayerAvatarLayout()) {
+            this.avatarFaceOnly = var1.getBoolean("face-only", avatarSection != null && avatarSection.getBoolean("face-only", false));
+            this.avatarPlayer = var1.getString(
+               "player",
+               avatarSection != null ? avatarSection.getString("player", avatarSection.getString("owner", "self")) : "self"
+            );
+         }
+         ConfigurationSection hitboxSection = configuredHitbox;
          if (hitboxSection != null) {
             this.hitboxText = hitboxSection.getString("text", this.hitboxText);
             this.hitboxWidth = Math.max(0.05, hitboxSection.getDouble("width", this.itemScale));
@@ -808,6 +1043,8 @@ public class MenuLayout {
          this.entranceAnimationDelay = Math.max(0L, entrance.getLong("delay", 0L));
          this.entranceAnimationDuration = Math.max(0, Math.min(59, entrance.getInt("duration", 10)));
          this.entranceAnimationDistance = Math.max(0.0, entrance.getDouble("distance", 1.0));
+         String entranceEasing = entrance.getString("easing", "linear");
+         this.entranceAnimationEasing = entranceEasing == null ? "linear" : entranceEasing.trim().toLowerCase(java.util.Locale.ROOT);
       }
 
       if (var1.contains("animation")) {
@@ -888,8 +1125,8 @@ public class MenuLayout {
    }
 
    private String renderBarText(Player player) {
-      double value = parseNumber(UIcorePlugin.parsePlaceholders(player, this.barValue));
-      double max = parseNumber(UIcorePlugin.parsePlaceholders(player, this.barMax));
+      double value = parseNumber(UIcorePlugin.resolveDataValue(player, this.ownerMenuKey, this.key, this.barValue));
+      double max = parseNumber(UIcorePlugin.resolveDataValue(player, this.ownerMenuKey, this.key, this.barMax));
       if (max <= 0.0) {
          max = 1.0;
       }
@@ -993,22 +1230,18 @@ public class MenuLayout {
       this.floatingAnimationAmplitude = Math.max(0.0, amplitude);
    }
 
-   private static YamlConfiguration copyConfig(ConfigurationSection section) {
-      YamlConfiguration copy = new YamlConfiguration();
-      if (section != null) {
-         for (Map.Entry<String, Object> entry : section.getValues(true).entrySet()) {
-            if (!(entry.getValue() instanceof ConfigurationSection)) {
-               copy.set(entry.getKey(), entry.getValue());
-            }
-         }
-      }
-
-      return copy;
-   }
-
    public void runCommand(Player var1) {
+      if (UIcorePlugin.plugin == null) {
+         return;
+      }
+      long sessionGeneration = UIcorePlugin.plugin.getMenuSessionGeneration(var1);
+      if (!UIcorePlugin.plugin.isMenuSessionCurrent(var1, sessionGeneration)) {
+         return;
+      }
       if (!this.hasPermission(var1)) {
          this.handlePermissionDeniedClick(var1);
+      } else if (!this.isVisible(var1)) {
+         var1.sendMessage(UIcorePlugin.plugin.getLangMessage("menu.condition_not_met", "&c[UIcore] The condition was not met."));
       } else if (!this.passesClickRequirements(var1)) {
          this.handleClickRequirementDenied(var1);
       } else if (this.conditionVariable != null && this.conditionOperator != null && this.conditionValue != null && !this.checkCondition(var1)) {
@@ -1016,17 +1249,13 @@ public class MenuLayout {
       } else if (!this.passesCooldown(var1)) {
          this.handleCooldownDenied(var1);
       } else {
-         if (this.stop && (!this.nextMenuEnabled || this.nextMenuKey.isEmpty()) && var1.isInsideVehicle()) {
-            Entity var2 = var1.getVehicle();
-            if (var2 != null) {
-               var2.removePassenger(var1);
-               var2.remove();
+          UIcorePlugin.plugin.selectedLayouts.put(var1, this);
+          if (this.pendingClickPlayers.add(var1.getUniqueId())) {
+            if (!this.extensionActionId.isBlank() && !UIcorePlugin.plugin.getExtensionManager().executeAction(
+               this.extensionActionId, var1, this.ownerMenuKey, this.key, this.extensionActionArgs)) {
+               this.pendingClickPlayers.remove(var1.getUniqueId());
+               return;
             }
-         }
-
-         UIcorePlugin.plugin.selectedLayouts.put(var1, this);
-         if (!this.isClick) {
-            this.isClick = true;
             this.startCooldown(var1);
             if (this.hasInputField()) {
                UIcorePlugin.plugin.setCurrentPlayerInputField(var1, this.inputFieldName);
@@ -1041,54 +1270,63 @@ public class MenuLayout {
                this.executeToggleContentCommands(var1, newState);
             }
 
+            if (!this.clickElementStates.isEmpty()) {
+               UIcorePlugin.plugin.applyElementStateChanges(var1, this.ownerMenuKey, this.clickElementStates);
+            }
+
             HoverEnlargeManager hoverManager = UIcorePlugin.plugin.getHoverEnlargeManager();
             if (hoverManager != null) {
                hoverManager.applyPressedStyle(var1, this);
             }
 
-            UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(var1x -> this.isClick = false, null, 1L);
+            UIcorePlugin.foliaLib
+               .scheduling()
+               .entitySpecificScheduler(var1)
+               .runDelayed(var1x -> this.pendingClickPlayers.remove(var1.getUniqueId()), null, 1L);
             if (this.linkCommand != null && !this.linkCommand.isEmpty()) {
                this.sendClickableLink(var1, this.linkCommand);
             } else if (this.useRandomCommands) {
                this.executeRandomCommands(var1);
             } else {
                for (String var8 : this.command) {
-                  String var4 = UIcorePlugin.plugin.applyInputPlaceholders(var1, var8, false);
-                  if (UIcorePlugin.hasPAPI) {
-                     var4 = PlaceholderAPI.setPlaceholders(var1, var4);
-                  }
-
-                  this.dispatchCommand(var1, var4);
+                  this.dispatchCommand(var1, var8);
                }
             }
 
-            this.scheduleMenuRefresh(var1);
+             this.scheduleMenuRefresh(var1, sessionGeneration);
 
             if (this.nextMenuEnabled && !this.nextMenuKey.isEmpty()) {
                UIcorePlugin.foliaLib
                   .scheduling()
                   .entitySpecificScheduler(var1)
-                  .runDelayed(var2x -> UIcorePlugin.plugin.setupCursor(var1, this.nextMenuKey), null, 5L);
+                   .runDelayed(var2x -> {
+                      if (UIcorePlugin.plugin.isMenuSessionCurrent(var1, sessionGeneration)) {
+                         UIcorePlugin.plugin.setupCursor(var1, this.nextMenuKey);
+                      }
+                   }, null, 5L);
             } else {
                if (this.stop) {
                   UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(var2x -> {
-                     boolean var3x = this.teleportBool && this.teleportOriginal;
-                     UIcorePlugin.plugin.stopCursor(var1, var3x);
-                     this.teleport(var1);
-                     this.runStopCommand(var1);
+                      boolean var3x = this.teleportBool && this.teleportOriginal;
+                   if (UIcorePlugin.plugin.isMenuSessionCurrent(var1, sessionGeneration)) {
+                      UIcorePlugin.plugin.stopCursorAsync(var1, var3x).whenComplete((restored, failure) -> {
+                         if (failure != null || !Boolean.TRUE.equals(restored)) return;
+                         if (this.teleportBool) this.teleport(var1, () -> this.runStopCommand(var1));
+                         else var1.getScheduler().execute(UIcorePlugin.plugin, () -> this.runStopCommand(var1), null, 0L);
+                      });
+                   }
                   }, null, 2L);
                }
 
-               UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(var1x -> this.isClick = false, null, 15L);
             }
          }
       }
    }
 
-   private void scheduleMenuRefresh(Player player) {
+   private void scheduleMenuRefresh(Player player, long sessionGeneration) {
       if (this.refreshMenuEnabled && !this.stop && (!this.nextMenuEnabled || this.nextMenuKey.isEmpty())) {
          UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).runDelayed(var1 -> {
-            if (UIcorePlugin.playerCursors.containsKey(player)) {
+            if (UIcorePlugin.plugin.isMenuSessionCurrent(player, sessionGeneration) && UIcorePlugin.playerCursors.containsKey(player)) {
                UIcorePlugin.plugin.refreshCurrentMenu(player);
             }
          }, null, this.refreshMenuDelay);
@@ -1121,21 +1359,16 @@ public class MenuLayout {
    private void handleCooldownDenied(Player player) {
       long leftMillis = UIcorePlugin.plugin.getLayoutCooldownLeftMillis(player, this.resolveCooldownKey(player));
       if (this.cooldownDeniedMessage != null && !this.cooldownDeniedMessage.isBlank()) {
-         CommandUtils.sendChatMessage(player, this.applyCooldownPlaceholders(UIcorePlugin.parsePlaceholders(player, this.cooldownDeniedMessage), leftMillis));
+         CommandUtils.sendChatMessage(player, this.applyCooldownPlaceholders(this.cooldownDeniedMessage, leftMillis));
       }
 
       if (this.cooldownDeniedActionBar != null && !this.cooldownDeniedActionBar.isBlank()) {
-         CommandUtils.sendActionBar(player, this.applyCooldownPlaceholders(UIcorePlugin.parsePlaceholders(player, this.cooldownDeniedActionBar), leftMillis));
+         CommandUtils.sendActionBar(player, this.applyCooldownPlaceholders(this.cooldownDeniedActionBar, leftMillis));
       }
 
       if (this.cooldownDeniedCommands != null) {
          for (String command : this.cooldownDeniedCommands) {
-            String processedCommand = UIcorePlugin.plugin.applyInputPlaceholders(player, command, false);
-            if (UIcorePlugin.hasPAPI) {
-               processedCommand = PlaceholderAPI.setPlaceholders(player, processedCommand);
-            }
-
-            CommandUtils.executeCommand(player, this.applyCooldownPlaceholders(processedCommand, leftMillis));
+            CommandUtils.executeCommand(player, this.applyCooldownPlaceholders(command, leftMillis));
          }
       }
    }
@@ -1168,17 +1401,17 @@ public class MenuLayout {
 
    private void handleClickRequirementDenied(Player player) {
       if (this.clickRequirementDeniedMessage != null && !this.clickRequirementDeniedMessage.isBlank()) {
-         CommandUtils.sendChatMessage(player, UIcorePlugin.parsePlaceholders(player, this.clickRequirementDeniedMessage));
+         CommandUtils.sendChatMessage(player, this.clickRequirementDeniedMessage);
       } else if (this.permissionDeniedMessage != null && !this.permissionDeniedMessage.isBlank()) {
-         CommandUtils.sendChatMessage(player, UIcorePlugin.parsePlaceholders(player, this.permissionDeniedMessage));
+         CommandUtils.sendChatMessage(player, this.permissionDeniedMessage);
       } else {
          player.sendMessage(UIcorePlugin.plugin.getLangMessage("permission.no_permission_button", "&c[UIcore] You cannot use this element."));
       }
 
       if (this.clickRequirementDeniedActionBar != null && !this.clickRequirementDeniedActionBar.isBlank()) {
-         CommandUtils.sendActionBar(player, UIcorePlugin.parsePlaceholders(player, this.clickRequirementDeniedActionBar));
+         CommandUtils.sendActionBar(player, this.clickRequirementDeniedActionBar);
       } else if (this.permissionDeniedActionBar != null && !this.permissionDeniedActionBar.isBlank()) {
-         CommandUtils.sendActionBar(player, UIcorePlugin.parsePlaceholders(player, this.permissionDeniedActionBar));
+         CommandUtils.sendActionBar(player, this.permissionDeniedActionBar);
       }
 
       String sound = this.clickRequirementDeniedSound != null && !this.clickRequirementDeniedSound.isBlank()
@@ -1199,12 +1432,7 @@ public class MenuLayout {
          : this.permissionDeniedCommands;
       if (commands != null) {
          for (String command : commands) {
-            String processedCommand = UIcorePlugin.plugin.applyInputPlaceholders(player, command, false);
-            if (UIcorePlugin.hasPAPI) {
-               processedCommand = PlaceholderAPI.setPlaceholders(player, processedCommand);
-            }
-
-            CommandUtils.executeCommand(player, processedCommand);
+            CommandUtils.executeCommand(player, command);
          }
       }
    }
@@ -1215,13 +1443,13 @@ public class MenuLayout {
       }
 
       if (this.permissionDeniedMessage != null && !this.permissionDeniedMessage.isBlank()) {
-         CommandUtils.sendChatMessage(player, UIcorePlugin.parsePlaceholders(player, this.permissionDeniedMessage));
+         CommandUtils.sendChatMessage(player, this.permissionDeniedMessage);
       } else {
          player.sendMessage(UIcorePlugin.plugin.getLangMessage("permission.no_permission_button", "&c[UIcore] You cannot use this element."));
       }
 
       if (this.permissionDeniedActionBar != null && !this.permissionDeniedActionBar.isBlank()) {
-         CommandUtils.sendActionBar(player, UIcorePlugin.parsePlaceholders(player, this.permissionDeniedActionBar));
+         CommandUtils.sendActionBar(player, this.permissionDeniedActionBar);
       }
 
       if (this.permissionDeniedSound != null && !this.permissionDeniedSound.isBlank()) {
@@ -1230,12 +1458,7 @@ public class MenuLayout {
 
       if (this.hasPermissionDeniedCommands()) {
          for (String command : this.permissionDeniedCommands) {
-            String processedCommand = UIcorePlugin.plugin.applyInputPlaceholders(player, command, false);
-            if (UIcorePlugin.hasPAPI) {
-               processedCommand = PlaceholderAPI.setPlaceholders(player, processedCommand);
-            }
-
-            CommandUtils.executeCommand(player, processedCommand);
+            CommandUtils.executeCommand(player, command);
          }
       }
    }
@@ -1276,12 +1499,7 @@ public class MenuLayout {
             var11 += this.randomChances.get(var6);
             if (var10 <= var11) {
                String var7 = this.randomCommands.get(var6);
-               String var8 = UIcorePlugin.plugin.applyInputPlaceholders(var1, var7, false);
-               if (UIcorePlugin.hasPAPI) {
-                  var8 = PlaceholderAPI.setPlaceholders(var1, var8);
-               }
-
-               this.dispatchCommand(var1, var8);
+               this.dispatchCommand(var1, var7);
                break;
             }
          }
@@ -1292,12 +1510,7 @@ public class MenuLayout {
       List<String> commands = newState ? this.toggleContentOnCommands : this.toggleContentOffCommands;
       if (commands != null && !commands.isEmpty()) {
          for (String command : commands) {
-            String processedCommand = UIcorePlugin.plugin.applyInputPlaceholders(player, command, false);
-            if (UIcorePlugin.hasPAPI) {
-               processedCommand = PlaceholderAPI.setPlaceholders(player, processedCommand);
-            }
-
-            this.dispatchCommand(player, processedCommand);
+            this.dispatchCommand(player, command);
          }
       }
    }
@@ -1310,34 +1523,31 @@ public class MenuLayout {
       CommandUtils.connectToServer(var1, var2);
    }
 
-   private void teleport(Player var1) {
-      if (this.teleportBool) {
-         Location var2;
-         if (this.teleportOriginal) {
-            var2 = UIcorePlugin.playerLocations.get(var1);
-         } else {
-            var2 = this.teleportLoc.clone();
-         }
-
-         if (var2 != null && var2.getWorld() != null) {
-            var2.setYaw(UIcorePlugin.exitYaw);
-            var2.setPitch(UIcorePlugin.exitPitch);
-            World var5 = var2.getWorld();
-            if (var5 != null) {
-               var1.teleport(var2);
-            } else {
-               Location var4 = var1.getLocation().clone();
-               var4.setYaw(UIcorePlugin.exitYaw);
-               var4.setPitch(UIcorePlugin.exitPitch);
-               var1.teleport(var4);
-            }
-         } else {
-            Location var3 = var1.getLocation();
-            var3.setYaw(UIcorePlugin.exitYaw);
-            var3.setPitch(UIcorePlugin.exitPitch);
-            var1.teleport(var3);
-         }
+   private void teleport(Player player, Runnable afterTeleport) {
+      if (!this.teleportBool) {
+         afterTeleport.run();
+         return;
       }
+
+      Location target = this.teleportOriginal ? UIcorePlugin.playerLocations.get(player) : this.teleportLoc;
+      if (target == null || target.getWorld() == null) {
+         target = player.getLocation();
+      } else {
+         target = target.clone();
+      }
+      target.setYaw(UIcorePlugin.exitYaw);
+      target.setPitch(UIcorePlugin.exitPitch);
+
+      /*
+       * A menu can return the player to a different region or world. teleportAsync
+       * transfers ownership without blocking the entity region; its completion can
+       * run on an arbitrary thread, so continue on the player's scheduler.
+       */
+      player.teleportAsync(target).whenComplete((ignored, failure) -> {
+         if (UIcorePlugin.plugin != null) {
+            player.getScheduler().execute(UIcorePlugin.plugin, afterTeleport, null, 0L);
+         }
+      });
    }
 
    private void runStopCommand(Player var1) {
@@ -1350,13 +1560,15 @@ public class MenuLayout {
 
    private boolean checkCondition(Player var1) {
       if (!UIcorePlugin.hasPAPI) {
-         return true;
+         return false;
       } else {
          String var2 = PlaceholderAPI.setPlaceholders(var1, this.conditionVariable);
+         if (var2 == null || var2.matches("(?s).*%[^%\\s]+%.*")) return false;
 
          try {
             double var3 = Double.parseDouble(var2);
             double var5 = Double.parseDouble(this.conditionValue);
+            if (!Double.isFinite(var3) || !Double.isFinite(var5)) return false;
             String var7 = this.conditionOperator;
             switch (var7) {
                case ">":
@@ -1389,18 +1601,28 @@ public class MenuLayout {
    }
 
    private static class VisibilityCondition {
+      private static final int MAX_REGEX_LENGTH = 256;
+      private static final int MAX_REGEX_INPUT_LENGTH = 1024;
       private final String kind;
       private final String key;
       private final String operator;
       private final String expected;
       private final List<VisibilityCondition> children;
+      private final com.google.re2j.Pattern regex;
+      private final Map<String, Object> arguments;
 
       private VisibilityCondition(String kind, String key, String operator, String expected, List<VisibilityCondition> children) {
+         this(kind, key, operator, expected, children, Map.of());
+      }
+
+      private VisibilityCondition(String kind, String key, String operator, String expected, List<VisibilityCondition> children, Map<String, Object> arguments) {
          this.kind = kind;
          this.key = key == null ? "" : key;
          this.operator = operator == null ? "==" : operator;
          this.expected = expected == null ? "" : expected;
          this.children = children == null ? Collections.emptyList() : children;
+         this.regex = "matches".equals(this.operator) ? compileRegex(this.expected) : null;
+         this.arguments = Map.copyOf(arguments);
       }
 
       static VisibilityCondition always() {
@@ -1411,26 +1633,56 @@ public class MenuLayout {
          return new VisibilityCondition("never", "", "==", "", Collections.emptyList());
       }
 
+      static VisibilityCondition invalid() {
+         return new VisibilityCondition("invalid", "", "==", "", Collections.emptyList());
+      }
+
       static VisibilityCondition from(ConfigurationSection section) {
          if (section == null) {
             return always();
          }
 
-         Object allValue = section.get("all");
-         if (allValue instanceof List<?>) {
-            return new VisibilityCondition("all", "", "==", "", fromList((List<?>)allValue));
+          for (String structural : List.of("all", "any", "not")) if (section.contains(structural) && section.getKeys(false).size() != 1) return invalid();
+          Object allValue = section.get("all");
+          if (allValue instanceof List<?>) {
+             List<VisibilityCondition> children = fromList((List<?>)allValue);
+             return children.isEmpty() || children.stream().anyMatch(VisibilityCondition::isInvalid)
+                ? invalid()
+                : new VisibilityCondition("all", "", "==", "", children);
+          }
+          if (section.contains("all")) {
+             return invalid();
+          }
+
+          Object anyValue = section.get("any");
+          if (anyValue instanceof List<?>) {
+             List<VisibilityCondition> children = fromList((List<?>)anyValue);
+             return children.isEmpty() || children.stream().anyMatch(VisibilityCondition::isInvalid)
+                ? invalid()
+                : new VisibilityCondition("any", "", "==", "", children);
+          }
+          if (section.contains("any")) {
+             return invalid();
+          }
+
+          if (section.contains("not")) {
+             VisibilityCondition child = fromValue(section.get("not"));
+             return child.isInvalid() ? invalid() : new VisibilityCondition("not", "", "==", "", List.of(child));
+          }
+
+         if (section.contains("custom")) {
+            ConfigurationSection custom = section.getConfigurationSection("custom");
+            if (custom == null || section.getKeys(false).size() != 1) return invalid();
+            String id = custom.getString("type", "");
+            if (id.isBlank()) return invalid();
+            Map<String, Object> arguments = new LinkedHashMap<>(custom.getValues(false));
+            arguments.remove("type");
+            if (arguments.values().stream().anyMatch(value -> !(value instanceof String || value instanceof Number || value instanceof Boolean))) return invalid();
+            return new VisibilityCondition("custom", id, "==", "", Collections.emptyList(), arguments);
          }
 
-         Object anyValue = section.get("any");
-         if (anyValue instanceof List<?>) {
-            return new VisibilityCondition("any", "", "==", "", fromList((List<?>)anyValue));
-         }
-
-         ConfigurationSection notSection = section.getConfigurationSection("not");
-         if (notSection != null) {
-            return new VisibilityCondition("not", "", "==", "", List.of(from(notSection)));
-         }
-
+         java.util.Set<String> accepted = java.util.Set.of("permission", "placeholder", "state", "operator", "value", "equals", "not-equals", "not_equals", "contains", "not-contains", "not_contains", "matches", "greater-than", "greater_than", "greater-or-equal", "greater_or_equal", "less-than", "less_than", "less-or-equal", "less_or_equal");
+         for (String key : section.getKeys(false)) if (!accepted.contains(key) && !key.startsWith("state.")) return invalid();
          List<VisibilityCondition> conditions = new ArrayList<>();
          String permission = section.getString("permission", "");
          if (!permission.isBlank()) {
@@ -1456,11 +1708,33 @@ public class MenuLayout {
             }
          }
 
-         if (conditions.isEmpty()) {
-            return always();
+          if (conditions.isEmpty()) {
+             return invalid();
          }
 
          return conditions.size() == 1 ? conditions.get(0) : new VisibilityCondition("all", "", "==", "", conditions);
+      }
+
+      static VisibilityCondition fromValue(Object value) {
+         if (value instanceof ConfigurationSection section) {
+            return from(section);
+         }
+         if (value instanceof Map<?, ?> values) {
+            return from(sectionFromMap(values));
+         }
+         if (value instanceof List<?> values) {
+            List<VisibilityCondition> children = fromList(values);
+            return children.isEmpty() || children.stream().anyMatch(VisibilityCondition::isInvalid)
+               ? invalid()
+               : new VisibilityCondition("all", "", "==", "", children);
+         }
+         if (value instanceof Boolean booleanValue) {
+            return booleanValue ? always() : never();
+         }
+         if (value instanceof String permission && !permission.isBlank()) {
+            return new VisibilityCondition("permission", permission.trim(), "==", "true", Collections.emptyList());
+         }
+         return invalid();
       }
 
       private static List<VisibilityCondition> fromList(List<?> values) {
@@ -1468,11 +1742,15 @@ public class MenuLayout {
          for (Object value : values) {
             if (value instanceof Map<?, ?>) {
                conditions.add(from(sectionFromMap((Map<?, ?>)value)));
+            } else if (value instanceof Boolean booleanValue) {
+               conditions.add(booleanValue ? always() : never());
             } else if (value instanceof String) {
                String raw = ((String)value).trim();
                if (!raw.isBlank()) {
                   conditions.add(new VisibilityCondition("permission", raw, "==", "true", Collections.emptyList()));
                }
+            } else {
+               conditions.add(invalid());
             }
          }
 
@@ -1483,11 +1761,23 @@ public class MenuLayout {
          YamlConfiguration config = new YamlConfiguration();
          for (Map.Entry<?, ?> entry : values.entrySet()) {
             if (entry.getKey() != null) {
-               config.set(String.valueOf(entry.getKey()), entry.getValue());
+               putMapValue(config, String.valueOf(entry.getKey()), entry.getValue());
             }
          }
 
          return config;
+      }
+
+      private static void putMapValue(YamlConfiguration config, String path, Object value) {
+         if (value instanceof Map<?, ?> nested) {
+            for (Map.Entry<?, ?> entry : nested.entrySet()) {
+               if (entry.getKey() != null) {
+                  putMapValue(config, path + "." + entry.getKey(), entry.getValue());
+               }
+            }
+         } else {
+            config.set(path, value);
+         }
       }
 
       private static String operatorFrom(ConfigurationSection section) {
@@ -1577,7 +1867,30 @@ public class MenuLayout {
          }
       }
 
+      private boolean canEvaluate(Player player, MenuLayout layout) {
+         if (this.isInvalid() || !List.of("==", "!=", ">", ">=", "<", "<=", "contains", "!contains", "matches").contains(normalizeOperator(this.operator))) return false;
+         if ("permission".equals(this.kind) && player == null) return false;
+         if ("placeholder".equals(this.kind)) {
+            if (!UIcorePlugin.hasPAPI || player == null) return false;
+            String resolved = UIcorePlugin.parsePlaceholders(player, this.key);
+            if (resolved != null && resolved.matches("(?s).*%[^%\\s]+%.*")) return false;
+            if (List.of(">", ">=", "<", "<=").contains(normalizeOperator(this.operator))) {
+               try { if (!Double.isFinite(Double.parseDouble(resolved)) || !Double.isFinite(Double.parseDouble(this.expected))) return false; }
+               catch (RuntimeException ignored) { return false; }
+            }
+         }
+         if ("state".equals(this.kind) && (player == null || layout == null || UIcorePlugin.plugin == null)) return false;
+         if ("custom".equals(this.kind) && (player == null || layout == null || UIcorePlugin.plugin == null)) return false;
+         for (VisibilityCondition child : this.children) if (!child.canEvaluate(player, layout)) return false;
+         return true;
+      }
+
       boolean matches(Player player, MenuLayout layout) {
+         return Boolean.TRUE.equals(this.evaluate(player, layout));
+      }
+
+      private Boolean evaluate(Player player, MenuLayout layout) {
+         if (!this.canEvaluate(player, layout)) return null;
          switch (this.kind) {
             case "always":
                return true;
@@ -1586,41 +1899,55 @@ public class MenuLayout {
             case "permission":
                return player != null && (player.hasPermission(this.key) || player.isOp());
             case "placeholder":
-               return compare(UIcorePlugin.parsePlaceholders(player, this.key), UIcorePlugin.parsePlaceholders(player, this.expected), this.operator);
+                return UIcorePlugin.hasPAPI
+                   && player != null
+                   && this.compare(UIcorePlugin.parsePlaceholders(player, this.key), this.expected, this.operator);
             case "state":
-               return player != null
-                  && layout != null
-                  && compare(UIcorePlugin.plugin.getPlayerMenuState(player, layout.getOwnerMenuKey(), this.key), UIcorePlugin.parsePlaceholders(player, this.expected), this.operator);
+                return player != null
+                   && layout != null
+                   && UIcorePlugin.plugin != null
+                   && this.compare(UIcorePlugin.plugin.getPlayerMenuState(player, layout.getOwnerMenuKey(), this.key), UIcorePlugin.parsePlaceholders(player, this.expected), this.operator);
+            case "custom":
+               return UIcorePlugin.plugin.getExtensionManager()
+                  .evaluateCondition(this.key, player, layout.getOwnerMenuKey(), layout.key, this.arguments).orElse(null);
             case "all":
                for (VisibilityCondition child : this.children) {
-                  if (!child.matches(player, layout)) {
-                     return false;
-                  }
+                  Boolean value = child.evaluate(player, layout);
+                  if (value == null) return null;
+                  if (!value) return false;
                }
 
                return true;
             case "any":
+               boolean any = false;
                for (VisibilityCondition child : this.children) {
-                  if (child.matches(player, layout)) {
-                     return true;
-                  }
+                  Boolean value = child.evaluate(player, layout);
+                  if (value == null) return null;
+                  any |= value;
                }
 
-               return false;
+               return any;
             case "not":
-               return this.children.isEmpty() || !this.children.get(0).matches(player, layout);
+               if (this.children.size() != 1) return null;
+               Boolean childValue = this.children.get(0).evaluate(player, layout);
+               return childValue == null ? null : !childValue;
             default:
-               return true;
+               return null;
          }
       }
 
-      private static boolean compare(String actual, String expected, String operator) {
+      private boolean isInvalid() {
+         return "invalid".equals(this.kind);
+      }
+
+      private boolean compare(String actual, String expected, String operator) {
          String left = actual == null ? "" : actual;
          String right = expected == null ? "" : expected;
          String op = normalizeOperator(operator == null ? "==" : operator);
          try {
             double leftNumber = Double.parseDouble(left);
             double rightNumber = Double.parseDouble(right);
+            if (!Double.isFinite(leftNumber) || !Double.isFinite(rightNumber)) return false;
             switch (op) {
                case ">":
                   return leftNumber > rightNumber;
@@ -1650,11 +1977,19 @@ public class MenuLayout {
             case "!contains":
                return !left.contains(right);
             case "matches":
-               return left.matches(right);
+               return this.regex != null && left.length() <= MAX_REGEX_INPUT_LENGTH && this.regex.matcher(left).matches();
             default:
                return false;
          }
       }
+
+      private static com.google.re2j.Pattern compileRegex(String expression) {
+         if (expression == null || expression.length() > MAX_REGEX_LENGTH || expression.indexOf('%') >= 0 || expression.contains("{input.") || expression.contains("{menu.input."))
+            throw new IllegalArgumentException("matches requires a fixed regex of at most " + MAX_REGEX_LENGTH + " characters");
+         try { return com.google.re2j.Pattern.compile(expression); }
+         catch (com.google.re2j.PatternSyntaxException exception) { throw new IllegalArgumentException("Invalid matches regex: " + exception.getDescription(), exception); }
+      }
+
    }
 
    private static class PlaceholderRequirement {
@@ -1671,6 +2006,7 @@ public class MenuLayout {
       boolean matches(Player player) {
          String actual = UIcorePlugin.parsePlaceholders(player, this.placeholder);
          String expectedValue = UIcorePlugin.parsePlaceholders(player, this.expected);
+         if (actual == null || expectedValue == null || actual.matches("(?s).*%[^%\\s]+%.*") || expectedValue.matches("(?s).*%[^%\\s]+%.*")) return false;
          try {
             double actualNumber = Double.parseDouble(actual);
             double expectedNumber = Double.parseDouble(expectedValue);

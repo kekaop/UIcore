@@ -35,8 +35,9 @@ public class NPCModule {
    public static synchronized void shutdown() {
       if (instance != null) {
          instance.mirrorHook.cleanup();
-         instance.mirrorManager.cleanup();
          instance = null;
+         NPCMirrorHook.clearInstance();
+         NPCMirrorManager.clearInstance();
       }
    }
 
@@ -49,7 +50,7 @@ public class NPCModule {
    }
 
    public static void onMenuOpen(Player player, Location menuLocation, float yaw, float pitch, String menuKey) {
-      if (instance != null && instance.enabled) {
+      if (instance != null) {
          instance.mirrorHook.onMenuOpen(player, menuLocation, yaw, pitch, menuKey);
       }
    }
@@ -73,7 +74,7 @@ public class NPCModule {
    }
 
    public static void onMenuSwitch(Player player, Location newLocation, float yaw, float pitch, String menuKey) {
-      if (instance != null && instance.enabled) {
+      if (instance != null) {
          instance.mirrorHook.onMenuSwitch(player, newLocation, yaw, pitch, menuKey);
       }
    }

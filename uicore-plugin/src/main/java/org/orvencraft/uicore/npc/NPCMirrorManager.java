@@ -6,8 +6,8 @@ import de.oliver.fancynpcs.api.Npc;
 import de.oliver.fancynpcs.api.NpcAttribute;
 import de.oliver.fancynpcs.api.NpcData;
 import de.oliver.fancynpcs.api.NpcManager;
+import de.oliver.fancynpcs.api.skins.SkinData;
 import de.oliver.fancynpcs.api.utils.NpcEquipmentSlot;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -26,7 +26,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 public class NPCMirrorManager {
    private static NPCMirrorManager instance;
@@ -37,14 +37,15 @@ public class NPCMirrorManager {
    private boolean skinsRestorerEnabled = false;
    private final Map<UUID, Npc> playerNPCs = new ConcurrentHashMap<>();
    private final Map<UUID, NPCMenuSettings> playerMenuSettings = new ConcurrentHashMap<>();
-   private final Map<UUID, BukkitTask> autoRotateTasks = new ConcurrentHashMap<>();
-   private final Set<UUID> disabledPlayers = new HashSet<>();
+   private final Map<UUID, ScheduledTask> autoRotateTasks = new ConcurrentHashMap<>();
+   private final Set<UUID> disabledPlayers = ConcurrentHashMap.newKeySet();
    private NPCConfig config;
 
    private NPCMirrorManager(JavaPlugin plugin) {
       this.plugin = plugin;
       this.config = new NPCConfig(plugin);
       this.initializeDependencies();
+      this.disabledPlayers.addAll(this.config.loadDisabledPlayers());
    }
 
    public static synchronized NPCMirrorManager getInstance(JavaPlugin plugin) {
@@ -57,6 +58,10 @@ public class NPCMirrorManager {
 
    public static NPCMirrorManager getInstance() {
       return instance;
+   }
+
+   static synchronized void clearInstance() {
+      instance = null;
    }
 
    private void initializeDependencies() {
@@ -160,8 +165,9 @@ public class NPCMirrorManager {
                   this.applyCustomModel(npcData, menuSettings, menuKey);
                   Npc npc = (Npc)this.fancyNpcsPlugin.getNpcAdapter().apply(npcData);
                   npc.setSaveToFile(false);
+                  this.playerNPCs.put(player.getUniqueId(), npc);
                   npc.create();
-                  npc.spawnForAll();
+                  npc.spawn(player);
                   this.updateNpcName(player, npc, menuSettings);
                   this.playerNPCs.put(player.getUniqueId(), npc);
                   if (menuSettings != null) {
@@ -175,6 +181,7 @@ public class NPCMirrorManager {
                   return true;
                }
             } catch (Exception var10) {
+               this.removeMirrorNPC(player);
                this.plugin.getLogger().warning("[NPCMirror] Could not create NPC: " + var10.getMessage());
                return false;
             }
@@ -230,19 +237,27 @@ public class NPCMirrorManager {
    }
 
    private void applyPlayerSkin(Player player, NpcData npcData) {
-      if (this.skinsRestorerEnabled) {
-         try {
-            PlayerStorage playerStorage = this.skinsRestorer.getPlayerStorage();
-            Optional<SkinProperty> skin = playerStorage.getSkinForPlayer(player.getUniqueId(), player.getName());
-            if (skin.isPresent()) {
-               npcData.setSkin(player.getName());
-            }
-         } catch (IllegalStateException var5) {
-            this.plugin.getLogger().info("[NPCMirror] SkinsRestorer API unavailable; skin setup skipped.");
-         } catch (Exception var6) {
-            this.plugin.getLogger().warning("[NPCMirror] Could not obtain player skin: " + var6.getMessage());
-         }
-      }
+      npcData.setMirrorSkin(true);
+      if (!this.skinsRestorerEnabled) return;
+      UUID playerId = player.getUniqueId();
+      long generation = ((UIcorePlugin)this.plugin).getMenuSessionGeneration(player);
+      String name = player.getName();
+      PlayerStorage storage = this.skinsRestorer.getPlayerStorage();
+      java.util.concurrent.CompletableFuture.supplyAsync(() -> storage.getSkinOfPlayer(playerId))
+         .whenComplete((skin, failure) -> {
+            if (!this.plugin.isEnabled()) return;
+            try {
+               UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(() -> {
+                  Npc current = this.playerNPCs.get(playerId);
+                  if (failure != null) { this.plugin.getLogger().warning("[NPCMirror] Skin lookup failed; player profile fallback retained."); return; }
+                  if (current == null || current.getData() != npcData || !((UIcorePlugin)this.plugin).isMenuSessionCurrent(player, generation) || skin == null || skin.isEmpty()) return;
+                  SkinProperty property = skin.get();
+                  npcData.setMirrorSkin(false);
+                  npcData.setSkinData(new SkinData(name, SkinData.SkinVariant.AUTO, property.getValue(), property.getSignature()));
+                  current.update(player);
+               }, () -> { });
+            } catch (org.bukkit.plugin.IllegalPluginAccessException ignored) { }
+         });
    }
 
    private void copyPlayerEquipment(Player player, NpcData npcData) {
@@ -273,7 +288,7 @@ public class NPCMirrorManager {
 
          try {
             npc.getData().setDisplayName(formattedName);
-            npc.updateForAll();
+            npc.update(player);
             if (this.config.isDebugMode()) {
                this.plugin.getLogger().info("[NPCMirror] Set NPC name: " + formattedName);
             }
@@ -296,7 +311,11 @@ public class NPCMirrorManager {
       Npc npc = this.playerNPCs.remove(playerId);
       if (npc != null) {
          try {
-            npc.removeForAll();
+            if (player.isOnline()) {
+               npc.remove(player);
+            } else {
+               npc.removeForAll();
+            }
          } catch (Exception var5) {
             this.plugin.getLogger().warning("[NPCMirror] Could not remove NPC: " + var5.getMessage());
          }
@@ -311,7 +330,7 @@ public class NPCMirrorManager {
             float newYaw = (location.getYaw() + yawOffset + 360.0F) % 360.0F;
             location.setYaw(newYaw);
             npc.getData().setLocation(location);
-            npc.updateForAll();
+            npc.update(player);
          } catch (Exception var6) {
             this.plugin.getLogger().warning("[NPCMirror] Could not rotate NPC: " + var6.getMessage());
          }
@@ -324,26 +343,26 @@ public class NPCMirrorManager {
       boolean enabled = settings != null && settings.autoRotateEnabled() != null ? settings.autoRotateEnabled() : this.config.isAutoRotateEnabled();
       float speed = settings != null && settings.autoRotateSpeed() != null ? settings.autoRotateSpeed() : this.config.getAutoRotateSpeed();
       if (enabled) {
-         BukkitTask task = Bukkit.getScheduler().runTaskTimer(this.plugin, () -> {
+         ScheduledTask task = UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).runAtFixedRate(() -> {
             if (player.isOnline() && this.playerNPCs.get(playerId) == npc) {
                try {
                   Location location = npc.getData().getLocation();
                   location.setYaw(location.getYaw() + speed);
                   npc.getData().setLocation(location);
-                  npc.updateForAll();
+                  npc.update(player);
                } catch (Exception var5) {
                   this.cancelAutoRotate(playerId);
                }
             } else {
                this.cancelAutoRotate(playerId);
             }
-         }, 1L, 1L);
-         this.autoRotateTasks.put(playerId, task);
+         }, () -> this.cancelAutoRotate(playerId), 1L, 1L);
+         if (task != null) this.autoRotateTasks.put(playerId, task);
       }
    }
 
    private void cancelAutoRotate(UUID playerId) {
-      BukkitTask task = this.autoRotateTasks.remove(playerId);
+      ScheduledTask task = this.autoRotateTasks.remove(playerId);
       if (task != null) {
          task.cancel();
       }
@@ -360,7 +379,7 @@ public class NPCMirrorManager {
                this.playerMenuSettings.get(player.getUniqueId())
             );
             npc.getData().setLocation(npcLoc);
-            npc.updateForAll();
+            npc.update(player);
          } catch (Exception var5) {
             this.plugin.getLogger().warning("[NPCMirror] Could not update NPC position: " + var5.getMessage());
          }
@@ -376,18 +395,33 @@ public class NPCMirrorManager {
    }
 
    public void cleanup() {
-      this.autoRotateTasks.values().forEach(BukkitTask::cancel);
+      this.autoRotateTasks.values().forEach(ScheduledTask::cancel);
       this.autoRotateTasks.clear();
 
-      for (Npc npc : this.playerNPCs.values()) {
-         try {
-            npc.removeForAll();
-         } catch (Exception var4) {
+      for (Map.Entry<UUID, Npc> entry : this.playerNPCs.entrySet()) {
+         Player player = Bukkit.getPlayer(entry.getKey());
+         Npc npc = entry.getValue();
+         if (player != null) {
+            org.orvencraft.uicore.scheduler.CleanupTasks.entity(this.plugin, player, () -> {
+               try {
+                  npc.remove(player);
+               } catch (Exception ignored) {
+               }
+            }, () -> this.removeNpcWithoutViewer(npc));
+         } else {
+            this.removeNpcWithoutViewer(npc);
          }
       }
 
       this.playerNPCs.clear();
       this.playerMenuSettings.clear();
+   }
+
+   private void removeNpcWithoutViewer(Npc npc) {
+      try {
+         npc.removeForAll();
+      } catch (Exception ignored) {
+      }
    }
 
    public NPCConfig getConfig() {

@@ -1,7 +1,5 @@
 package org.orvencraft.uicore.api;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 public final class MenuElementSnapshot {
@@ -34,7 +32,7 @@ public final class MenuElementSnapshot {
       this.y = y;
       this.z = z;
       this.textSize = textSize;
-      this.configValues = Collections.unmodifiableMap(new LinkedHashMap<>(configValues == null ? Map.of() : configValues));
+      this.configValues = ConfigurationCopy.immutableMap(configValues);
    }
 
    public String menuId() {

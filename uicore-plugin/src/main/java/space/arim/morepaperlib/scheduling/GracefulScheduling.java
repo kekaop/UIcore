@@ -53,7 +53,12 @@ public class GracefulScheduling {
 
    public boolean isOnGlobalRegionThread() {
       Server server = this.morePaperLib.getPlugin().getServer();
-      return this.isUsingFolia() ? server.isGlobalTickThread() : server.isPrimaryThread();
+      if (!this.isUsingFolia()) return server.isPrimaryThread();
+      try {
+         return (boolean) server.getClass().getMethod("isGlobalTickThread").invoke(server);
+      } catch (ReflectiveOperationException ignored) {
+         return server.isPrimaryThread();
+      }
    }
 
    public void cancelGlobalTasks() {

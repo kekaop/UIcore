@@ -18,6 +18,10 @@
 /build/
 uicore-api/target/
 uicore-plugin/target/
+release/morepaperlib-source/target/
+release/out/
+__pycache__/
+*.pyc
 
 # Local server runtime state.
 /server-data-current/

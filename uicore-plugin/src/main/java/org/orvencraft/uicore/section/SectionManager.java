@@ -3,15 +3,18 @@ package org.orvencraft.uicore.section;
 import org.orvencraft.uicore.UIcorePlugin;
 import org.orvencraft.uicore.layout.MenuLayout;
 import java.io.File;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 public class SectionManager {
-   private static HashMap<String, Section> sections = new HashMap<>();
+   private static volatile Map<String, Section> sections = Collections.emptyMap();
 
-   public void addSection(String key, Section section) {
-      sections.put(key, section);
+   public synchronized void addSection(String key, Section section) {
+      Map<String, Section> updated = new LinkedHashMap<>(sections);
+      updated.put(key, section);
+      sections = Collections.unmodifiableMap(updated);
    }
 
    public Section get(String key) {
@@ -22,8 +25,8 @@ public class SectionManager {
       return sections.containsKey(key);
    }
 
-   public void clear() {
-      sections.clear();
+   public synchronized void clear() {
+      sections = Collections.emptyMap();
    }
 
    public Set<String> keySet() {
@@ -41,20 +44,26 @@ public class SectionManager {
    }
 
    public Map<String, Section> getAll() {
-      return new HashMap<>(sections);
+      return new LinkedHashMap<>(sections);
    }
 
    public boolean hasSection(String key) {
       return sections.containsKey(key);
    }
 
-   public void loadAllMenuConfigs() {
-      this.clear();
+   public synchronized Map<String, Section> validateMenuConfigs() {
       File menuFolder = new File(UIcorePlugin.plugin.getDataFolder(), "menu");
       if (!menuFolder.exists()) {
-         menuFolder.mkdirs();
-      } else {
-         MenuConfigLoader.loadAllMenuFiles(menuFolder, this);
+         if (!menuFolder.mkdirs() && !menuFolder.isDirectory()) {
+            throw new IllegalStateException("Could not create menu directory: " + menuFolder);
+         }
       }
+      return MenuConfigLoader.loadMenuSections(menuFolder);
+   }
+
+   /** Publishes a fully parsed menu set only after every input file succeeds. */
+   public synchronized void loadAllMenuConfigs() {
+      Map<String, Section> staged = this.validateMenuConfigs();
+      sections = Collections.unmodifiableMap(new LinkedHashMap<>(staged));
    }
 }

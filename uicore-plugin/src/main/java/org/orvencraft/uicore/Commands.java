@@ -27,6 +27,10 @@ public class Commands implements TabExecutor {
 
    @Override
    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+      if (sender instanceof Player player && !Bukkit.isOwnedByCurrentRegion(player)) {
+         player.getScheduler().execute(UIcorePlugin.plugin, () -> this.onCommand(sender, command, label, args), null, 0L);
+         return true;
+      }
       if (args.length == 0) {
          sendUsage(sender);
          return true;
@@ -157,6 +161,15 @@ public class Commands implements TabExecutor {
          sender.sendMessage(UIcorePlugin.plugin.getLangMessage("player.not_found", "&c[UIcore] Player not found."));
          return true;
       }
+      if (!Bukkit.isOwnedByCurrentRegion(target)) {
+         target.getScheduler().execute(
+            UIcorePlugin.plugin,
+            () -> UIcorePlugin.textDisplayManager.showTextDisplayById(target, args[2]),
+            null,
+            0L
+         );
+         return true;
+      }
       if (!UIcorePlugin.textDisplayManager.showTextDisplayById(target, args[2])) {
          sender.sendMessage(UIcorePlugin.plugin.getLangMessage("command.text_display_not_found", "&c[UIcore] Text display not found."));
       }
@@ -174,6 +187,11 @@ public class Commands implements TabExecutor {
       }
       if (args.length < 2) {
          sender.sendMessage("Usage: /uicore set_input_field <field>");
+         return true;
+      }
+
+      if (!UIcorePlugin.plugin.isMenuInputField(player, args[1])) {
+         sender.sendMessage(UIcorePlugin.plugin.getLangMessage("input.invalid", "&c[UIcore] This input field is not available in the active menu."));
          return true;
       }
 
@@ -198,8 +216,10 @@ public class Commands implements TabExecutor {
 
       String field = args[1];
       String value = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
-      USER_INPUT_DATA.computeIfAbsent(player.getUniqueId(), ignored -> new ConcurrentHashMap<>()).put(field, value);
-      UIcorePlugin.plugin.setPlayerInputData(player, field, value);
+      if (!UIcorePlugin.plugin.submitMenuInput(player, field, value)) {
+         sender.sendMessage(UIcorePlugin.plugin.getLangMessage("input.invalid", "&c[UIcore] This input field is not available in the active menu."));
+         return true;
+      }
       String displayed = UIcorePlugin.plugin.isPasswordInputField(field) ? "*".repeat(value.length()) : value;
       CommandUtils.sendActionBar(
          player,
@@ -207,7 +227,6 @@ public class Commands implements TabExecutor {
             .replace("%field%", field)
             .replace("%value%", displayed)
       );
-      UIcorePlugin.plugin.refreshCurrentMenu(player);
       return true;
    }
 
@@ -317,6 +336,49 @@ public class Commands implements TabExecutor {
             }
             result = api.resetSlot(target, args[3], args[4]);
          }
+         case "transition" -> {
+            if (args.length < 8) {
+               sendSlotUsage(sender);
+               return true;
+            }
+            Player target = Bukkit.getPlayerExact(args[2]);
+            if (target == null) {
+               sender.sendMessage("§cPlayer not found: " + args[2]);
+               return true;
+            }
+            int duration;
+            double distance;
+            try {
+               duration = Integer.parseInt(args[7]);
+               distance = args.length >= 9 ? Double.parseDouble(args[8]) : 2.4;
+            } catch (NumberFormatException exception) {
+               sender.sendMessage("§cTransition duration and distance must be numbers.");
+               return true;
+            }
+            String easing = args.length >= 10 ? args[9] : "ease-in-cubic";
+            if (!Bukkit.isOwnedByCurrentRegion(target)) {
+               target.getScheduler().execute(
+                  UIcorePlugin.plugin,
+                  () -> UIcorePlugin.plugin.transitionPlayerMenuSlot(
+                     target, args[3], args[4], args[5], args[6], duration, distance, easing
+                  ),
+                  null,
+                  0L
+               );
+               result = MenuMutationResult.success("Player slot transition scheduled", 0);
+            } else {
+               result = UIcorePlugin.plugin.transitionPlayerMenuSlot(
+                  target,
+                  args[3],
+                  args[4],
+                  args[5],
+                  args[6],
+                  duration,
+                  distance,
+                  easing
+               );
+            }
+         }
          case "refresh" -> {
             if (args.length < 4) {
                sendSlotUsage(sender);
@@ -368,6 +430,7 @@ public class Commands implements TabExecutor {
 
    private void sendSlotUsage(CommandSender sender) {
       sender.sendMessage("§e/uicore slot set <player> <menu> <slot> <template>");
+      sender.sendMessage("§e/uicore slot transition <player> <menu> <slot> <template> <direction> <ticks> [distance] [easing]");
       sender.sendMessage("§e/uicore slot clear|reset <player> <menu> <slot>");
       sender.sendMessage("§e/uicore slot refresh <player> <menu>");
       sender.sendMessage("§e/uicore slot set-global <menu> <slot> <template>");

@@ -1,5 +1,8 @@
 # UIcore local dev change list
 
+> Historical changelog. It does not describe the current supported runtime or certify testing. See [Runtime and API contracts](RUNTIME_CONTRACTS.md) and [audit fixes](AUDIT_FIXES_RU.md).
+
+
 This is the full local change list prepared on top of the original
 UIcore 1.4.8 test tree.
 
@@ -615,7 +618,7 @@ ORVENCRAFT_TZ_TEST_MENU_NOTES.md
 `docs/UIcore_GitBook.html` is a standalone GitBook-like HTML file
 with:
 
-- English / Chinese language switch.
+- English / Russian language switch in the current documentation.
 - Light / dark theme switch.
 - Command reference.
 - Menu authoring guide.

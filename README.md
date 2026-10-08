@@ -1,36 +1,58 @@
-# UIcore Orven Build
+# UIcore
 
-Private OrvenCraft custom build of UIcore.
+### A world-space UI framework for Minecraft servers
 
-## Build
+UIcore turns the game world into a stage for menus. Text, items, buttons, input fields, stateful elements, animated slots, NPC mirrors, and per-player previews live in the same scene as the player instead of inside a flat inventory window.
+
+This is the first public release of UIcore: a focused, extensible continuation of CustomScreenMenu with a proper Java API, YAML authoring, Paper/Folia support, and built-in integrations for Vault and LuckPerms.
+
+The project exists thanks to **wuhaoxian123**, the original CustomScreenMenu author. UIcore is based on the paid 1.4.8 build, with permission to publish the complete source under AGPL-3.0. See the [original plugin page](https://builtbybit.com/resources/customscreenmenu.108929/), [LICENSE](LICENSE), and [provenance](PROVENANCE.md).
+
+## What is included
+
+- World-space menus rendered around the player camera.
+- Text, item, button, input, state, slot, and schematic-preview systems.
+- A public API for menus, elements, input fields, slots, state, actions, data providers, conditions, and components.
+- Optional integrations built into the UIcore JAR: Vault and LuckPerms.
+- Paper and Folia-aware scheduling with Java 17 bytecode.
+- Russian and English guides, including a full menu authoring reference.
+
+## Build UIcore
+
+Run:
 
 ```bash
 mvn clean package
 ```
 
-Artifacts:
+The build produces:
 
-- API: `uicore-api/target/uicore-api-1.4.8-uicore.1-SNAPSHOT.jar`
-- Plugin: `uicore-plugin/target/UIcore-1.4.8-uicore.1-SNAPSHOT.jar`
+- `uicore-api/target/uicore-api-1.0.0.jar`
+- `uicore-plugin/target/UIcore-1.0.0.jar`
+- `uicore-example-extension/target/uicore-example-extension-1.0.0.jar`
 
-## Maven Coordinates
+## Add the API to a plugin
 
 ```xml
 <dependency>
   <groupId>org.orvencraft.uicore</groupId>
   <artifactId>uicore-api</artifactId>
-  <version>1.4.8-uicore.1-SNAPSHOT</version>
+  <version>1.0.0</version>
 </dependency>
 ```
 
-## Runtime Target
+## Runtime requirements
 
-- Java 25
-- Paper `26.1.2`
-- Required plugin: PacketEvents
-- Optional plugins: PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine
+- Minecraft 1.20.1–26.2 on Paper, Folia, Purpur, or a compatible fork.
+- Java 17 bytecode. Use the Java runtime required by the selected server build.
+- PacketEvents 2.14.0 is required.
+- PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault, and LuckPerms are optional.
 
-## Notes
+## Documentation
 
-- The archived dev21 decompiled snapshot is kept on `archive/decompiled-dev21-20260719`.
-- Build outputs, unpacked JARs, local server state, and old patch folders are intentionally ignored on the normal source branch.
+- [Menu authoring guide](docs/MENU_AUTHORING_GUIDE_RU.md) · [English extension API](docs/EXTENSION_API_EN.md)
+- [Русская документация API](docs/EXTENSION_API_RU.md) · [Built-in integrations](docs/BUILTIN_INTEGRATIONS_EN.md)
+- [Встроенные интеграции Vault и LuckPerms](docs/BUILTIN_INTEGRATIONS_RU.md)
+- [Runtime contracts](docs/RUNTIME_CONTRACTS.md) · [Compatibility matrix](docs/COMPATIBILITY_RU.md)
+
+The repository contains source and documentation only. The plugin JAR is created by the Maven build and is not committed to Git.

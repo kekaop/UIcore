@@ -55,6 +55,17 @@ class DynamicPositionSpecTest {
       assertEquals(0.25, spec.basePosition().y(), 1.0E-9);
    }
 
+   @Test
+   void rejectsNonFiniteStaticAxisWithoutBreakingEvaluation() {
+      YamlConfiguration config = new YamlConfiguration();
+      config.set("x", Double.NaN);
+
+      DynamicPositionSpec spec = DynamicPositionSpec.from(config, 1.0, 0.0, 3.5);
+
+      assertFalse(spec.configurationErrors().isEmpty());
+      assertEquals(1.0, spec.basePosition().x(), 1.0E-9);
+   }
+
    private static YamlConfiguration yaml(String source) throws InvalidConfigurationException {
       YamlConfiguration configuration = new YamlConfiguration();
       configuration.loadFromString(source);

@@ -133,6 +133,31 @@ public final class TextStyleConfig {
       return ColorParser.toLegacyString(effective.openingTags() + body);
    }
 
+   /** Keeps font/glyph and other Component metadata through style application. */
+   public net.kyori.adventure.text.Component renderComponent(String baseText, String colorOverride,
+      java.util.function.Function<String, net.kyori.adventure.text.Component> renderer) {
+      TextStyleConfig effective = colorOverride == null || colorOverride.isBlank() ? this : this.withColor(colorOverride);
+      net.kyori.adventure.text.Component component = renderer.apply(effective.text == null ? baseText : effective.text);
+      return applyComponentStyle(component, effective);
+   }
+
+   private static net.kyori.adventure.text.Component applyComponentStyle(net.kyori.adventure.text.Component component, TextStyleConfig style) {
+      if (style.color != null) {
+         net.kyori.adventure.text.format.TextColor color = style.color.startsWith("#")
+            ? net.kyori.adventure.text.format.TextColor.fromHexString(style.color)
+            : net.kyori.adventure.text.format.NamedTextColor.NAMES.value(style.color.toLowerCase(Locale.ROOT).replace('-', '_'));
+         if (color != null) component = component.color(color);
+      }
+      if (style.bold != null) component = component.decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, style.bold);
+      if (style.italic != null) component = component.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, style.italic);
+      if (style.underlined != null) component = component.decoration(net.kyori.adventure.text.format.TextDecoration.UNDERLINED, style.underlined);
+      if (style.strikethrough != null) component = component.decoration(net.kyori.adventure.text.format.TextDecoration.STRIKETHROUGH, style.strikethrough);
+      if (style.obfuscated != null) component = component.decoration(net.kyori.adventure.text.format.TextDecoration.OBFUSCATED, style.obfuscated);
+      java.util.List<net.kyori.adventure.text.Component> children = new java.util.ArrayList<>();
+      for (net.kyori.adventure.text.Component child : component.children()) children.add(applyComponentStyle(child, style));
+      return component.children(children);
+   }
+
    public static String toHex(int r, int g, int b) {
       return String.format(Locale.ROOT, "#%02x%02x%02x", clamp(r), clamp(g), clamp(b));
    }

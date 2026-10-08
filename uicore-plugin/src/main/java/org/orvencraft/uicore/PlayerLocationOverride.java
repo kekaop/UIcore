@@ -4,6 +4,8 @@ import org.orvencraft.uicore.section.Section;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+/** Legacy mutable adapter. New callers should use section.PlayerLocationOverride.apply and its copied Section. */
+@Deprecated
 public final class PlayerLocationOverride {
    private static boolean enabled = false;
 

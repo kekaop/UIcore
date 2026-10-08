@@ -2,15 +2,17 @@ package org.orvencraft.uicore.api;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.orvencraft.uicore.api.model.UiElementModel;
 
 public final class MenuElementSpec {
    private final String id;
-   private final YamlConfiguration config;
+   private final UiElementModel model;
 
-   private MenuElementSpec(String id, YamlConfiguration config) {
+   private MenuElementSpec(String id, UiElementModel model) {
       this.id = id;
-      this.config = MenuElementEditor.copy(config);
+      this.model = model;
    }
 
    public static Builder builder(String id) {
@@ -22,85 +24,101 @@ public final class MenuElementSpec {
    }
 
    public YamlConfiguration toConfiguration() {
-      return MenuElementEditor.copy(this.config);
+      return ConfigurationCopy.configuration(this.model.properties());
    }
+
+   public UiElementModel model() { return this.model; }
 
    public static final class Builder {
       private final String id;
-      private final YamlConfiguration config = new YamlConfiguration();
+      private UiElementModel model = UiElementModel.empty();
 
       private Builder(String id) {
          this.id = id;
       }
 
       public Builder text(String text) {
-         this.config.set("name", text);
+         this.model = this.model.with("name", text);
          return this;
       }
 
       public Builder type(String type) {
-         this.config.set("type", type);
+         this.model = this.model.with("type", type);
          return this;
       }
 
       public Builder position(double x, double y, double z) {
-         this.config.set("x", x);
-         this.config.set("y", y);
-         this.config.set("z", z);
+         this.model = this.model.with("x", x).with("y", y).with("z", z);
          return this;
       }
 
       public Builder textSize(double textSize) {
-         this.config.set("text-size", textSize);
+         this.model = this.model.with("text-size", textSize);
          return this;
       }
 
       public Builder commands(List<String> commands) {
-         this.config.set("command", commands == null ? List.of() : new ArrayList<>(commands));
+         this.model = this.model.with("command", commands == null ? List.of() : new ArrayList<>(commands));
+         return this;
+      }
+
+      public Builder action(String id, Map<String, ?> arguments) {
+         this.model = this.model.with("action.type", id);
+         if (arguments != null) arguments.forEach((key, value) -> {
+            if ("type".equals(key)) throw new IllegalArgumentException("Action argument cannot be named type");
+            this.model = this.model.with("action." + key, value);
+         });
+         return this;
+      }
+
+      public Builder visibleIfCustom(String id, Map<String, ?> arguments) {
+         this.model = this.model.with("visible-if.custom.type", id);
+         if (arguments != null) arguments.forEach((key, value) -> {
+            if ("type".equals(key)) throw new IllegalArgumentException("Condition argument cannot be named type");
+            this.model = this.model.with("visible-if.custom." + key, value);
+         });
          return this;
       }
 
       public Builder permission(String permission) {
-         this.config.set("permission", permission);
+         this.model = this.model.with("permission", permission);
          return this;
       }
 
       public Builder nextMenu(String menuId) {
-         this.config.set("next-menu.enabled", true);
-         this.config.set("next-menu.menu", menuId);
+         this.model = this.model.with("next-menu.enabled", true).with("next-menu.menu", menuId);
          return this;
       }
 
       public Builder stopMenu(boolean enabled) {
-         this.config.set("stop-menu.enabled", enabled);
+         this.model = this.model.with("stop-menu.enabled", enabled);
          return this;
       }
 
       public Builder hoverEnlarge(boolean enabled, double scale) {
-         this.config.set("hover-enlarge.enabled", enabled);
-         this.config.set("hover-enlarge.scale", scale);
+         this.model = this.model.with("hover-enlarge.enabled", enabled).with("hover-enlarge.scale", scale);
          return this;
       }
 
       public Builder set(String path, Object value) {
-         this.config.set(path, value);
+         this.model = this.model.with(path, value);
          return this;
       }
 
       public MenuElementSpec build() {
-         if (!this.config.contains("name")) {
-            this.config.set("name", this.id);
+         if (!this.model.contains("name")) {
+            this.model = this.model.with("name", this.id);
          }
-         if (!this.config.contains("x")) {
-            this.config.set("x", 0.0);
+         if (!this.model.contains("x")) {
+            this.model = this.model.with("x", 0.0);
          }
-         if (!this.config.contains("y")) {
-            this.config.set("y", 0.0);
+         if (!this.model.contains("y")) {
+            this.model = this.model.with("y", 0.0);
          }
-         if (!this.config.contains("z")) {
-            this.config.set("z", 3.5);
+         if (!this.model.contains("z")) {
+            this.model = this.model.with("z", 3.5);
          }
-         return new MenuElementSpec(this.id, this.config);
+         return new MenuElementSpec(this.id, this.model);
       }
    }
 }

@@ -38,6 +38,7 @@ public class UIcorePlaceholder extends PlaceholderExpansion {
 
    public String onRequest(OfflinePlayer offlinePlayer, String params) {
       if (offlinePlayer instanceof Player player) {
+         if (params == null) return "";
          String menuKey = this.plugin.getCurrentPlayerMenu(player);
          if (menuKey == null || menuKey.isEmpty()) {
             return "";
@@ -50,7 +51,7 @@ public class UIcorePlaceholder extends PlaceholderExpansion {
          } else if (params.equals("menu_world")) {
             return this.getMenuWorld(player);
          } else if (params.startsWith("button_")) {
-            String coord = params.split("_")[1];
+            String coord = params.substring("button_".length());
             return this.getButtonCoordinate(player, coord);
          } else if (params.equals("clicked_option")) {
             return this.getClickedOption(player);
@@ -62,7 +63,7 @@ public class UIcorePlaceholder extends PlaceholderExpansion {
             String field = params.substring(6);
             return this.getUserInput(player, field);
          }
-         return null;
+         return "";
       } else {
          return "";
       }
@@ -132,45 +133,7 @@ public class UIcorePlaceholder extends PlaceholderExpansion {
    }
 
    private String getHoveredOption(Player player) {
-      String menuKey = this.plugin.getCurrentPlayerMenu(player);
-      if (menuKey != null && !menuKey.isEmpty()) {
-         Section section = this.plugin.getRuntimeSection(player, menuKey);
-         if (section == null) {
-            return "";
-         } else {
-            World world = Bukkit.getWorld(section.world);
-            if (world == null) {
-               return "";
-            } else {
-               ArmorStand cursor = UIcorePlugin.playerCursors.get(player);
-               Pig camera = UIcorePlugin.playerSit.get(player);
-               if (cursor != null && camera != null) {
-                  Location cursorLoc = cursor.getLocation();
-                  Location cameraLoc = camera.getLocation();
-                  Vector dir = cameraLoc.getDirection().normalize();
-                  Vector right = new Vector(-dir.getZ(), 0.0, dir.getX()).normalize();
-                  Vector up = dir.getCrossProduct(right).multiply(-1);
-                  MenuLayout closest = null;
-                  double minDistance = Double.MAX_VALUE;
-
-                  for (MenuLayout layout : section.layouts.values()) {
-                     Vector offset = dir.clone().multiply(layout.z).add(right.clone().multiply(layout.x)).add(up.clone().multiply(layout.y));
-                     Vector layoutVec = cameraLoc.clone().add(offset).toVector();
-                     double distance = cursorLoc.toVector().distance(layoutVec);
-                     if (distance < minDistance) {
-                        minDistance = distance;
-                        closest = layout;
-                     }
-                  }
-
-                  return closest != null && minDistance < 1.1 ? closest.key : "";
-               } else {
-                  return "";
-               }
-            }
-         }
-      } else {
-         return "";
-      }
+      HoverEnlargeManager manager = this.plugin.getHoverEnlargeManager();
+      return manager == null ? "" : manager.getHoveredElementId(player);
    }
 }

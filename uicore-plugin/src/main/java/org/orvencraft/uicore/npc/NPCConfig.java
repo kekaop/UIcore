@@ -45,74 +45,12 @@ public class NPCConfig {
          this.createDefaultConfig();
       }
 
-      this.config = YamlConfiguration.loadConfiguration(this.configFile);
+      this.config = org.orvencraft.uicore.config.ConfigFiles.loadStrict(this.configFile);
       this.readConfig();
    }
 
    private void createDefaultConfig() {
-      this.config = new YamlConfiguration();
-      this.config.set("enabled", true);
-      this.config.set("debug-mode", false);
-      this.config.set("offset.x", 0.0);
-      this.config.set("offset.y", 0.0);
-      this.config.set("offset.z", 0.0);
-      this.config.set("default-yaw", 180.0);
-      this.config.set("default-pitch", 0.0);
-      this.config.set("auto-rotate.enabled", false);
-      this.config.set("auto-rotate.speed", 1.0);
-      this.config.set("sync.equipment", true);
-      this.config.set("sync.skin", true);
-      this.config.set("disabled-worlds", new ArrayList());
-      this.config.set("disabled-players", new ArrayList());
-      this.config.set("menu-settings.enable-for-all-menus", true);
-      this.config.set("menu-settings.enabled-menus", new ArrayList());
-      this.config.set("menu-settings.use-whitelist-mode", false);
-      this.config.set("name-display.show", true);
-      this.config.set("name-display.format", "&e%player%");
-      this.config.set("name-display.always-visible", true);
-      List<String> header = new ArrayList<>();
-      header.add("===========================================");
-      header.add("NPC mirror system configuration");
-      header.add("UIcore NPC Mirror Module");
-      header.add("===========================================");
-      header.add("");
-      header.add("enabled: enables NPC mirror support");
-      header.add("debug-mode: writes detailed diagnostics to the server log");
-      header.add("");
-      header.add("offset: NPC position offset relative to the player");
-      header.add("default-yaw/pitch: default NPC orientation");
-      header.add("");
-      header.add("auto-rotate: automatic rotation settings");
-      header.add("sync: equipment and skin synchronization settings");
-      header.add("disabled-worlds: worlds where NPC mirrors are disabled");
-      header.add("disabled-players: player UUIDs for which NPC mirrors are disabled");
-      header.add("");
-      header.add("menu-settings: menu assignment settings");
-      header.add("  enable-for-all-menus: enables NPC mirrors for every menu");
-      header.add("  enabled-menus: menu list used when enable-for-all-menus is false");
-      header.add("  use-whitelist-mode: true enables only listed menus; false disables listed menus");
-      header.add("");
-      header.add("name-display: NPC name display settings");
-      header.add("  show: shows the name above the NPC");
-      header.add("  format: supports color codes and placeholders");
-      header.add("         %player% - player name");
-      header.add("         %displayname% - player display name");
-      header.add("         & color codes, for example &e for yellow");
-      header.add("         PlaceholderAPI values such as %player_level% and %player_money%");
-      header.add("  always-visible: keeps the name visible through blocks");
-      header.add("");
-      header.add("Examples:");
-      header.add("  Enable NPC mirrors only for selected menus:");
-      header.add("    enable-for-all-menus: false");
-      header.add("    use-whitelist-mode: true");
-      header.add("    enabled-menus: [\"main_menu\", \"lobby\", \"settings\"]");
-      header.add("");
-      header.add("  Disable NPC mirrors for selected menus:");
-      header.add("    enable-for-all-menus: true");
-      header.add("    use-whitelist-mode: false");
-      header.add("    enabled-menus: [\"cinematic\", \"minimal\"]");
-      this.config.options().setHeader(header);
-      this.save();
+      this.plugin.saveResource("npc_config.yml", false);
    }
 
    private void readConfig() {

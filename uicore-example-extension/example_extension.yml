@@ -1,0 +1,38 @@
+example_extension:
+  schema-version: 2
+  camera-position:
+    type: player
+    distance: 1.5
+  layout:
+    balance:
+      name: '<gold>Balance: {example:balance}'
+      x: 0
+      y: 0.5
+      z: 3.5
+    hello:
+      name: '<green>Say hello'
+      x: 0
+      y: 0
+      z: 3.5
+      action:
+        type: example:hello
+        target: player
+      visible-if:
+        custom:
+          type: example:has-permission
+          permission: uicore.example.hello
+    profile:
+      type: example:profile-card
+      title: Player profile
+      x: 1
+      y: 0
+      z: 3.5
+    badge:
+      type: item
+      item:
+        material: '{example:item-material}'
+        custom-model-data: '{example:balance}'
+        glow: '{example:highlighted}'
+      x: -1
+      y: 0
+      z: 3.5

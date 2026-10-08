@@ -6,7 +6,7 @@
 
     <groupId>org.orvencraft.uicore</groupId>
     <artifactId>uicore-parent</artifactId>
-    <version>1.4.8-uicore.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
 
     <name>UIcore</name>
@@ -14,19 +14,24 @@
     <modules>
         <module>uicore-api</module>
         <module>uicore-plugin</module>
+        <module>uicore-example-extension</module>
     </modules>
 
     <properties>
-        <java.version>25</java.version>
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <paper.version>26.1.2.build.72-stable</paper.version>
-        <packetevents.version>2.13.0</packetevents.version>
+        <paper.version>1.20.1-R0.1-SNAPSHOT</paper.version>
+        <packetevents.version>2.14.0</packetevents.version>
         <placeholderapi.version>2.12.3</placeholderapi.version>
-        <minimessage.version>4.25.0</minimessage.version>
+        <minimessage.version>4.14.0</minimessage.version>
         <junit.version>5.13.4</junit.version>
     </properties>
 
     <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
         <repository>
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>

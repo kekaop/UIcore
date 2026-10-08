@@ -1,26 +1,31 @@
 package org.orvencraft.uicore.scheduler;
 
-import org.orvencraft.uicore.UIcorePlugin;
-import org.orvencraft.uicore.layout.MenuLayout;
-import org.orvencraft.uicore.section.Section;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
+import org.orvencraft.uicore.UIcorePlugin;
+import org.orvencraft.uicore.layout.MenuLayout;
+import org.orvencraft.uicore.section.Section;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
+/**
+ * Holds chunk tickets only while at least one active menu viewer needs them.
+ * Viewer reconciliation runs on that viewer's entity scheduler; ticket changes
+ * run on the scheduler for the affected chunk's owning region.
+ */
 public class ChunkLoaderManager {
    private final UIcorePlugin plugin;
-   private BukkitTask chunkLoaderTask;
-   private final Map<String, Set<Long>> forcedLoadedChunks = new ConcurrentHashMap<>();
-   private final Map<String, Set<Long>> persistentChunks = new ConcurrentHashMap<>();
-   private boolean isTaskRunning = false;
+   private final Map<UUID, Set<ChunkReference>> viewerTickets = new ConcurrentHashMap<>();
+   private final Map<ChunkReference, Set<UUID>> viewersByChunk = new ConcurrentHashMap<>();
+   private volatile ScheduledTask reconcileTask;
+   private volatile boolean isTaskRunning;
 
    public ChunkLoaderManager(UIcorePlugin plugin) {
       this.plugin = plugin;
@@ -28,134 +33,144 @@ public class ChunkLoaderManager {
 
    public void startChunkLoaderTask() {
       this.stopChunkLoaderTask();
-      this.updatePersistentChunks();
-      this.chunkLoaderTask = Bukkit.getScheduler().runTaskTimer(this.plugin, this::updatePersistentChunks, 0L, 600L);
       this.isTaskRunning = true;
-      if (this.plugin.getConfig().getBoolean("Debug", false)) {
-         this.plugin.getLogger().info("Chunk loading task started.");
-      }
+      this.reconcileActiveViewers();
+      this.reconcileTask = UIcorePlugin.foliaLib.scheduling().globalRegionalScheduler()
+         .runAtFixedRate(this::reconcileActiveViewers, 20L, 20L);
+      if (this.plugin.getConfig().getBoolean("Debug", false)) this.plugin.getLogger().info("Chunk loading task started.");
    }
 
    public void stopChunkLoaderTask() {
-      if (this.chunkLoaderTask != null) {
-         this.chunkLoaderTask.cancel();
-         this.chunkLoaderTask = null;
-      }
-
-      for (Entry<String, Set<Long>> entry : this.forcedLoadedChunks.entrySet()) {
-         String worldName = entry.getKey();
-         World world = Bukkit.getWorld(worldName);
-         if (world != null) {
-            for (long chunkKey : entry.getValue()) {
-               int x = (int)(chunkKey >> 32);
-               int z = (int)(chunkKey & 4294967295L);
-               Chunk chunk = world.getChunkAt(x, z);
-               if (chunk != null) {
-                  chunk.setForceLoaded(false);
-               }
-            }
-         }
-      }
-
-      this.forcedLoadedChunks.clear();
-      this.persistentChunks.clear();
+      ScheduledTask task = this.reconcileTask;
+      this.reconcileTask = null;
+      if (task != null) task.cancel();
       this.isTaskRunning = false;
-      if (this.plugin.getConfig().getBoolean("Debug", false)) {
-         this.plugin.getLogger().info("Chunk loading task stopped.");
+
+      Set<ChunkReference> ticketed = Set.copyOf(this.viewersByChunk.keySet());
+      this.viewerTickets.clear();
+      this.viewersByChunk.clear();
+      // Paper's plugin manager removes all of this plugin's tickets after onDisable.
+      // Scheduling here is only needed when stopping/reloading an enabled plugin.
+      if (this.plugin.isEnabled()) ticketed.forEach(this::scheduleTicketRemoval);
+      if (this.plugin.getConfig().getBoolean("Debug", false)) this.plugin.getLogger().info("Chunk loading task stopped.");
+   }
+
+   /**
+    * Does not touch worlds: it only dispatches each viewer's own reconciliation
+    * onto that player's entity scheduler.
+    */
+   public void updatePersistentChunks() {
+      this.reconcileActiveViewers();
+   }
+
+   private void reconcileActiveViewers() {
+      if (!this.isTaskRunning) return;
+      Set<UUID> activeViewers = new HashSet<>();
+      for (Player player : this.plugin.getActiveMenuPlayers()) {
+         activeViewers.add(player.getUniqueId());
+         UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player)
+            .run(() -> this.reconcileViewer(player), () -> this.releaseViewer(player.getUniqueId()));
+      }
+      for (UUID previousViewer : Set.copyOf(this.viewerTickets.keySet())) {
+         if (!activeViewers.contains(previousViewer)) this.releaseViewer(previousViewer);
       }
    }
 
-   public void updatePersistentChunks() {
-      Map<String, Set<Long>> oldChunks = new HashMap<>();
-
-      for (Entry<String, Set<Long>> entry : this.forcedLoadedChunks.entrySet()) {
-         oldChunks.put(entry.getKey(), new HashSet<>(entry.getValue()));
+   private void reconcileViewer(Player player) {
+      if (!this.isTaskRunning || !player.isOnline()) {
+         this.releaseViewer(player.getUniqueId());
+         return;
       }
+      Set<ChunkReference> required = this.requiredChunks(player);
+      UUID playerId = player.getUniqueId();
+      Set<ChunkReference> previous = this.viewerTickets.put(playerId, required);
+      if (previous == null) previous = Set.of();
 
-      Map<String, Set<Long>> newChunks = new HashMap<>();
-      Map<String, Section> allSections = UIcorePlugin.sectionManager.getAll();
+      for (ChunkReference reference : previous) if (!required.contains(reference)) this.release(reference, playerId);
+      for (ChunkReference reference : required) if (!previous.contains(reference)) this.acquire(reference, playerId);
+   }
 
-      for (Section section : allSections.values()) {
-         if (section.isPlayerRelative()) {
-            continue;
-         }
-         World world = Bukkit.getWorld(section.world);
-         if (world != null) {
-            int chunkX = (int)Math.floor(section.cameraX / 16.0);
-            int chunkZ = (int)Math.floor(section.cameraZ / 16.0);
-            long chunkKey = (long)chunkX << 32 | chunkZ & 4294967295L;
-            newChunks.computeIfAbsent(section.world, k -> new HashSet<>()).add(chunkKey);
-            if (section.layouts != null) {
-               for (MenuLayout layout : section.layouts.values()) {
-                  int layoutChunkX = (int)Math.floor((section.cameraX + layout.x) / 16.0);
-                  int layoutChunkZ = (int)Math.floor((section.cameraZ + layout.z) / 16.0);
-                  long layoutChunkKey = (long)layoutChunkX << 32 | layoutChunkZ & 4294967295L;
-                  newChunks.get(section.world).add(layoutChunkKey);
-               }
-            }
+   private Set<ChunkReference> requiredChunks(Player player) {
+      String menuKey = this.plugin.getCurrentPlayerMenu(player);
+      Section section = this.plugin.getRuntimeSection(player, menuKey);
+      if (section == null || section.world == null) return Set.of();
+      Set<ChunkReference> required = new HashSet<>();
+      addChunk(required, section.world, section.cameraX, section.cameraZ);
+      if (section.layouts != null) {
+         for (MenuLayout layout : section.layouts.values()) {
+            Location location = layoutLocation(section, layout.x, layout.y, layout.z);
+            addChunk(required, section.world, location.getX(), location.getZ());
          }
       }
+      return Set.copyOf(required);
+   }
 
-      for (Entry<String, Set<Long>> entry : newChunks.entrySet()) {
-         String worldName = entry.getKey();
-         World world = Bukkit.getWorld(worldName);
-         if (world != null) {
-            for (long chunkKey : entry.getValue()) {
-               int x = (int)(chunkKey >> 32);
-               int z = (int)(chunkKey & 4294967295L);
-               if (!world.isChunkLoaded(x, z)) {
-                  world.loadChunk(x, z, true);
-                  Chunk chunk = world.getChunkAt(x, z);
-                  if (chunk != null) {
-                     chunk.setForceLoaded(true);
-                  }
-               } else {
-                  Chunk chunk = world.getChunkAt(x, z);
-                  chunk.setForceLoaded(true);
-               }
+   private void acquire(ChunkReference reference, UUID playerId) {
+      Set<UUID> viewers = viewersByChunk.computeIfAbsent(reference, ignored -> ConcurrentHashMap.newKeySet());
+      boolean wasEmpty = viewers.isEmpty();
+      viewers.add(playerId);
+      if (wasEmpty) this.scheduleTicketAddition(reference);
+   }
 
-               this.forcedLoadedChunks.computeIfAbsent(worldName, k -> new HashSet<>()).add(chunkKey);
-            }
-         }
-      }
+   private void release(ChunkReference reference, UUID playerId) {
+      Set<UUID> viewers = viewersByChunk.get(reference);
+      if (viewers == null || !viewers.remove(playerId) || !viewers.isEmpty()) return;
+      if (viewersByChunk.remove(reference, viewers)) this.scheduleTicketRemoval(reference);
+   }
 
-      for (Entry<String, Set<Long>> entryx : oldChunks.entrySet()) {
-         String worldName = entryx.getKey();
-         World world = Bukkit.getWorld(worldName);
-         if (world != null) {
-            for (long chunkKey : entryx.getValue()) {
-               Set<Long> newChunkKeys = newChunks.getOrDefault(worldName, Collections.emptySet());
-               if (!newChunkKeys.contains(chunkKey)) {
-                  int x = (int)(chunkKey >> 32);
-                  int z = (int)(chunkKey & 4294967295L);
-                  Chunk chunk = world.getChunkAt(x, z);
-                  if (chunk != null) {
-                     chunk.setForceLoaded(false);
-                  }
+   private void releaseViewer(UUID playerId) {
+      Set<ChunkReference> references = this.viewerTickets.remove(playerId);
+      if (references != null) references.forEach(reference -> this.release(reference, playerId));
+   }
 
-                  this.forcedLoadedChunks.getOrDefault(worldName, new HashSet<>()).remove(chunkKey);
-               }
-            }
-         }
-      }
+   private void scheduleTicketAddition(ChunkReference reference) {
+      if (!this.plugin.isEnabled()) return;
+      World world = Bukkit.getWorld(reference.worldName());
+      if (world == null) return;
+      CleanupTasks.region(this.plugin, new Location(world, reference.chunkX() * 16.0, 0, reference.chunkZ() * 16.0), () -> {
+         if (!this.plugin.isEnabled() || !this.viewersByChunk.containsKey(reference)) return;
+         world.getChunkAt(reference.chunkX(), reference.chunkZ()).addPluginChunkTicket(this.plugin);
+      });
+   }
 
-      this.forcedLoadedChunks.entrySet().removeIf(e -> e.getValue().isEmpty());
-      if (this.plugin.getConfig().getBoolean("Debug", false)) {
-         this.plugin
-            .getLogger()
-            .info("Updated forced chunks: " + this.forcedLoadedChunks.size() + " worlds, " + this.forcedLoadedChunks.values().stream().mapToInt(Set::size).sum() + " chunks.");
-      }
+   private void scheduleTicketRemoval(ChunkReference reference) {
+      if (!this.plugin.isEnabled()) return;
+      World world = Bukkit.getWorld(reference.worldName());
+      if (world == null) return;
+      CleanupTasks.region(this.plugin, new Location(world, reference.chunkX() * 16.0, 0, reference.chunkZ() * 16.0), () -> {
+         if (this.viewersByChunk.containsKey(reference) || !world.isChunkLoaded(reference.chunkX(), reference.chunkZ())) return;
+         world.getChunkAt(reference.chunkX(), reference.chunkZ()).removePluginChunkTicket(this.plugin);
+      });
    }
 
    public int getLoadedChunkCount() {
-      return this.forcedLoadedChunks.values().stream().mapToInt(Set::size).sum();
+      return this.viewersByChunk.size();
    }
 
    public int getLoadedWorldCount() {
-      return this.forcedLoadedChunks.size();
+      return (int) this.viewersByChunk.keySet().stream().map(ChunkReference::worldName).distinct().count();
    }
 
    public boolean isTaskRunning() {
       return this.isTaskRunning;
    }
+
+   private static void addChunk(Set<ChunkReference> chunks, String worldName, double x, double z) {
+      chunks.add(new ChunkReference(worldName, ((int) Math.floor(x)) >> 4, ((int) Math.floor(z)) >> 4));
+   }
+
+   static Location layoutLocation(Section section, double x, double y, double z) {
+      Location base = new Location(null, section.cameraX, section.cameraY, section.cameraZ, section.yaw, section.pitch);
+      Vector forward = base.getDirection().normalize();
+      Vector right = new Vector(-forward.getZ(), 0.0D, forward.getX());
+      if (right.lengthSquared() < 1.0E-8D) {
+         double yawRadians = Math.toRadians(section.yaw);
+         right = new Vector(-Math.cos(yawRadians), 0.0D, -Math.sin(yawRadians));
+      }
+      right.normalize();
+      Vector up = forward.getCrossProduct(right).multiply(-1.0D).normalize();
+      return base.add(forward.multiply(z)).add(right.multiply(x)).add(up.multiply(y));
+   }
+
+   private record ChunkReference(String worldName, int chunkX, int chunkZ) { }
 }

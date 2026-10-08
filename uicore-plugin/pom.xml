@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.orvencraft.uicore</groupId>
         <artifactId>uicore-parent</artifactId>
-        <version>1.4.8-uicore.1-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>uicore-plugin</artifactId>
@@ -16,6 +16,11 @@
     <name>UIcore Plugin</name>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.re2j</groupId>
+            <artifactId>re2j</artifactId>
+            <version>1.8</version>
+        </dependency>
         <dependency>
             <groupId>org.orvencraft.uicore</groupId>
             <artifactId>uicore-api</artifactId>
@@ -52,6 +57,20 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>com.github.MilkBowl</groupId>
+            <artifactId>VaultAPI</artifactId>
+            <version>1.7</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>net.luckperms</groupId>
+            <artifactId>api</artifactId>
+            <version>5.4</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
@@ -65,13 +84,21 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
+                <excludes>
+                    <exclude>menu/oc_*.yml</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/../release/third-party</directory>
+                <targetPath>META-INF/licenses</targetPath>
+                <filtering>false</filtering>
             </resource>
         </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -83,8 +110,15 @@
                             <artifactSet>
                                 <includes>
                                     <include>org.orvencraft.uicore:uicore-api</include>
+                                    <include>com.google.re2j:re2j</include>
                                 </includes>
                             </artifactSet>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.google.re2j</pattern>
+                                    <shadedPattern>org.orvencraft.uicore.internal.re2j</shadedPattern>
+                                </relocation>
+                            </relocations>
                         </configuration>
                     </execution>
                 </executions>

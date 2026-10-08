@@ -23,20 +23,6 @@ public class WorldChangeListener implements Listener {
          return;
       }
 
-      String currentMenu = this.plugin.getCurrentPlayerMenu(player);
-      if (currentMenu != null) {
-         Section section = this.plugin.getRuntimeSection(player, currentMenu);
-         if (section != null) {
-            World world = Bukkit.getWorld(section.world);
-            if (world != null) {
-               if (!player.getWorld().equals(world)) {
-                  Location cameraLoc = new Location(world, section.cameraX, section.cameraY, section.cameraZ, section.yaw, section.pitch);
-                  this.plugin.teleportMenuInternal(player, cameraLoc);
-                  this.plugin.stopCursor(player, false);
-                  this.plugin.setupCursor(player, currentMenu);
-               }
-            }
-         }
-      }
+      if (this.plugin.getCurrentPlayerMenu(player) != null) this.plugin.stopCursor(player, false);
    }
 }

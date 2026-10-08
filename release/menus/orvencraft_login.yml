@@ -1,0 +1,1321 @@
+# OrvenCraft — стартовое меню для UIcore. Без ресурс-пака.
+# Открыть: /uicore run oc_login
+# Этот файл содержит все 6 экранов. Положите его целиком в plugins/UIcore/menu/.
+# Перемещение камеры у краёв уже есть в config.yml: cursor-item.edge-pan.
+# Сопутствующие настройки: orvencraft_login_config.yml (НЕ класть в menu/).
+# Статистика, друзья и онлайн режимов — демонстрационные числа.
+# Настройки — демонстрационные переключатели UIcore, без подключения к системе друзей/уведомлений.
+# Реальные команды своих плагинов добавьте в toggle-content.on-commands/off-commands.
+# Выбор режима пока закрывает меню и возвращает игрока в мир.
+# Для сети у нужного режима добавьте stop-menu.command.enabled: true и
+# stop-menu.command.list: ["[server] survival"] (или creative / arena).
+# Для выхода нужен точечный доступ к minecraft:kick из сопутствующего config-фрагмента.
+# Карточки без glow: не вызывают обводку/эффекты других плагинов.
+
+oc_login:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: "player"
+    distance: 1.5
+  layout:
+    backdrop:
+      type: "item"
+      material: "BLACK_CONCRETE"
+      x: 0
+      y: 0
+      z: 7.4
+      scale: 5.8
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    brand:
+      name: "<#59E0C8><bold>ORVEN</bold><#EFF5FA><bold>CRAFT</bold>"
+      x: 0
+      y: 1.25
+      z: 3.5
+      text-size: 0.56
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    heading:
+      name: "<#F0F5FA><bold>Добро пожаловать</bold>"
+      x: 0
+      y: 0.94
+      z: 3.5
+      text-size: 0.64
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    subtitle:
+      name: "<#92A6B9>Выбери, с чего начнётся твоё приключение"
+      x: 0
+      y: 0.69
+      z: 3.5
+      text-size: 0.32
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_top:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: 0.51
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_bottom:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: -1.08
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    footer:
+      name: "<#607386>Твоя история начинается здесь"
+      x: 0
+      y: -1.27
+      z: 3.5
+      text-size: 0.27
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    avatar:
+      type: "player-avatar"
+      player: "self"
+      face-only: true
+      scale: 1.45
+      billboard: "center"
+      rotate: false
+      glow: false
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      x: -1.34
+      y: 0.05
+      z: 3.43
+      hitbox:
+        width: 0.9279999999999999
+        height: 0.9279999999999999
+        depth: 0.35
+      hover-tooltip:
+        type: "actionbar"
+        text: "<#59E0C8>Открыть профиль игрока"
+      next-menu:
+        enabled: true
+        menu: "oc_profile"
+      stop-menu:
+        enabled: false
+    profile_link:
+      name: "<#DCEAF4>МОЙ ПРОФИЛЬ"
+      x: -1.34
+      y: -0.48
+      z: 3.5
+      text-size: 0.39
+      hitbox:
+        width: 2.6
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_profile"
+    level:
+      name: "<#59E0C8>Уровень 27  <#526979>•  <#B6C7D6>Исследователь"
+      x: -1.34
+      y: -0.74
+      z: 3.5
+      text-size: 0.25
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    play:
+      name: "<#59E0C8><bold>▶  ИГРАТЬ</bold>"
+      x: 0.73
+      y: 0.24
+      z: 3.5
+      text-size: 0.72
+      hitbox:
+        width: 3.0
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_modes"
+      hover-tooltip:
+        type: "actionbar"
+        text: "<#59E0C8>Выживание, творчество или сражения?"
+    settings:
+      name: "<#DCEAF4>Настройки"
+      x: 0.73
+      y: -0.15
+      z: 3.5
+      text-size: 0.53
+      hitbox:
+        width: 3.1
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_settings"
+    friends:
+      name: "<#DCEAF4>Друзья <#6C8192>• <#58E394>3"
+      x: 0.73
+      y: -0.49
+      z: 3.5
+      text-size: 0.53
+      hitbox:
+        width: 3.1
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_friends"
+    exit:
+      name: "<#FF6C7D>Выйти с сервера"
+      x: 0.73
+      y: -0.87
+      z: 3.5
+      text-size: 0.46
+      hitbox:
+        width: 3.5
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_exit"
+oc_profile:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: "player"
+    distance: 1.5
+  layout:
+    backdrop:
+      type: "item"
+      material: "BLACK_CONCRETE"
+      x: 0
+      y: 0
+      z: 7.4
+      scale: 5.8
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    brand:
+      name: "<#59E0C8><bold>ORVEN</bold><#EFF5FA><bold>CRAFT</bold>"
+      x: 0
+      y: 1.25
+      z: 3.5
+      text-size: 0.56
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    heading:
+      name: "<#F0F5FA><bold>Твой профиль</bold>"
+      x: 0
+      y: 0.94
+      z: 3.5
+      text-size: 0.64
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    subtitle:
+      name: "<#92A6B9>Исследуй. Создавай. Побеждай."
+      x: 0
+      y: 0.69
+      z: 3.5
+      text-size: 0.32
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_top:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: 0.51
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_bottom:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: -1.08
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    back:
+      name: "<#92A6B9>‹  Главное меню"
+      x: -1.1
+      y: -1.27
+      z: 3.5
+      text-size: 0.4
+      hitbox:
+        width: 3.1
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_login"
+    footer:
+      name: "<#607386>Твоя история начинается здесь"
+      x: 0.66
+      y: -1.27
+      z: 3.5
+      text-size: 0.27
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    avatar:
+      type: "player-avatar"
+      player: "self"
+      face-only: true
+      scale: 1.35
+      billboard: "center"
+      rotate: false
+      glow: false
+      tilt:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      x: -1.37
+      y: 0.1
+      z: 3.43
+      hitbox:
+        width: 0.8640000000000001
+        height: 0.8640000000000001
+        depth: 0.35
+      stop-menu:
+        enabled: false
+    rank:
+      name: "<#FFD68C><bold>ИССЛЕДОВАТЕЛЬ</bold>"
+      x: -1.37
+      y: -0.38
+      z: 3.5
+      text-size: 0.3
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    level:
+      name: "<#EFF5FA>27 <#8DA6BA>уровень"
+      x: -1.37
+      y: -0.63
+      z: 3.5
+      text-size: 0.4
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    stats_time:
+      name: "<#8099AD>ВРЕМЯ В ИГРЕ/n<#F0F5FA><bold>128 часов</bold>"
+      x: 0.57
+      y: 0.15
+      z: 3.5
+      text-size: 0.44
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    stats_wins:
+      name: "<#8099AD>ПОБЕДЫ/n<#59E0C8><bold>164</bold>"
+      x: 0.02
+      y: -0.44
+      z: 3.5
+      text-size: 0.43
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    stats_coins:
+      name: "<#8099AD>МОНЕТЫ/n<#FFD68C><bold>24 850</bold>"
+      x: 1.21
+      y: -0.44
+      z: 3.5
+      text-size: 0.43
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    progress:
+      name: "<#8099AD>ДО СЛЕДУЮЩЕГО УРОВНЯ  <#DCEAF4>72%"
+      x: 0.57
+      y: -0.79
+      z: 3.5
+      text-size: 0.26
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    progress_bar:
+      name: "<#59E0C8>━━━━━━━━━━━━━━<#344859>━━━━━━"
+      x: 0.57
+      y: -0.94
+      z: 3.5
+      text-size: 0.35
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+oc_modes:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: "player"
+    distance: 1.5
+  layout:
+    backdrop:
+      type: "item"
+      material: "BLACK_CONCRETE"
+      x: 0
+      y: 0
+      z: 7.4
+      scale: 5.8
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    brand:
+      name: "<#59E0C8><bold>ORVEN</bold><#EFF5FA><bold>CRAFT</bold>"
+      x: 0
+      y: 1.25
+      z: 3.5
+      text-size: 0.56
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    heading:
+      name: "<#F0F5FA><bold>Выбери свой мир</bold>"
+      x: 0
+      y: 0.94
+      z: 3.5
+      text-size: 0.64
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    subtitle:
+      name: "<#92A6B9>Три пути. Одна история — твоя."
+      x: 0
+      y: 0.69
+      z: 3.5
+      text-size: 0.32
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_top:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: 0.51
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_bottom:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: -1.08
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    back:
+      name: "<#92A6B9>‹  Главное меню"
+      x: -1.1
+      y: -1.27
+      z: 3.5
+      text-size: 0.4
+      hitbox:
+        width: 3.1
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_login"
+    footer:
+      name: "<#607386>Твоя история начинается здесь"
+      x: 0.66
+      y: -1.27
+      z: 3.5
+      text-size: 0.27
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    survival_icon:
+      type: "item"
+      material: "GRASS_BLOCK"
+      x: -1.43
+      y: 0.21
+      z: 3.5
+      scale: 0.68
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.85
+        height: 0.74
+        depth: 0.35
+      command:
+        - "[message] <#59E0C8>Выбран режим: ВЫЖИВАНИЕ."
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true
+    survival_title:
+      name: "<#59E0C8><bold>ВЫЖИВАНИЕ</bold>"
+      x: -1.43
+      y: -0.2
+      z: 3.5
+      text-size: 0.42
+      hitbox:
+        width: 2.8
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true
+      command:
+        - "[message] <#59E0C8>Выбран режим: ВЫЖИВАНИЕ."
+    survival_desc:
+      name: "<#9BB0C3>Дом, приключения и друзья"
+      x: -1.43
+      y: -0.48
+      z: 3.5
+      text-size: 0.25
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    survival_online:
+      name: "<#58E394>● <#D0DDE8>128 <#6C8192>игроков"
+      x: -1.43
+      y: -0.77
+      z: 3.5
+      text-size: 0.29
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    creative_icon:
+      type: "item"
+      material: "AMETHYST_SHARD"
+      x: 0
+      y: 0.21
+      z: 3.5
+      scale: 0.68
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.85
+        height: 0.74
+        depth: 0.35
+      command:
+        - "[message] <#BB9CFA>Выбран режим: ТВОРЧЕСТВО."
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true
+    creative_title:
+      name: "<#BB9CFA><bold>ТВОРЧЕСТВО</bold>"
+      x: 0
+      y: -0.2
+      z: 3.5
+      text-size: 0.42
+      hitbox:
+        width: 2.8
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true
+      command:
+        - "[message] <#BB9CFA>Выбран режим: ТВОРЧЕСТВО."
+    creative_desc:
+      name: "<#9BB0C3>Строй без ограничений"
+      x: 0
+      y: -0.48
+      z: 3.5
+      text-size: 0.25
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    creative_online:
+      name: "<#58E394>● <#D0DDE8>42 <#6C8192>игроков"
+      x: 0
+      y: -0.77
+      z: 3.5
+      text-size: 0.29
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    arena_icon:
+      type: "item"
+      material: "IRON_SWORD"
+      x: 1.43
+      y: 0.21
+      z: 3.5
+      scale: 0.68
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.85
+        height: 0.74
+        depth: 0.35
+      command:
+        - "[message] <#FFAC76>Выбран режим: АРЕНА."
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true
+    arena_title:
+      name: "<#FFAC76><bold>АРЕНА</bold>"
+      x: 1.43
+      y: -0.2
+      z: 3.5
+      text-size: 0.42
+      hitbox:
+        width: 2.8
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true
+      command:
+        - "[message] <#FFAC76>Выбран режим: АРЕНА."
+    arena_desc:
+      name: "<#9BB0C3>Покажи, на что способен"
+      x: 1.43
+      y: -0.48
+      z: 3.5
+      text-size: 0.25
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    arena_online:
+      name: "<#58E394>● <#D0DDE8>67 <#6C8192>игроков"
+      x: 1.43
+      y: -0.77
+      z: 3.5
+      text-size: 0.29
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+oc_friends:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: "player"
+    distance: 1.5
+  layout:
+    backdrop:
+      type: "item"
+      material: "BLACK_CONCRETE"
+      x: 0
+      y: 0
+      z: 7.4
+      scale: 5.8
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    brand:
+      name: "<#59E0C8><bold>ORVEN</bold><#EFF5FA><bold>CRAFT</bold>"
+      x: 0
+      y: 1.25
+      z: 3.5
+      text-size: 0.56
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    heading:
+      name: "<#F0F5FA><bold>Друзья</bold>"
+      x: 0
+      y: 0.94
+      z: 3.5
+      text-size: 0.64
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    subtitle:
+      name: "<#92A6B9>Хорошие приключения начинаются с компании"
+      x: 0
+      y: 0.69
+      z: 3.5
+      text-size: 0.32
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_top:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: 0.51
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_bottom:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: -1.08
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    back:
+      name: "<#92A6B9>‹  Главное меню"
+      x: -1.1
+      y: -1.27
+      z: 3.5
+      text-size: 0.4
+      hitbox:
+        width: 3.1
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_login"
+    footer:
+      name: "<#607386>Твоя история начинается здесь"
+      x: 0.66
+      y: -1.27
+      z: 3.5
+      text-size: 0.27
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    online_count:
+      name: "<#58E394>3 <#DCEAF4>друга сейчас в сети"
+      x: 0
+      y: 0.22
+      z: 3.5
+      text-size: 0.44
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    Arsen_icon:
+      type: "item"
+      material: "OAK_SAPLING"
+      x: -1.4
+      y: -0.11
+      z: 3.5
+      scale: 0.5
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    Arsen:
+      name: "<#58E394>● <#F0F5FA>Arsen"
+      x: -1.4
+      y: -0.45
+      z: 3.5
+      text-size: 0.43
+      hitbox:
+        width: 2.9
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      hover-tooltip:
+        type: "actionbar"
+        text: "<#DCEAF4>Arsen — Выживание · Строит дом"
+      command:
+        - "[actionbar] <#58E394>Arsen в сети. <#DCEAF4>Выживание · Строит дом."
+    Arsen_status:
+      name: "<#8AA0B4>Выживание · Строит дом"
+      x: -1.4
+      y: -0.73
+      z: 3.5
+      text-size: 0.25
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    Miko_icon:
+      type: "item"
+      material: "AMETHYST_SHARD"
+      x: 0
+      y: -0.11
+      z: 3.5
+      scale: 0.5
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    Miko:
+      name: "<#58E394>● <#F0F5FA>Miko"
+      x: 0
+      y: -0.45
+      z: 3.5
+      text-size: 0.43
+      hitbox:
+        width: 2.9
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      hover-tooltip:
+        type: "actionbar"
+        text: "<#DCEAF4>Miko — Творчество · Новый проект"
+      command:
+        - "[actionbar] <#58E394>Miko в сети. <#DCEAF4>Творчество · Новый проект."
+    Miko_status:
+      name: "<#8AA0B4>Творчество · Новый проект"
+      x: 0
+      y: -0.73
+      z: 3.5
+      text-size: 0.25
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    Luna_icon:
+      type: "item"
+      material: "IRON_SWORD"
+      x: 1.4
+      y: -0.11
+      z: 3.5
+      scale: 0.5
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    Luna:
+      name: "<#58E394>● <#F0F5FA>Luna"
+      x: 1.4
+      y: -0.45
+      z: 3.5
+      text-size: 0.43
+      hitbox:
+        width: 2.9
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      hover-tooltip:
+        type: "actionbar"
+        text: "<#DCEAF4>Luna — Арена · В бою"
+      command:
+        - "[actionbar] <#58E394>Luna в сети. <#DCEAF4>Арена · В бою."
+    Luna_status:
+      name: "<#8AA0B4>Арена · В бою"
+      x: 1.4
+      y: -0.73
+      z: 3.5
+      text-size: 0.25
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+oc_settings:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: "player"
+    distance: 1.5
+  layout:
+    backdrop:
+      type: "item"
+      material: "BLACK_CONCRETE"
+      x: 0
+      y: 0
+      z: 7.4
+      scale: 5.8
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    brand:
+      name: "<#59E0C8><bold>ORVEN</bold><#EFF5FA><bold>CRAFT</bold>"
+      x: 0
+      y: 1.25
+      z: 3.5
+      text-size: 0.56
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    heading:
+      name: "<#F0F5FA><bold>Настройки</bold>"
+      x: 0
+      y: 0.94
+      z: 3.5
+      text-size: 0.64
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    subtitle:
+      name: "<#92A6B9>Сделай меню удобным для себя"
+      x: 0
+      y: 0.69
+      z: 3.5
+      text-size: 0.32
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_top:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: 0.51
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_bottom:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: -1.08
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    back:
+      name: "<#92A6B9>‹  Главное меню"
+      x: -1.1
+      y: -1.27
+      z: 3.5
+      text-size: 0.4
+      hitbox:
+        width: 3.1
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_login"
+    footer:
+      name: "<#607386>Твоя история начинается здесь"
+      x: 0.66
+      y: -1.27
+      z: 3.5
+      text-size: 0.27
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    notifications:
+      name: "<#DCEAF4>Уведомления  <#58E394>ВКЛ"
+      x: 0
+      y: 0.18
+      z: 3.5
+      text-size: 0.47
+      hitbox:
+        width: 6
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      toggle-content:
+        enabled: true
+        "off": "<#DCEAF4>Уведомления  <#58E394>ВКЛ"
+        "on": "<#DCEAF4>Уведомления  <#FF6C7D>ВЫКЛ"
+      refresh-menu:
+        enabled: true
+        delay: 1
+    invites:
+      name: "<#DCEAF4>Приглашения друзей  <#58E394>ВКЛ"
+      x: 0
+      y: -0.26
+      z: 3.5
+      text-size: 0.47
+      hitbox:
+        width: 6
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      toggle-content:
+        enabled: true
+        "off": "<#DCEAF4>Приглашения друзей  <#58E394>ВКЛ"
+        "on": "<#DCEAF4>Приглашения друзей  <#FF6C7D>ВЫКЛ"
+      refresh-menu:
+        enabled: true
+        delay: 1
+    hints:
+      name: "<#DCEAF4>Подсказки  <#58E394>ВКЛ"
+      x: 0
+      y: -0.7
+      z: 3.5
+      text-size: 0.47
+      hitbox:
+        width: 6
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      toggle-content:
+        enabled: true
+        "off": "<#DCEAF4>Подсказки  <#58E394>ВКЛ"
+        "on": "<#DCEAF4>Подсказки  <#FF6C7D>ВЫКЛ"
+      refresh-menu:
+        enabled: true
+        delay: 1
+oc_exit:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: "player"
+    distance: 1.5
+  layout:
+    backdrop:
+      type: "item"
+      material: "BLACK_CONCRETE"
+      x: 0
+      y: 0
+      z: 7.4
+      scale: 5.8
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    brand:
+      name: "<#59E0C8><bold>ORVEN</bold><#EFF5FA><bold>CRAFT</bold>"
+      x: 0
+      y: 1.25
+      z: 3.5
+      text-size: 0.56
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    heading:
+      name: "<#F0F5FA><bold>Уже уходишь?</bold>"
+      x: 0
+      y: 0.94
+      z: 3.5
+      text-size: 0.64
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    subtitle:
+      name: "<#92A6B9>Твои приключения будут ждать тебя"
+      x: 0
+      y: 0.69
+      z: 3.5
+      text-size: 0.32
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_top:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: 0.51
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    rule_bottom:
+      name: "<#344859>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      x: 0
+      y: -1.08
+      z: 3.5
+      text-size: 0.34
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    back:
+      name: "<#92A6B9>‹  Главное меню"
+      x: -1.1
+      y: -1.27
+      z: 3.5
+      text-size: 0.4
+      hitbox:
+        width: 3.1
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_login"
+    footer:
+      name: "<#607386>Твоя история начинается здесь"
+      x: 0.66
+      y: -1.27
+      z: 3.5
+      text-size: 0.27
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    heart:
+      type: "item"
+      material: "RED_DYE"
+      x: 0
+      y: 0.15
+      z: 3.5
+      scale: 0.65
+      billboard: "center"
+      transform: "none"
+      rotate: false
+      glow: false
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    question:
+      name: "<#DCEAF4>Отключиться от сервера?"
+      x: 0
+      y: -0.25
+      z: 3.5
+      text-size: 0.5
+      hitbox:
+        width: 0.05
+        height: 0.05
+        depth: 0.05
+    cancel:
+      name: "<#59E0C8>Остаться"
+      x: -0.92
+      y: -0.7
+      z: 3.5
+      text-size: 0.54
+      hitbox:
+        width: 2.8
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: false
+      next-menu:
+        enabled: true
+        menu: "oc_login"
+    confirm:
+      name: "<#FF6C7D>Да, выйти"
+      x: 0.92
+      y: -0.7
+      z: 3.5
+      text-size: 0.54
+      hitbox:
+        width: 2.8
+        height: 0.58
+        depth: 0.35
+      hover-enlarge:
+        enabled: true
+        scale: 1.06
+      hover-style:
+        underlined: true
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: true
+          back-original: true
+        command:
+          enabled: true
+          list:
+            - "[console] minecraft:kick %player% До встречи на OrvenCraft!"

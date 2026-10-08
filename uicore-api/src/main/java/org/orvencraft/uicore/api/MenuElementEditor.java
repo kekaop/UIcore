@@ -5,112 +5,120 @@ import java.util.List;
 import java.util.Map;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.orvencraft.uicore.api.model.UiElementModel;
 
 public final class MenuElementEditor {
-   private final YamlConfiguration config;
+   private UiElementModel model;
 
    public MenuElementEditor(ConfigurationSection source) {
-      this.config = copy(source);
+      this.model = ConfigurationCopy.model(source);
    }
 
    public MenuElementEditor text(String text) {
-      this.config.set("name", text);
+      this.model = this.model.with("name", text);
       return this;
    }
 
    public MenuElementEditor type(String type) {
-      this.config.set("type", type);
+      this.model = this.model.with("type", type);
       return this;
    }
 
    public MenuElementEditor position(double x, double y, double z) {
-      this.config.set("x", x);
-      this.config.set("y", y);
-      this.config.set("z", z);
+      this.model = this.model.with("x", x).with("y", y).with("z", z);
       return this;
    }
 
    public MenuElementEditor x(double x) {
-      this.config.set("x", x);
+      this.model = this.model.with("x", x);
       return this;
    }
 
    public MenuElementEditor y(double y) {
-      this.config.set("y", y);
+      this.model = this.model.with("y", y);
       return this;
    }
 
    public MenuElementEditor z(double z) {
-      this.config.set("z", z);
+      this.model = this.model.with("z", z);
       return this;
    }
 
    public MenuElementEditor textSize(double textSize) {
-      this.config.set("text-size", textSize);
+      this.model = this.model.with("text-size", textSize);
       return this;
    }
 
    public MenuElementEditor commands(List<String> commands) {
-      this.config.set("command", commands == null ? List.of() : new ArrayList<>(commands));
+      this.model = this.model.with("command", commands == null ? List.of() : new ArrayList<>(commands));
+      return this;
+   }
+
+   public MenuElementEditor action(String id, Map<String, ?> arguments) {
+      this.model = this.model.with("action.type", id);
+      if (arguments != null) arguments.forEach((key, value) -> {
+         if ("type".equals(key)) throw new IllegalArgumentException("Action argument cannot be named type");
+         this.model = this.model.with("action." + key, value);
+      });
+      return this;
+   }
+
+   public MenuElementEditor visibleIfCustom(String id, Map<String, ?> arguments) {
+      this.model = this.model.with("visible-if.custom.type", id);
+      if (arguments != null) arguments.forEach((key, value) -> {
+         if ("type".equals(key)) throw new IllegalArgumentException("Condition argument cannot be named type");
+         this.model = this.model.with("visible-if.custom." + key, value);
+      });
       return this;
    }
 
    public MenuElementEditor permission(String permission) {
-      this.config.set("permission", permission);
+      this.model = this.model.with("permission", permission);
       return this;
    }
 
    public MenuElementEditor clearPermission() {
-      this.config.set("permission", null);
+      this.model = this.model.with("permission", null);
       return this;
    }
 
    public MenuElementEditor nextMenu(String menuId) {
-      this.config.set("next-menu.enabled", true);
-      this.config.set("next-menu.menu", menuId);
+      this.model = this.model.with("next-menu.enabled", true).with("next-menu.menu", menuId);
       return this;
    }
 
    public MenuElementEditor clearNextMenu() {
-      this.config.set("next-menu", null);
+      this.model = this.model.with("next-menu", null);
       return this;
    }
 
    public MenuElementEditor stopMenu(boolean enabled) {
-      this.config.set("stop-menu.enabled", enabled);
+      this.model = this.model.with("stop-menu.enabled", enabled);
       return this;
    }
 
    public MenuElementEditor hoverEnlarge(boolean enabled, double scale) {
-      this.config.set("hover-enlarge.enabled", enabled);
-      this.config.set("hover-enlarge.scale", scale);
+      this.model = this.model.with("hover-enlarge.enabled", enabled).with("hover-enlarge.scale", scale);
       return this;
    }
 
    public MenuElementEditor set(String path, Object value) {
-      this.config.set(path, value);
+      this.model = this.model.with(path, value);
       return this;
    }
 
    public MenuElementEditor remove(String path) {
-      this.config.set(path, null);
+      this.model = this.model.with(path, null);
       return this;
    }
 
    public YamlConfiguration toConfiguration() {
-      return copy(this.config);
+      return ConfigurationCopy.configuration(this.model.properties());
    }
 
-   static YamlConfiguration copy(ConfigurationSection source) {
-      YamlConfiguration copy = new YamlConfiguration();
-      if (source != null) {
-         for (Map.Entry<String, Object> entry : source.getValues(true).entrySet()) {
-            if (!(entry.getValue() instanceof ConfigurationSection)) {
-               copy.set(entry.getKey(), entry.getValue());
-            }
-         }
-      }
+   public UiElementModel model() { return this.model; }
 
-      return copy;
+   static YamlConfiguration copy(ConfigurationSection source) {
+      return ConfigurationCopy.configuration(source);
    }
 }

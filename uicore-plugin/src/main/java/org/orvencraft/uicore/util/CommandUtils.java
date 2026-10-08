@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 
 public final class CommandUtils {
    private static final Pattern DELAY_PREFIX = Pattern.compile("^\\s*<delay\\s*=\\s*(\\d+)\\s*>\\s*", Pattern.CASE_INSENSITIVE);
+   private static final Pattern ACTION_PREFIX = Pattern.compile("^\\s*\\[(console|op|player|server|message|actionbar)]\\s*", Pattern.CASE_INSENSITIVE);
 
    private CommandUtils() {
    }
@@ -23,16 +24,32 @@ public final class CommandUtils {
    }
 
    public static void executeCommand(Player player, String cmd, long fallbackDelayTicks) {
-      if (cmd == null || cmd.trim().isEmpty()) {
+      if (player == null || cmd == null || cmd.trim().isEmpty()) {
+         return;
+      }
+
+      /*
+       * Commands may be requested by integrations from an async or a different
+       * region thread. Player commands, placeholder expansion and plugin
+       * messages belong to the player's entity scheduler.
+       */
+      if (UIcorePlugin.plugin != null && !Bukkit.isOwnedByCurrentRegion(player)) {
+         player.getScheduler().execute(UIcorePlugin.plugin, () -> executeCommand(player, cmd, fallbackDelayTicks), null, 0L);
          return;
       }
 
       DelayedCommand delayed = parseDelayedCommand(cmd, fallbackDelayTicks);
       if (delayed.delayTicks() > 0L && UIcorePlugin.plugin != null && UIcorePlugin.foliaLib != null) {
+         boolean requireCurrentSession = UIcorePlugin.plugin.getCurrentPlayerMenu(player) != null;
+         long sessionGeneration = requireCurrentSession ? UIcorePlugin.plugin.getMenuSessionGeneration(player) : 0L;
          UIcorePlugin.foliaLib
             .scheduling()
             .entitySpecificScheduler(player)
-            .runDelayed(ignored -> executeCommandNow(player, delayed.command()), null, delayed.delayTicks());
+            .runDelayed(ignored -> {
+               if (!requireCurrentSession || UIcorePlugin.plugin.isMenuSessionCurrent(player, sessionGeneration)) {
+                  executeCommandNow(player, delayed.command());
+               }
+            }, null, delayed.delayTicks());
          return;
       }
 
@@ -60,53 +77,80 @@ public final class CommandUtils {
          return;
       }
 
-      String processedCmd = cmd;
+      CommandAction action = parseCommandAction(cmd);
+      String processedArgument = action.argument();
       if (UIcorePlugin.plugin != null) {
-         processedCmd = UIcorePlugin.plugin.applyInputPlaceholders(player, processedCmd, false);
+         processedArgument = UIcorePlugin.plugin.applyInputPlaceholders(player, processedArgument, false);
       }
 
-      if (UIcorePlugin.hasPAPI && Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-         processedCmd = PlaceholderAPI.setPlaceholders(player, processedCmd);
+      if (UIcorePlugin.hasPAPI) {
+         processedArgument = PlaceholderAPI.setPlaceholders(player, processedArgument);
       }
 
-      processedCmd = replaceBuiltinPlaceholders(player, processedCmd);
-      String lowerCmd = processedCmd.toLowerCase();
-      if (lowerCmd.startsWith("[console]")) {
-         String finalCmd = processedCmd.replaceAll("\\[console\\]", "").trim();
-         if (!finalCmd.isEmpty() && isConsoleCommandAllowed(player, finalCmd)) {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
+      processedArgument = replaceBuiltinPlaceholders(player, processedArgument);
+      switch (action.type()) {
+         case CONSOLE -> {
+            String finalCmd = processedArgument.trim();
+            if (!finalCmd.isEmpty() && isConsoleCommandAllowed(player, finalCmd) && UIcorePlugin.plugin != null) {
+               // Command-map access is global state and must not run from an entity region.
+               Bukkit.getGlobalRegionScheduler().execute(
+                  UIcorePlugin.plugin,
+                  () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd)
+               );
+            }
          }
-      } else if (lowerCmd.startsWith("[op]")) {
-         String finalCmd = processedCmd.replaceAll("\\[op\\]", "").trim();
+         case OP -> {
+            String finalCmd = processedArgument.trim();
          if (!finalCmd.isEmpty() && isOpCommandAllowed(player, finalCmd)) {
             player.performCommand(finalCmd);
          }
-      } else if (lowerCmd.startsWith("[player]")) {
-         String finalCmd = processedCmd.replaceAll("\\[player\\]", "").trim();
+         }
+         case PLAYER -> {
+            String finalCmd = processedArgument.trim();
          if (!finalCmd.isEmpty()) {
             player.performCommand(finalCmd);
          }
-      } else if (lowerCmd.startsWith("[server]")) {
-         String serverName = processedCmd.replaceAll("\\[server\\]", "").trim();
+         }
+         case SERVER -> {
+            String serverName = processedArgument.trim();
          if (!serverName.isEmpty()) {
             connectToServer(player, serverName);
          }
-      } else if (lowerCmd.startsWith("[message]")) {
-         String message = processedCmd.replaceAll("\\[message\\]", "").trim();
-         if (!message.isEmpty()) {
-            sendChatMessage(player, message);
          }
-      } else if (lowerCmd.startsWith("[actionbar]")) {
-         String message = processedCmd.replaceAll("\\[actionbar\\]", "").trim();
+         case MESSAGE -> {
+            String message = processedArgument.trim();
          if (!message.isEmpty()) {
-            sendActionBar(player, message);
+            sendChatMessage(player, replaceMessageBuiltinPlaceholders(player, action.argument()));
          }
-      } else {
-         String finalCmd = processedCmd.trim();
-         if (!finalCmd.isEmpty()) {
-            player.performCommand(finalCmd);
+         }
+         case ACTIONBAR -> {
+            String message = processedArgument.trim();
+         if (!message.isEmpty()) {
+            sendActionBar(player, replaceMessageBuiltinPlaceholders(player, action.argument()));
+         }
          }
       }
+   }
+
+   private static String replaceMessageBuiltinPlaceholders(Player player, String template) {
+      return replaceBuiltinPlaceholders(player, template, false);
+   }
+
+   static CommandAction parseCommandAction(String raw) {
+      String command = raw == null ? "" : raw;
+      Matcher matcher = ACTION_PREFIX.matcher(command);
+      if (!matcher.find()) {
+         return new CommandAction(ActionType.PLAYER, command);
+      }
+      ActionType type = switch (matcher.group(1).toLowerCase()) {
+         case "console" -> ActionType.CONSOLE;
+         case "op" -> ActionType.OP;
+         case "server" -> ActionType.SERVER;
+         case "message" -> ActionType.MESSAGE;
+         case "actionbar" -> ActionType.ACTIONBAR;
+         default -> ActionType.PLAYER;
+      };
+      return new CommandAction(type, command.substring(matcher.end()));
    }
 
    private static boolean isConsoleCommandAllowed(Player player, String command) {
@@ -120,15 +164,41 @@ public final class CommandUtils {
          return true;
       }
 
-      String normalized = command.toLowerCase().trim();
       for (String allowed : allowlist) {
-         if (allowed != null && !allowed.isBlank() && normalized.startsWith(allowed.toLowerCase().trim())) {
+         if (isAllowedCommand(command, allowed)) {
             return true;
          }
       }
 
       denyCommand(player, "console-not-allowlisted", command);
       return false;
+   }
+
+   static boolean isAllowedCommand(String command, String allowed) {
+      if (command == null || allowed == null) {
+         return false;
+      }
+      String normalizedCommand = normalizeCommand(command);
+      String normalizedAllowed = normalizeCommand(allowed);
+      if (normalizedCommand.isEmpty() || normalizedAllowed.isEmpty()) {
+         return false;
+      }
+      int commandSeparator = normalizedCommand.indexOf(' ');
+      int allowedSeparator = normalizedAllowed.indexOf(' ');
+      String commandLabel = commandSeparator < 0 ? normalizedCommand : normalizedCommand.substring(0, commandSeparator);
+      String allowedLabel = allowedSeparator < 0 ? normalizedAllowed : normalizedAllowed.substring(0, allowedSeparator);
+      if (!commandLabel.equals(allowedLabel)) {
+         return false;
+      }
+      return allowedSeparator < 0 || normalizedCommand.equals(normalizedAllowed) || normalizedCommand.startsWith(normalizedAllowed + " ");
+   }
+
+   private static String normalizeCommand(String command) {
+      String normalized = command.trim().toLowerCase();
+      while (normalized.startsWith("/")) {
+         normalized = normalized.substring(1).trim();
+      }
+      return normalized.replaceAll("\\s+", " ");
    }
 
    private static boolean isOpCommandAllowed(Player player, String command) {
@@ -151,20 +221,24 @@ public final class CommandUtils {
       }
    }
 
-   private static String sanitizeForLog(String command) {
+   static String sanitizeForLog(String command) {
       if (command == null) {
          return "";
       }
-      return command.replaceAll("(?i)(password|pass|pwd)\\s+\\S+", "$1 <redacted>");
+      return "<command arguments redacted>";
    }
 
    private static String replaceBuiltinPlaceholders(Player player, String text) {
+      return replaceBuiltinPlaceholders(player, text, true);
+   }
+
+   static String replaceBuiltinPlaceholders(Player player, String text, boolean expandInput) {
       if (text == null || player == null) {
          return text;
       }
 
       text = text.replace("%player%", player.getName());
-      if (UIcorePlugin.plugin != null) {
+      if (expandInput && UIcorePlugin.plugin != null) {
          text = UIcorePlugin.plugin.applyInputPlaceholders(player, text, false);
       }
 
@@ -211,7 +285,7 @@ public final class CommandUtils {
    public static void sendActionBar(Player player, String message) {
       if (player != null && message != null) {
          try {
-            player.sendActionBar(ColorParser.parse(TextContentUtils.normalizeLineBreaks(message)));
+            player.sendActionBar(UIcorePlugin.renderDisplayComponent(player, TextContentUtils.normalizeLineBreaks(message)));
          } catch (Exception e) {
             UIcorePlugin.plugin.getLogger().warning("Failed to send actionbar message: " + e.getMessage());
          }
@@ -222,7 +296,7 @@ public final class CommandUtils {
       if (player != null && message != null) {
          String normalized = TextContentUtils.normalizeLineBreaks(message);
          try {
-            player.sendMessage(ColorParser.parse(normalized));
+            player.sendMessage(UIcorePlugin.renderDisplayComponent(player, normalized));
          } catch (RuntimeException e) {
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', normalized));
          }
@@ -230,5 +304,17 @@ public final class CommandUtils {
    }
 
    record DelayedCommand(String command, long delayTicks) {
+   }
+
+   record CommandAction(ActionType type, String argument) {
+   }
+
+   enum ActionType {
+      CONSOLE,
+      OP,
+      PLAYER,
+      SERVER,
+      MESSAGE,
+      ACTIONBAR
    }
 }

@@ -1,9 +1,9 @@
 package org.orvencraft.uicore.npc;
 
+import org.orvencraft.uicore.UIcorePlugin;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 
 public class NPCMirrorHook {
    private static NPCMirrorHook instance;
@@ -29,7 +29,12 @@ public class NPCMirrorHook {
       return instance;
    }
 
+   static synchronized void clearInstance() {
+      instance = null;
+   }
+
    public void initialize() {
+      this.initialized = this.npcManager.isEnabled();
       if (!this.initialized) {
          this.plugin.getLogger().info("[NPCMirrorHook] NPC mirror system is disabled; initialization skipped.");
       } else {
@@ -38,15 +43,18 @@ public class NPCMirrorHook {
    }
 
    public void onMenuOpen(final Player player, final Location menuLocation, final float menuYaw, final float menuPitch, final String menuKey) {
-      if (this.initialized && this.npcManager.isEnabled()) {
-         (new BukkitRunnable() {
-            public void run() {
-               if (player.isOnline()) {
-                  NPCMirrorHook.this.npcManager.createMirrorNPC(player, menuLocation, menuYaw, menuPitch, menuKey);
-               }
+      if (player == null) return;
+      final Location location = menuLocation == null ? null : menuLocation.clone();
+      UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(() -> {
+         this.npcManager.removeMirrorNPC(player);
+         if (!this.initialized || !this.npcManager.isEnabled() || location == null) return;
+         long sessionGeneration = ((UIcorePlugin) this.plugin).getMenuSessionGeneration(player);
+         UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).runDelayed(() -> {
+            if (((UIcorePlugin) this.plugin).isMenuSessionCurrent(player, sessionGeneration)) {
+               this.npcManager.createMirrorNPC(player, location, menuYaw, menuPitch, menuKey);
             }
-         }).runTaskLater(this.plugin, 5L);
-      }
+         }, () -> { }, 5L);
+      }, () -> { });
    }
 
    public void onMenuOpen(Player player, Location menuLocation, float menuYaw, float menuPitch) {
@@ -62,22 +70,23 @@ public class NPCMirrorHook {
    }
 
    public void onMenuClose(Player player) {
-      if (this.initialized) {
-         this.npcManager.removeMirrorNPC(player);
-      }
+      if (player != null && this.initialized) org.orvencraft.uicore.scheduler.CleanupTasks.entity(this.plugin, player,
+         () -> this.npcManager.removeMirrorNPC(player));
    }
 
    public void onMenuSwitch(final Player player, final Location newMenuLocation, final float newMenuYaw, final float newMenuPitch, final String menuKey) {
-      if (this.initialized && this.npcManager.isEnabled()) {
+      if (player == null) return;
+      final Location location = newMenuLocation == null ? null : newMenuLocation.clone();
+      UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(() -> {
          this.npcManager.removeMirrorNPC(player);
-         (new BukkitRunnable() {
-            public void run() {
-               if (player.isOnline()) {
-                  NPCMirrorHook.this.npcManager.createMirrorNPC(player, newMenuLocation, newMenuYaw, newMenuPitch, menuKey);
-               }
+         if (!this.initialized || !this.npcManager.isEnabled() || location == null) return;
+         long sessionGeneration = ((UIcorePlugin) this.plugin).getMenuSessionGeneration(player);
+         UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).runDelayed(() -> {
+            if (((UIcorePlugin) this.plugin).isMenuSessionCurrent(player, sessionGeneration)) {
+               this.npcManager.createMirrorNPC(player, location, newMenuYaw, newMenuPitch, menuKey);
             }
-         }).runTaskLater(this.plugin, 3L);
-      }
+         }, () -> { }, 3L);
+      }, () -> { });
    }
 
    public void onMenuSwitch(Player player, Location newMenuLocation, float newMenuYaw, float newMenuPitch) {
@@ -93,16 +102,16 @@ public class NPCMirrorHook {
    }
 
    public void onPlayerLocationUpdate(Player player, Location newLocation) {
-      if (this.initialized && this.npcManager.isEnabled()) {
-         if (this.npcManager.hasNPC(player)) {
-         }
+      if (player != null && newLocation != null && this.initialized && this.npcManager.isEnabled() && this.npcManager.hasNPC(player)) {
+         Location location = newLocation.clone();
+         UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player)
+            .run(() -> this.npcManager.updateNPCLocation(player, location), () -> { });
       }
    }
 
    public void rotateNPC(Player player, float yawOffset) {
-      if (this.initialized) {
-         this.npcManager.rotateNPC(player, yawOffset);
-      }
+      if (player != null && this.initialized) UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player)
+         .run(() -> this.npcManager.rotateNPC(player, yawOffset), () -> { });
    }
 
    public boolean toggleNPCForPlayer(Player player) {
@@ -134,6 +143,10 @@ public class NPCMirrorHook {
    public void reload() {
       if (this.npcManager != null) {
          this.npcManager.reloadConfig();
+         this.initialized = this.npcManager.isEnabled();
+         if (!this.initialized) {
+            this.npcManager.cleanup();
+         }
       }
    }
 }
