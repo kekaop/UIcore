@@ -1,0 +1,65 @@
+showcase_main:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: player
+    distance: 1.5
+  layout:
+    title:
+      name: "<gold><bold>UIcore</bold> <gray>showcase"
+      x: 0.0
+      y: 1.05
+      z: 3.5
+      text-size: 0.8
+    subtitle:
+      name: "<gray>World-space menus, built for the moment the player looks up."
+      x: 0.0
+      y: 0.7
+      z: 3.5
+      text-size: 0.4
+    interactions:
+      name: "<aqua>Interactions"
+      x: -1.35
+      y: 0.1
+      z: 3.5
+      text-size: 0.58
+      hover-enlarge: { enabled: true, scale: 1.08 }
+      next-menu: { enabled: true, menu: showcase_interactions }
+      stop-menu: { enabled: false }
+    dragging:
+      name: "<yellow>Dragging"
+      x: 0.0
+      y: 0.1
+      z: 3.5
+      text-size: 0.58
+      hover-enlarge: { enabled: true, scale: 1.08 }
+      next-menu: { enabled: true, menu: showcase_drag }
+      stop-menu: { enabled: false }
+    integrations:
+      name: "<green>Integrations"
+      x: 1.35
+      y: 0.1
+      z: 3.5
+      text-size: 0.58
+      hover-enlarge: { enabled: true, scale: 1.08 }
+      next-menu: { enabled: true, menu: showcase_integrations }
+      stop-menu: { enabled: false }
+    slots:
+      name: "<light_purple>Slots"
+      x: 0.0
+      y: -0.45
+      z: 3.5
+      text-size: 0.58
+      hover-enlarge: { enabled: true, scale: 1.08 }
+      next-menu: { enabled: true, menu: showcase_slots }
+      stop-menu: { enabled: false }
+    close:
+      name: "<red>Close"
+      x: 0.0
+      y: -0.95
+      z: 3.5
+      text-size: 0.52
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false

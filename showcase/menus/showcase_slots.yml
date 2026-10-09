@@ -1,0 +1,69 @@
+showcase_slots:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: player
+    distance: 1.5
+  templates:
+    shield:
+      type: item
+      material: SHIELD
+      scale: 0.5
+      glow: true
+      rotate: true
+      rotate-speed: 1.0
+      hitbox: { width: 0.8, height: 0.8, depth: 0.3 }
+      stop-menu: { enabled: false }
+    pickaxe:
+      type: item
+      material: GOLDEN_PICKAXE
+      scale: 0.5
+      glow: true
+      rotate: true
+      rotate-speed: 1.3
+      hitbox: { width: 0.8, height: 0.8, depth: 0.3 }
+      stop-menu: { enabled: false }
+  slots:
+    left:
+      x: -0.75
+      y: 0.1
+      z: 3.5
+      content: shield
+      fallback: shield
+    right:
+      x: 0.75
+      y: 0.1
+      z: 3.5
+      content: pickaxe
+      fallback: pickaxe
+  layout:
+    title:
+      name: "<light_purple><bold>Template slots"
+      x: 0.0
+      y: 1.05
+      z: 3.5
+      text-size: 0.78
+    note:
+      name: "<gray>Slots swap complete item templates into a fixed layout."
+      x: 0.0
+      y: -0.55
+      z: 3.5
+      text-size: 0.42
+    back:
+      name: "<gray>Back"
+      x: -0.45
+      y: -1.0
+      z: 3.5
+      text-size: 0.5
+      next-menu: { enabled: true, menu: showcase_main }
+      stop-menu: { enabled: false }
+    close:
+      name: "<red>Close"
+      x: 0.55
+      y: -1.0
+      z: 3.5
+      text-size: 0.5
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false

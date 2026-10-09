@@ -1,0 +1,76 @@
+showcase_interactions:
+  permission: ""
+  wasd-enabled: false
+  camera-position:
+    type: player
+    distance: 1.5
+  layout:
+    title:
+      name: "<aqua><bold>Interactions"
+      x: 0.0
+      y: 1.05
+      z: 3.5
+      text-size: 0.78
+    state_panel:
+      name: "<gray>Click a button to change this element state."
+      x: 0.0
+      y: 0.48
+      z: 3.5
+      text-size: 0.5
+      initial-state: idle
+      states:
+        idle:
+          text: "<gray>State: idle"
+        active:
+          text: "<green>State: active"
+          style:
+            bold: true
+            color: "#62e67a"
+    activate:
+      name: "<green>Activate"
+      x: -0.8
+      y: -0.05
+      z: 3.5
+      text-size: 0.58
+      set-state: active
+      pressed-style:
+        text: "<green>Activated"
+        duration: 6
+      stop-menu: { enabled: false }
+    reset:
+      name: "<red>Reset"
+      x: 0.8
+      y: -0.05
+      z: 3.5
+      text-size: 0.58
+      set-state: idle
+      stop-menu: { enabled: false }
+    input:
+      type: input-field
+      name: "<yellow>Nickname: <white>{input.showcase_name}"
+      field: showcase_name
+      x: 0.0
+      y: -0.48
+      z: 3.5
+      text-size: 0.52
+      input-field:
+        prompt: "<yellow>Type the name in chat for the recording."
+      stop-menu: { enabled: false }
+    back:
+      name: "<gray>Back"
+      x: -0.45
+      y: -0.95
+      z: 3.5
+      text-size: 0.5
+      next-menu: { enabled: true, menu: showcase_main }
+      stop-menu: { enabled: false }
+    close:
+      name: "<red>Close"
+      x: 0.55
+      y: -0.95
+      z: 3.5
+      text-size: 0.5
+      stop-menu:
+        enabled: true
+        teleport:
+          enabled: false
