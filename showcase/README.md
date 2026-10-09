@@ -1,5 +1,7 @@
 # UIcore showcase package
 
+[Русская версия](README_RU.md).
+
 This directory contains the material used for the UIcore README and feature videos. It is intentionally outside `uicore-plugin/src/main/resources`, so Maven does not copy it into the plugin JAR.
 
 ## Record the videos in this order
