@@ -1,6 +1,5 @@
 demo_main:
   permission: ""
-  wasd-enabled: true
   camera-position:
     type: player
     distance: 1.5

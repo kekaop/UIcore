@@ -1,6 +1,5 @@
 demo_toggle_input:
   permission: ""
-  wasd-enabled: true
   camera-position:
     type: player
     distance: 1.5

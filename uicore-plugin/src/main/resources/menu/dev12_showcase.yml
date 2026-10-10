@@ -1,6 +1,5 @@
 dev12_showcase:
   permission: ""
-  wasd-enabled: true
   auto-commands:
     enabled: true
     commands:
@@ -176,7 +175,6 @@ dev12_showcase:
 
 dev12_conditions:
   permission: ""
-  wasd-enabled: true
   camera-position:
     distance: 1.5
     world: world
@@ -325,7 +323,6 @@ dev12_conditions:
 
 dev12_animations:
   permission: ""
-  wasd-enabled: true
   camera-position:
     distance: 1.5
     world: world
@@ -443,7 +440,6 @@ dev12_animations:
 
 dev12_input_items:
   permission: ""
-  wasd-enabled: true
   camera-position:
     distance: 1.5
     world: world

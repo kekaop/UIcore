@@ -1,6 +1,5 @@
-﻿oc_connecting:
+oc_connecting:
   permission: ""
-  wasd-enabled: false
   auto-commands:
     enabled: true
     commands:

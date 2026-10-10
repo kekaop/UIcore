@@ -1,6 +1,5 @@
-﻿oc_profile_select_mira:
+oc_profile_select_mira:
   permission: ""
-  wasd-enabled: false
   camera-position:
     distance: 1.5
     world: world

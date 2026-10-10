@@ -9,7 +9,7 @@ UIcore создаёт меню из элементов в игровом мир�
 3. Запустите сервер. UIcore создаст конфигурацию и примеры меню в `plugins/UIcore/menu/`.
 4. Встаньте в свободном месте и выполните `/uicore run demo_main`. Закройте меню командой `/uicore stop`.
 
-UIcore собирается с Java 17 bytecode. Запускайте сам сервер на версии Java, которую требует его сборка: в локальных проверках 1.20.1 использовала Java 17, а 26.2 — Java 25. Проверенные серверы и глубина проверки указаны в [матрице совместимости](../docs/COMPATIBILITY_RU.md). Зависимость PacketEvents обязательна; PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault и LuckPerms — дополнительные интеграции.
+UIcore поддерживает Minecraft 1.21.1 и новее. Он собирается с Java 17 bytecode; запускайте сервер на версии Java, которую требует выбранная сборка. Проверенные серверы и глубина проверки указаны в [матрице совместимости](../docs/COMPATIBILITY_RU.md). PacketEvents обязателен; PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault и LuckPerms — дополнительные интеграции.
 
 ## Настройте своё меню
 

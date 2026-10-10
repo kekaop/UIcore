@@ -1,6 +1,5 @@
 demo_player_menu:
   permission: ""
-  wasd-enabled: false
   camera-position:
     # fixed (default) uses world/x/y/z. player uses the player's position and view
     # at the moment the menu opens.

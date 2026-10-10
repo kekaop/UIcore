@@ -1,6 +1,5 @@
-﻿dev12_toggle_test:
+dev12_toggle_test:
   permission: ""
-  wasd-enabled: false
   camera-position:
     distance: 1.5
     world: world

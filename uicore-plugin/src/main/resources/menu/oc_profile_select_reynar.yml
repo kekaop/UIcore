@@ -1,6 +1,5 @@
-﻿oc_profile_select_reynar:
+oc_profile_select_reynar:
   permission: ""
-  wasd-enabled: false
   camera-position:
     distance: 1.5
     world: world

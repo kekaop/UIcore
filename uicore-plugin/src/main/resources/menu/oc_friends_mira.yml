@@ -1,6 +1,5 @@
-﻿oc_friends_mira:
+oc_friends_mira:
   permission: ""
-  wasd-enabled: false
   camera-position:
     distance: 1.5
     world: world

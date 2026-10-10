@@ -13,7 +13,7 @@
 | P1-02 | MenuSession сохраняет точные GameMode, invisible, collidable и исходную Location. Смена сцены сохраняет исходный снимок. |
 | P1-03 | Закрытие, quit/kick, смерть, потеря камеры, неудачное открытие и disable используют общий cleanup. Снимок записывается атомарно до побочных эффектов; неудачное возвращение сохраняет журнал. |
 | P1-04 | UIcore удаляет только свои PacketEvents listeners и не вызывает load/terminate общей зависимости. |
-| P1-05 | WASD активирует element ID через общий путь клика: visibility, debounce, MenuClickEvent, permission, conditions и cooldown. |
+| P1-05 | Историческое исправление WASD; модуль удалён из текущей версии UIcore. |
 | P1-06 | Неизвестные структуры/операторы, недоступный PAPI и нераскрытые placeholders запрещают действие, включая композиции any/not. Вложенные YAML-map и boolean разобраны рекурсивно. |
 | P1-07 | Естественное завершение, ручное завершение, удаление display и shutdown отменяют typewriter-task и очищают состояние. |
 | P1-08 | Hit-test использует displays текущего игрока вместо поиска объектов всех игроков в мире. |
@@ -25,16 +25,16 @@
 | P2-04 | Отложенные действия проверяют generation/token. Auto-commands запускаются после успешной активации камеры. |
 | P2-05 | При отмене анимации освобождаются slot transition locks; callback старого generation не затрагивает новые locks. |
 | P2-06 | Каждая временная text-группа имеет собственные displays/tasks/timeout. Частичные группы регистрируются до настройки и убираются при ошибке. Старые ветки float используют отслеживаемые задачи. |
-| P2-07 | Pumpkin-display заменяется с удалением прежнего и очищается при закрытии. Инвентарь/шлем не переписывается. |
+| P2-07 | Историческое исправление pumpkin-display; overlay удалён из текущей версии UIcore. |
 | P2-08 | Работает один chunk-loader. Он обслуживает активные сцены по фактической мировой геометрии и plugin tickets, не меняя чужой force-load. Загрузка новых чанков ограничена бюджетом. |
 | P2-09 | Глобальные API-изменения синхронизируют canonical definition с открытой player-relative копией. |
 | P2-10 | API spec/editor/snapshot используют рекурсивное копирование; snapshot-коллекции неизменяемы. |
 | P2-11 | Debounce хранится по UUID игрока и element ID. |
-| P2-12 | Старые NPC/WASD/text modules закрываются при смене сцены; новые получают текущую геометрию и element IDs. |
-| P2-13 | WASD получает настоящие displays, сохраняет transformation и учитывает whitelist/blacklist. Refresh сохраняет выбранный ID; dynamic movement обновляет координаты навигации. |
+| P2-12 | Старые NPC/text modules закрываются при смене сцены; WASD-модуль удалён. |
+| P2-13 | Историческая проверка WASD; модуль удалён из текущей версии UIcore. |
 | P2-14 | Персональные NPC создаются и обновляются для владельца, без глобального show-to-all. |
 | P2-15 | Полученная SkinsRestorer texture применяется к NPC. Lookup асинхронный; результат проверяет identity/generation, затем применяется в серверном потоке. |
-| P2-16 | Конфиги NPC/WASD читают persisted disabledPlayers; reload пересчитывает enabled и lifecycle hooks. Частичный enable приводит к disable cleanup. NPC defaults берутся из bundled YAML. |
+| P2-16 | Конфиг NPC читает persisted disabledPlayers; WASD-конфиг удалён. |
 | P2-17 | Подтверждённый внешний teleport закрывает меню на MONITOR, сохраняя его целевую позицию. Отменённый teleport не закрывает меню; смена мира не переоткрывает сцену. Internal marker снимается в finally. |
 | P2-18 | Добавлены проверки конечности/границ чисел, размеров, cursor material и sound значений, ограничения выражений/segments. Неизвестный явно заданный teleport world вызывает ошибку. Camera world проверяется до эффектов открытия. |
 | P2-19 | Regex статичен, ограничен и компилируется при загрузке. Вместо backtracking используется bundled RE2/J. Ошибочные patterns отвергаются; длинный патологический ввод покрыт тестом. |
@@ -57,7 +57,7 @@
 - Среди новых проверок: hostile yaw с таймаутом, вложенные условия и недоступный PAPI, regex, deep API copies, конфиги без перезаписи, динамическая позиция, slot definition refresh, manifest/граф установки, legacy blockcache, origin journal, exact state restore, typewriter lifecycle/font/Unicode, командная политика и отсутствие секретов в журнале.
 - Проверена упаковка relocated RE2/J, MenuSession и resource manifest в итоговый JAR. HTML source/package совпадают. `git diff --check` не выявил ошибок пробелов.
 
-После аудита сборка переведена на Minecraft 1.20.1–26.2 для Paper, Folia, Purpur и доступных сборок Leaf. Проверенные сочетания перечислены в [матрице совместимости](COMPATIBILITY_RU.md), особенности Folia — [отдельно](PORT_26_2_RU.md). Состояния элементов добавлены после аудита; экспериментальное перетаскивание исключено из релизного кандидата. Актуальный статус идей — в [списке задач](PLANNED_TASKS_RU.md).
+Текущая ветка поддерживает Minecraft 1.21.1 и новее для Paper, Folia, Purpur и доступных сборок Leaf. Проверенные сочетания перечислены в [матрице совместимости](COMPATIBILITY_RU.md), особенности Folia — [отдельно](PORT_26_2_RU.md). Актуальный статус идей — в [списке задач](PLANNED_TASKS_RU.md).
 
 ## Ограничения и серверная проверка
 

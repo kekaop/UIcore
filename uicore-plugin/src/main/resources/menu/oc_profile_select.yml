@@ -1,6 +1,5 @@
-﻿oc_profile_select:
+oc_profile_select:
   permission: ""
-  wasd-enabled: false
   camera-position:
     distance: 1.5
     world: world

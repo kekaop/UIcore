@@ -86,8 +86,7 @@ public class MenuConfigLoader {
             autoCommandDelays = autoCmdSection.getLongList("delays");
          }
 
-         boolean wasdEnabled = menuSection.getBoolean("wasd-enabled", true);
-         Section section = new Section(distance, world, x, y, z, yaw, pitch, permission, autoCommands, autoCommandDelays, autoCommandsEnabled, wasdEnabled);
+         Section section = new Section(distance, world, x, y, z, yaw, pitch, permission, autoCommands, autoCommandDelays, autoCommandsEnabled);
          section.positionType = positionType;
          ConfigurationSection playerOffset = cameraSection.getConfigurationSection("offset");
          if (playerOffset != null) {

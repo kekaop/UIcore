@@ -1,6 +1,5 @@
 oc_main_menu:
   permission: ""
-  wasd-enabled: false
   auto-commands:
     enabled: true
     commands:

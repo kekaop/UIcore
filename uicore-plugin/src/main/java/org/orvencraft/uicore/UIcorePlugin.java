@@ -34,7 +34,6 @@ import org.orvencraft.uicore.section.SectionManager;
 import org.orvencraft.uicore.section.MenuConfigLoader;
 import org.orvencraft.uicore.section.MenuSlot;
 import org.orvencraft.uicore.util.CommandUtils;
-import org.orvencraft.uicore.wasd.WASDModule;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
@@ -144,8 +143,6 @@ public class UIcorePlugin extends JavaPlugin {
    private final Map<Player, List<TextDisplay>> playerDisplays = new ConcurrentHashMap<>();
    private final Map<Player, ItemDisplay> playerItemDisplays = new ConcurrentHashMap<>();
    private final Map<Player, List<ItemDisplay>> playerMenuItemDisplays = new ConcurrentHashMap<>();
-   private final Map<Player, ItemDisplay> playerPumpkinDisplays = new ConcurrentHashMap<>();
-   private final Set<UUID> relocatingPumpkinDisplays = ConcurrentHashMap.newKeySet();
    private final Map<Player, List<ScheduledTask>> playerMenuTextAnimationTasks = new ConcurrentHashMap<>();
    private final Map<Player, List<ScheduledTask>> playerMenuItemAnimationTasks = new ConcurrentHashMap<>();
    private final Map<UUID, Map<String, Boolean>> playerLayoutToggleStates = new ConcurrentHashMap<>();
@@ -186,7 +183,6 @@ public class UIcorePlugin extends JavaPlugin {
    public static double cursorSmoothing;
    public static int runDelay;
    public static boolean hasPAPI;
-   public static boolean usePumpkinOverlay;
    public static boolean cursorMovementRangeEnabled;
    public static double cursorMovementRangeXMin;
    public static double cursorMovementRangeXMax;
@@ -269,7 +265,6 @@ public class UIcorePlugin extends JavaPlugin {
    private Map<UUID, String> currentPlayerInputFields = new ConcurrentHashMap<>();
    private Map<UUID, Map<String, String>> userInputData = new ConcurrentHashMap<>();
    private YamlConfiguration langConfig;
-   private static final String HELMET_META_KEY = "cursor_original_helmet";
    private static final String MENU_ENTITY_TAG = "uicore_runtime";
 
    private static final class MenuViewSnapshot {
@@ -279,7 +274,6 @@ public class UIcorePlugin extends JavaPlugin {
       private final List<TextDisplay> textDisplays;
       private final ItemDisplay cursorDisplay;
       private final List<ItemDisplay> menuItemDisplays;
-      private final ItemDisplay pumpkinDisplay;
 
       private MenuViewSnapshot(
          Pig cameraMount,
@@ -287,8 +281,7 @@ public class UIcorePlugin extends JavaPlugin {
          ArmorStand cursorStand,
          List<TextDisplay> textDisplays,
          ItemDisplay cursorDisplay,
-         List<ItemDisplay> menuItemDisplays,
-         ItemDisplay pumpkinDisplay
+         List<ItemDisplay> menuItemDisplays
       ) {
          this.cameraMount = cameraMount;
          this.playerSeat = playerSeat;
@@ -296,7 +289,6 @@ public class UIcorePlugin extends JavaPlugin {
          this.textDisplays = textDisplays;
          this.cursorDisplay = cursorDisplay;
          this.menuItemDisplays = menuItemDisplays;
-         this.pumpkinDisplay = pumpkinDisplay;
       }
    }
 
@@ -978,8 +970,7 @@ public class UIcorePlugin extends JavaPlugin {
          playerCursors.get(player),
          this.playerDisplays.get(player),
          this.playerItemDisplays.get(player),
-         this.playerMenuItemDisplays.get(player),
-         this.playerPumpkinDisplays.get(player)
+         this.playerMenuItemDisplays.get(player)
       );
    }
 
@@ -1101,10 +1092,6 @@ public class UIcorePlugin extends JavaPlugin {
          snapshot.menuItemDisplays.clear();
       }
 
-      if (snapshot.pumpkinDisplay != null) {
-         this.playerPumpkinDisplays.remove(player, snapshot.pumpkinDisplay);
-         this.closeSessionStep(() -> this.removeMenuEntity(snapshot.pumpkinDisplay));
-      }
    }
 
    private void removeMenuEntity(Entity entity) {
@@ -1691,7 +1678,6 @@ public class UIcorePlugin extends JavaPlugin {
       textDisplayManager = new TextDisplayManager(this);
       this.hoverEnlargeManager = new HoverEnlargeManager(this);
       NPCModule.initialize(this);
-      WASDModule.initialize(this);
       CraftEngineCompat.init();
       this.getLogger().info("====================================");
       this.getLogger().info("UIcore enabled");
@@ -1769,27 +1755,7 @@ public class UIcorePlugin extends JavaPlugin {
                 if (!this.dragSessions.containsKey(playerId)) this.tickCameraEdgePan(player);
                 this.updateDragCapture(player, tick);
                this.tickDynamicMenuPositions(player);
-               Location var3 = player.getLocation();
-               ItemDisplay var4 = this.playerPumpkinDisplays.get(player);
-               if (var4 != null) {
-                   Location var5 = var3.clone().add(0.0, 1.7, 0.0);
-                   foliaLib.scheduling().entitySpecificScheduler(var4).run(() -> {
-                      if (!var4.isValid() || this.relocatingPumpkinDisplays.contains(var4.getUniqueId())) return;
-                      if (Bukkit.isOwnedByCurrentRegion(var5)) {
-                         moveMenuEntity(var4, var5);
-                         var4.setRotation(var3.getYaw(), var3.getPitch());
-                      } else if (this.relocatingPumpkinDisplays.add(var4.getUniqueId())) {
-                         var4.teleportAsync(var5).whenComplete((teleported, error) -> {
-                            this.relocatingPumpkinDisplays.remove(var4.getUniqueId());
-                            if (error == null && Boolean.TRUE.equals(teleported)) {
-                               foliaLib.scheduling().entitySpecificScheduler(var4).run(() -> var4.setRotation(var3.getYaw(), var3.getPitch()), null);
-                            }
-                         });
-                      }
-                   }, null);
-               }
             }
-      if (WASDModule.getInstance() != null) WASDModule.getInstance().getNavigationManager().drainInput(player);
       if ((tick & 1L) == 0L && this.hoverEnlargeManager != null) this.hoverEnlargeManager.tickPlayer(player);
    }
 
@@ -1824,7 +1790,6 @@ public class UIcorePlugin extends JavaPlugin {
       if (this.extensionManager != null) this.extensionManager.clear();
       this.componentLayoutCache.clear();
 
-      this.closeSessionStep(WASDModule::shutdown);
       this.closeSessionStep(NPCModule::shutdown);
       if (this.chunkLoaderManager != null) {
          this.closeSessionStep(this.chunkLoaderManager::stopChunkLoaderTask);
@@ -1838,7 +1803,7 @@ public class UIcorePlugin extends JavaPlugin {
       if (!folia) {
          this.closeSessionStep(this::purgeAllEntities);
          playerCursors.clear(); playerSit.clear(); this.playerMenuSeats.clear(); this.playerDisplays.clear(); this.playerItemDisplays.clear();
-         this.playerMenuItemDisplays.clear(); this.playerPumpkinDisplays.clear(); this.menuSessions.clear();
+         this.playerMenuItemDisplays.clear(); this.menuSessions.clear();
       } else if (!Bukkit.isStopping()) {
          if (textDisplayManager != null) this.closeSessionStep(textDisplayManager::cleanup);
          if (this.hoverEnlargeManager != null) this.closeSessionStep(this.hoverEnlargeManager::cleanup);
@@ -1899,7 +1864,6 @@ public class UIcorePlugin extends JavaPlugin {
       if (this.hoverEnlargeManager != null) this.hoverEnlargeManager.cleanup();
       this.hoverEnlargeManager = new HoverEnlargeManager(this);
       NPCModule.reload();
-      WASDModule.reload();
       for (Map.Entry<Player, String> entry : openMenus.entrySet()) if (entry.getKey().isOnline()) this.setupCursor(entry.getKey(), entry.getValue());
    }
 
@@ -1947,7 +1911,6 @@ public class UIcorePlugin extends JavaPlugin {
       soundVolume = Float.parseFloat(this.getConfig().getString("sound.volume", "1"));
       soundPitch = Float.parseFloat(this.getConfig().getString("sound.pitch", "1"));
       this.debugMode = this.getConfig().getBoolean("Debug", false);
-      usePumpkinOverlay = this.getConfig().getBoolean("use-pumpkin-overlay", false);
       joinRunBool = this.getConfig().getBoolean("join-run.enabled", false);
       joinRunSection = this.getConfig().getString("join-run.menu", "test");
       cursorItem = Material.matchMaterial(this.getConfig().getString("cursor-item.material", "ARROW")).name();
@@ -2033,7 +1996,6 @@ public class UIcorePlugin extends JavaPlugin {
           this.restoreBlocks(var1);
           if (this.schematicPreviewManager != null) this.schematicPreviewManager.clear(var1);
           NPCModule.onMenuClose(var1);
-          WASDModule.onMenuClose(var1);
           if (textDisplayManager != null) textDisplayManager.clearPlayerDisplays(var1.getUniqueId());
           this.beginDynamicMenuSession(var1);
           final UUID menuSessionToken = UUID.randomUUID();
@@ -2266,18 +2228,13 @@ public class UIcorePlugin extends JavaPlugin {
                            playerSit.put(var1, var30);
                            Pig playerSeat = this.spawnPlayerLocStand(var1, seatLocation);
                            this.playerMenuSeats.put(var1, playerSeat);
-                           if (usePumpkinOverlay) {
-                              this.storeHelmet(var1);
-                           }
-
                            MenuViewSnapshot newViewSnapshot = new MenuViewSnapshot(
                               var30,
                               playerSeat,
                               var16x,
                               var17x,
                               var29,
-                              menuItemDisplays,
-                              this.playerPumpkinDisplays.get(var1)
+                              menuItemDisplays
                            );
                            var1.setInvisible(true);
                            var1.setCollidable(false);
@@ -2315,26 +2272,6 @@ public class UIcorePlugin extends JavaPlugin {
                            textDisplayManager.showTextDisplays(var1, var2);
                            this.clearBlockingBlocks(var1);
                            NPCModule.onMenuOpen(var1, var6x, var15.yaw, var15.pitch, var2);
-                           if (var15.wasdEnabled && WASDModule.isMenuEnabled(var2)) {
-                              ArrayList<Location> var31 = new ArrayList<>();
-                              ArrayList<String> var32 = new ArrayList<>();
-                              ArrayList<Double> var33 = new ArrayList<>();
-
-                               for (MenuLayout var35 : visibleLayouts.values()) {
-                                  DynamicPositionSpec.Position layoutPosition = this.getCurrentLayoutPosition(var1, var2, var35);
-                                  Location var37 = this.toMenuWorldLocation(var15, layoutPosition);
-                                  if (var37 == null) {
-                                     continue;
-                                  }
-                                  var31.add(var37);
-                                 var32.add(var35.key);
-
-                                 var33.add(var35.getTextSize());
-                              }
-
-                              WASDModule.onMenuOpen(var1, var2, var31.toArray(new Location[0]), var32, var17x.toArray(new TextDisplay[0]), var33);
-                           }
-
                            cursorExactLocations.put(var1, var15x.clone());
                         }
                         } catch (RuntimeException exception) {
@@ -2417,12 +2354,10 @@ public class UIcorePlugin extends JavaPlugin {
          this.closeSessionStep(() -> this.clearMenuTextAnimationTasks(player));
          this.closeSessionStep(() -> this.clearMenuItemAnimationTasks(player));
          this.closeSessionStep(() -> this.cleanupMenuViewSnapshot(player, this.captureMenuView(player)));
-         this.closeSessionStep(() -> this.restoreHelmet(player));
          if (textDisplayManager != null) this.closeSessionStep(() -> textDisplayManager.clearPlayerDisplays(playerId));
          if (itemDisplayManager != null) this.closeSessionStep(() -> itemDisplayManager.hideItem(player));
          if (this.hoverEnlargeManager != null) this.closeSessionStep(() -> this.hoverEnlargeManager.cleanupPlayer(player));
          this.closeSessionStep(() -> NPCModule.onMenuClose(player));
-         this.closeSessionStep(() -> WASDModule.onMenuClose(player));
          this.closeSessionStep(() -> playingSound.remove(player.getName()));
          this.closeSessionStep(() -> player.stopAllSounds());
          this.closeSessionStep(() -> this.sendCameraPacket(player, player));
@@ -2706,7 +2641,6 @@ public class UIcorePlugin extends JavaPlugin {
       for (String elementId : elementIds) {
          this.refreshMenuElement(player, menuKey, elementId, false, section, desired.get(elementId));
       }
-      this.rebuildMenuNavigation(player, menuKey);
    }
 
    private boolean refreshMenuElement(Player player, String menuKey, String elementId, boolean replaceExisting) {
@@ -2731,7 +2665,6 @@ public class UIcorePlugin extends JavaPlugin {
 
       MenuLayout layout = this.getLayoutsForPlayer(player, menuKey, section).get(elementId);
       boolean changed = this.refreshMenuElement(player, menuKey, elementId, replaceExisting, section, layout);
-      this.rebuildMenuNavigation(player, menuKey);
       return changed;
    }
 
@@ -3410,17 +3343,8 @@ public class UIcorePlugin extends JavaPlugin {
                state.movementPrepared = true;
             }
             this.moveLayoutEntities(player, menuKey, layout.key, worldLocation);
-         }
-      }      org.orvencraft.uicore.wasd.WASDNavigationManager navigation = org.orvencraft.uicore.wasd.WASDNavigationManager.getInstance();
-      if (navigation != null && navigation.getPlayerSession(player.getUniqueId()) != null) {
-         List<Location> locations = new ArrayList<>(); List<String> ids = new ArrayList<>();
-         for (MenuLayout layout : this.getLayoutsForPlayer(player, menuKey, section).values()) {
-            TextDisplay display = this.getTextDisplayByKeys(player, menuKey, layout.key);
-            if (display != null) { locations.add(display.getLocation()); ids.add(layout.key); }
-         }
-         navigation.updateTextLocations(player, locations.toArray(new Location[0]), ids);
       }
-
+   }
    }
 
    private DynamicPositionSpec.Evaluation evaluateDynamicPosition(
@@ -3687,25 +3611,8 @@ public class UIcorePlugin extends JavaPlugin {
       Section section = this.getRuntimeSection(player, menuKey);
       if (section == null) return;
       NPCModule.onMenuClose(player);
-      WASDModule.onMenuClose(player);
       Location camera = new Location(Bukkit.getWorld(section.world), section.cameraX, section.cameraY, section.cameraZ, section.yaw, section.pitch);
       NPCModule.onMenuOpen(player, camera, section.yaw, section.pitch, menuKey);
-      this.rebuildMenuNavigation(player, menuKey);
-   }
-
-   private void rebuildMenuNavigation(Player player, String menuKey) {
-      Section section = this.getRuntimeSection(player, menuKey);
-      if (section == null || !section.wasdEnabled || !WASDModule.isMenuEnabled(menuKey)) { WASDModule.onMenuClose(player); return; }
-      List<Location> locations = new ArrayList<>();
-      List<String> ids = new ArrayList<>();
-      List<TextDisplay> displays = new ArrayList<>();
-      List<Double> scales = new ArrayList<>();
-      for (MenuLayout layout : this.getLayoutsForPlayer(player, menuKey, section).values()) {
-         TextDisplay display = this.getTextDisplayByKeys(player, menuKey, layout.key);
-         if (display == null) continue;
-         locations.add(display.getLocation()); ids.add(layout.key); displays.add(display); scales.add(layout.getTextSize());
-      }
-      WASDModule.onMenuOpen(player, menuKey, locations.toArray(new Location[0]), ids, displays.toArray(new TextDisplay[0]), scales);
    }
 
    private void runLayout(Player var1, String var2) {
@@ -4071,38 +3978,6 @@ public class UIcorePlugin extends JavaPlugin {
       }
    }
 
-   public void storeHelmet(Player var1) {
-      this.restoreHelmet(var1);
-      ItemStack var3 = new ItemStack(Material.CARVED_PUMPKIN);
-      ItemMeta var4 = var3.getItemMeta();
-      var4.addEnchant(Enchantment.BINDING_CURSE, 1, true);
-      var4.addItemFlags(new ItemFlag[]{ItemFlag.HIDE_ENCHANTS});
-      var3.setItemMeta(var4);
-      Location var5 = var1.getLocation().clone().add(0.0, 1.7, 0.0);
-      ItemDisplay var6 = this.tagMenuEntity((ItemDisplay)var5.getWorld().spawn(var5, ItemDisplay.class));
-      var6.setItemStack(var3);
-      var6.setBillboard(Billboard.FIXED);
-      var6.setRotation(var5.getYaw(), var5.getPitch());
-      var6.setVisibleByDefault(false);
-      var6.setPersistent(false);
-      var6.setInvulnerable(true);
-      var6.setGravity(false);
-      var1.showEntity(this, var6);
-
-      for (Player var8 : Bukkit.getOnlinePlayers()) {
-         if (var8 != var1) {
-            var8.hideEntity(this, var6);
-         }
-      }
-
-      this.playerPumpkinDisplays.put(var1, var6);
-   }
-
-   private void restoreHelmet(Player player) {
-      this.removeMenuEntity(this.playerPumpkinDisplays.remove(player));
-      player.removeMetadata(HELMET_META_KEY, this);
-   }
-
    public static net.kyori.adventure.text.Component renderDisplayComponent(Player player, String template) {
       return renderDisplayComponent(player, plugin == null ? "" : plugin.getCurrentPlayerMenu(player), "", template);
    }
@@ -4431,15 +4306,6 @@ public class UIcorePlugin extends JavaPlugin {
       public void onJoin(PlayerJoinEvent var1) {
          Player var2 = var1.getPlayer();
          UIcorePlugin.this.recoverSavedSession(var2);
-
-          for (ItemDisplay var4 : UIcorePlugin.this.playerPumpkinDisplays.values()) {
-             if (var4 != null) foliaLib.scheduling().entitySpecificScheduler(var4).run(() -> {
-                if (var4.isValid()) foliaLib.scheduling().entitySpecificScheduler(var2).run(() -> {
-                   if (var2.isOnline()) var2.hideEntity(UIcorePlugin.this, var4);
-                }, null);
-             }, null);
-         }
-
       }
 
       private void cleanup(Player player) {

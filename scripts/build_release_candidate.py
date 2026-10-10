@@ -29,7 +29,6 @@ def main() -> None:
         required = {
             "plugin.yml",
             "menu-resources.txt",
-            "org/orvencraft/uicore/wasd/WASDSession.class",
             "META-INF/licenses/RE2J-LICENSE.txt",
             "META-INF/licenses/BSTATS-METRICS-LICENSE.txt",
             "META-INF/licenses/MOREPAPERLIB-LICENSE.txt",
@@ -37,7 +36,8 @@ def main() -> None:
         }
         if not required <= entries:
             raise SystemExit(f"Missing JAR resources: {sorted(required - entries)}")
-        forbidden = [name for name in entries if name.startswith("menu/oc_") or "DragPanGesture" in name]
+        forbidden = [name for name in entries if name.startswith("menu/oc_") or "DragPanGesture" in name
+                     or name.startswith("org/orvencraft/uicore/wasd/") or name == "wasd_config.yml"]
         if forbidden:
             raise SystemExit(f"Unwanted release entries: {sorted(forbidden)}")
         metadata = plugin.read("plugin.yml").decode("utf-8")

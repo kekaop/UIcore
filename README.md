@@ -43,7 +43,7 @@ The build produces:
 
 ## Runtime requirements
 
-- Minecraft 1.20.1–26.2 on Paper, Folia, Purpur, or a compatible fork.
+- Minecraft 1.21.1 and newer on Paper, Folia, Purpur, or a compatible fork.
 - Java 17 bytecode. Use the Java runtime required by the selected server build.
 - PacketEvents 2.14.0 is required.
 - PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault, and LuckPerms are optional.

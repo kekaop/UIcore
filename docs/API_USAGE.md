@@ -313,49 +313,6 @@ cursor-item:
     enabled: false
 ```
 
-## WASD Navigation
-
-WASD is an optional selection mode. It tracks the currently selected menu element, moves selection with `W/A/S/D`, and executes the selected element with `Space`.
-
-```yaml
-demo_main:
-  wasd-enabled: true
-```
-
-```yaml
-# wasd_config.yml
-enabled: true
-navigation:
-  horizontal-threshold: 0.5
-  dot-product-threshold: 0.5
-  selection-cooldown: 500
-menu-settings:
-  enable-for-all-menus: false
-  use-whitelist-mode: true
-  enabled-menus:
-    - demo_main
-```
-
-Useful placeholders:
-
-```text
-%cmp_wasd_menu%
-%cmp_wasd_enabled%
-%cmp_wasd_index%
-%cmp_wasd_x%
-%cmp_wasd_y%
-%cmp_wasd_z%
-```
-
-Helper calls:
-
-```java
-if (WASDModule.isModuleEnabled() && WASDModule.isMenuEnabled("demo_main")) {
-    String menu = WASDModule.getPlayerCurrentMenu(player);
-    Location selected = WASDModule.getPlayerCurrentLocation(player);
-}
-```
-
 ## NPC Mirror
 
 NPC mirror is an optional visual companion feature. It uses FancyNpcs for the mirror entity and can optionally use SkinsRestorer for skin sync.

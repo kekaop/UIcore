@@ -1,6 +1,5 @@
-﻿oc_social_discord:
+oc_social_discord:
   permission: ""
-  wasd-enabled: false
   camera-position:
     distance: 1.5
     world: world

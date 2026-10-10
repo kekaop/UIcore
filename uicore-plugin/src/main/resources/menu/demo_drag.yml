@@ -1,6 +1,5 @@
 demo_drag:
   permission: ""
-  wasd-enabled: false
   camera-position:
     type: player
     distance: 1.5

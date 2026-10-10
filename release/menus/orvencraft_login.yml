@@ -14,7 +14,6 @@
 
 oc_login:
   permission: ""
-  wasd-enabled: false
   camera-position:
     type: "player"
     distance: 1.5
@@ -236,7 +235,6 @@ oc_login:
         menu: "oc_exit"
 oc_profile:
   permission: ""
-  wasd-enabled: false
   camera-position:
     type: "player"
     distance: 1.5
@@ -429,7 +427,6 @@ oc_profile:
         depth: 0.05
 oc_modes:
   permission: ""
-  wasd-enabled: false
   camera-position:
     type: "player"
     distance: 1.5
@@ -723,7 +720,6 @@ oc_modes:
         depth: 0.05
 oc_friends:
   permission: ""
-  wasd-enabled: false
   camera-position:
     type: "player"
     distance: 1.5
@@ -976,7 +972,6 @@ oc_friends:
         depth: 0.05
 oc_settings:
   permission: ""
-  wasd-enabled: false
   camera-position:
     type: "player"
     distance: 1.5
@@ -1150,7 +1145,6 @@ oc_settings:
         delay: 1
 oc_exit:
   permission: ""
-  wasd-enabled: false
   camera-position:
     type: "player"
     distance: 1.5

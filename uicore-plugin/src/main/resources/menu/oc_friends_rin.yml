@@ -1,6 +1,5 @@
-﻿oc_friends_rin:
+oc_friends_rin:
   permission: ""
-  wasd-enabled: false
   camera-position:
     distance: 1.5
     world: world

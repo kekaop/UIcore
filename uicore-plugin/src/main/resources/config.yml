@@ -1,9 +1,6 @@
 version: "1.0.0" # Do not edit manually.
 Debug: false
 
-# Show a pumpkin overlay while the player is inside a menu.
-use-pumpkin-overlay: false
-
 # Use the player's current position and facing as the menu camera.
 # true  -> ignore camera-position in menu YAML and open the menu at the player.
 # false -> use camera-position from menu YAML.

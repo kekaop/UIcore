@@ -23,7 +23,6 @@ public class Section {
    public float yaw;
    public float pitch;
    public final String permission;
-   public final boolean wasdEnabled;
    public LinkedHashMap<String, MenuLayout> layouts;
    public final LinkedHashMap<String, MenuLayout> templates;
    public final LinkedHashMap<String, MenuSlot> slots;
@@ -48,8 +47,7 @@ public class Section {
       String permission,
       List<String> autoCommands,
       List<Long> autoCommandDelays,
-      boolean autoCommandsEnabled,
-      boolean wasdEnabled
+      boolean autoCommandsEnabled
    ) {
       this.distance = distance;
       this.world = world;
@@ -66,23 +64,6 @@ public class Section {
       this.autoCommands = autoCommands;
       this.autoCommandDelays = autoCommandDelays;
       this.autoCommandsEnabled = autoCommandsEnabled;
-      this.wasdEnabled = wasdEnabled;
-   }
-
-   public Section(
-      double distance,
-      String world,
-      double cameraX,
-      double cameraY,
-      double cameraZ,
-      float yaw,
-      float pitch,
-      String permission,
-      List<String> autoCommands,
-      List<Long> autoCommandDelays,
-      boolean autoCommandsEnabled
-   ) {
-      this(distance, world, cameraX, cameraY, cameraZ, yaw, pitch, permission, autoCommands, autoCommandDelays, autoCommandsEnabled, true);
    }
 
    public void add(String key, MenuLayout layout) {
@@ -138,8 +119,7 @@ public class Section {
          this.permission,
          this.autoCommands,
          this.autoCommandDelays,
-         this.autoCommandsEnabled,
-         this.wasdEnabled
+         this.autoCommandsEnabled
       );
       copy.key = this.key;
       copy.npcSettings = this.npcSettings;

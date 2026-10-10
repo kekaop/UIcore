@@ -1,6 +1,6 @@
 # UIcore runtime and API contracts
 
-This source build compiles against Paper 1.20.1 with Java 17 bytecode (`release 17`). The manifest declares `api-version: '1.20'` and `folia-supported: true`. Local startup/reload/shutdown results across Paper, Folia, Purpur, and Leaf are in the [compatibility matrix](COMPATIBILITY_RU.md). A test client opened and closed `demo_main` on Paper and Folia 1.20.1 and Folia 1.21.11; visual and interaction checks are still needed. See [Folia port status](PORT_26_2_RU.md).
+This source build compiles against Paper 1.21.1 with Java 17 bytecode (`release 17`). The manifest declares `api-version: '1.21'` and `folia-supported: true`. Local startup/reload/shutdown results across Paper, Folia, Purpur, and Leaf are in the [compatibility matrix](COMPATIBILITY_RU.md). Visual and interaction checks are still needed. See [Folia port status](PORT_26_2_RU.md).
 
 | Dependency | Compile target | Runtime role |
 | --- | --- | --- |

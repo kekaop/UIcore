@@ -1,6 +1,5 @@
-﻿oc_social_vk:
+oc_social_vk:
   permission: ""
-  wasd-enabled: false
   camera-position:
     distance: 1.5
     world: world
