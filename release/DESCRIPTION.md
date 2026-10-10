@@ -31,7 +31,8 @@ Read the [installation guide](https://github.com/kekaop/UIcore/blob/orven/normal
 
 Schematic previews show block states, but not container or other block-entity contents, entities, or biomes. Console commands in menus are disabled by default and require an explicit allowlist. NoChatReports may interfere with signed chat and menu text input on some client setups; see the compatibility guide for the observed behavior and workaround.
 
-**Source and documentation:** [github.com/kekaop/UIcore](https://github.com/kekaop/UIcore)  
+**Source and documentation:** [github.com/kekaop/UIcore](https://github.com/kekaop/UIcore)
+
 **License:** [AGPL-3.0](https://github.com/kekaop/UIcore/blob/orven/normal-source-build/LICENSE)
 
 Created by **Orven**. UIcore is based on [CustomScreenMenu](https://builtbybit.com/resources/customscreenmenu.108929/) by **wuhaoxian123** and is published with permission from the original author.
