@@ -41,4 +41,4 @@ PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault и LuckPerms под
 - [Совместимость](docs/COMPATIBILITY_RU.md) · [English](docs/COMPATIBILITY.md)
 - [Установка](release/INSTALL_RU.md) · [English](release/INSTALL.md)
 
-UIcore основан на CustomScreenMenu 1.4.8 и публикуется с разрешения автора исходного плагина, **wuhaoxian123**. Подробнее: [страница CustomScreenMenu](https://builtbybit.com/resources/customscreenmenu.108929/), [LICENSE](LICENSE) и [PROVENANCE.md](PROVENANCE.md).
+UIcore основан на CustomScreenMenu 1.4.8 и публикуется с разрешения автора исходного плагина, **wuhaoxian123**. Подробнее: [страница CustomScreenMenu](https://builtbybit.com/resources/customscreenmenu.108929/) и [LICENSE](LICENSE).

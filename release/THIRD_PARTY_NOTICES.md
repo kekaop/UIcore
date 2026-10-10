@@ -8,4 +8,4 @@ UIcore also includes RE2/J 1.8 for safe regular-expression processing. Its notic
 
 The source contains bStats Metrics classes. They do not start telemetry in this build. The MIT notice is in `META-INF/licenses/BSTATS-METRICS-LICENSE.txt` and [third-party/BSTATS-METRICS-LICENSE.txt](third-party/BSTATS-METRICS-LICENSE.txt). Source: [Bastian/bstats-metrics](https://github.com/Bastian/bstats-metrics).
 
-UIcore is based on [CustomScreenMenu](https://builtbybit.com/resources/customscreenmenu.108929/) by wuhaoxian123 and is published with the author's permission. See [PROVENANCE.md](../PROVENANCE.md) for the record kept with this repository.
+UIcore is based on [CustomScreenMenu](https://builtbybit.com/resources/customscreenmenu.108929/) by wuhaoxian123 and is published with the author's permission.
