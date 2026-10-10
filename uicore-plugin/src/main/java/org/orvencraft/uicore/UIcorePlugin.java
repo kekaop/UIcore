@@ -24,6 +24,7 @@ import org.orvencraft.uicore.extension.ExtensionManager;
 import org.orvencraft.uicore.extension.ComponentLayoutCache;
 import org.orvencraft.uicore.extension.builtin.BuiltInIntegrations;
 import org.orvencraft.uicore.layout.MenuLayout;
+import org.orvencraft.uicore.input.BoundedInputQueue;
 import org.orvencraft.uicore.npc.NPCModule;
 import org.orvencraft.uicore.position.DynamicPositionSpec;
 import org.orvencraft.uicore.scheduler.ChunkLoaderManager;
@@ -68,7 +69,6 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -230,7 +230,10 @@ public class UIcorePlugin extends JavaPlugin {
    private final Map<UUID, RotationInput> lastMenuRotations = new ConcurrentHashMap<>();
    private final Map<UUID, Long> pendingClicks = new ConcurrentHashMap<>();
    private final Map<UUID, Integer> pendingAttackTargets = new ConcurrentHashMap<>();
-   private final Map<UUID, ConcurrentLinkedQueue<DigInput>> pendingDigInputs = new ConcurrentHashMap<>();
+   private static final int MAX_PENDING_DIG_INPUTS_PER_PLAYER = 32;
+   private static final int MAX_DIG_INPUTS_PER_TICK = 8;
+   private final Map<UUID, BoundedInputQueue<DigInput>> pendingDigInputs = new ConcurrentHashMap<>();
+   private final Set<UUID> dragInputOverflows = ConcurrentHashMap.newKeySet();
    private final Map<UUID, DragSession> dragSessions = new ConcurrentHashMap<>();
    private final Map<UUID, Map<String, DragOffset>> dragGroupOffsets = new ConcurrentHashMap<>();
    private final Map<UUID, Map<String, Double>> dragElementRotations = new ConcurrentHashMap<>();
@@ -1754,10 +1757,14 @@ public class UIcorePlugin extends JavaPlugin {
                       + " item=" + player.getInventory().getItemInMainHand().getType());
                 }
                 if (clickGeneration != null && this.isMenuSessionCurrent(player, clickGeneration)) this.handleCursorClick(player, false);
-                ConcurrentLinkedQueue<DigInput> digs = this.pendingDigInputs.get(playerId);
-                if (digs != null) {
+                BoundedInputQueue<DigInput> digs = this.pendingDigInputs.get(playerId);
+                if (this.dragInputOverflows.remove(playerId)) {
+                   if (digs != null) digs.clear();
+                   this.endDrag(player);
+                } else if (digs != null) {
                    DigInput dig;
-                   while ((dig = digs.poll()) != null) this.handleDragDigInput(player, dig);
+                   int processed = 0;
+                   while (processed++ < MAX_DIG_INPUTS_PER_TICK && (dig = digs.poll()) != null) this.handleDragDigInput(player, dig);
                 }
                 if (!this.dragSessions.containsKey(playerId)) this.tickCameraEdgePan(player);
                 this.updateDragCapture(player, tick);
@@ -2405,6 +2412,7 @@ public class UIcorePlugin extends JavaPlugin {
       this.pendingClicks.remove(playerId);
       this.pendingAttackTargets.remove(playerId);
       this.pendingDigInputs.remove(playerId);
+      this.dragInputOverflows.remove(playerId);
       try {
          this.closeSessionStep(() -> this.clearMenuTextAnimationTasks(player));
          this.closeSessionStep(() -> this.clearMenuItemAnimationTasks(player));
@@ -3740,7 +3748,8 @@ public class UIcorePlugin extends JavaPlugin {
       boolean valid = "move-group".equals(mode)
          ? layouts.values().stream().anyMatch(layout -> target.equals(layout.getDragGroup()))
          : layouts.containsKey(target);
-      if (!valid || !this.tryAcquireLayoutClick(player, menuKey, handle.key)) return false;
+      if (!valid || !this.tryAcquireLayoutClick(player, menuKey, handle.key)
+         || !this.authorizeMenuInteraction(player, menuKey, handle)) return false;
       Location look = player.getLocation();
       RotationInput lastRotation = this.lastMenuRotations.get(player.getUniqueId());
       if (lastRotation != null && lastRotation.generation() != this.getMenuSessionGeneration(player)) lastRotation = null;
@@ -3751,6 +3760,7 @@ public class UIcorePlugin extends JavaPlugin {
          this.getMenuSessionGeneration(player), menuKey, mode, target, handle.getDragSensitivity(),
          yaw, pitch
       ));
+      handle.recordInteraction(player);
       return true;
    }
 
@@ -3817,8 +3827,13 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private boolean isCaptureBlock(Player player, DigInput input) {
-      Set<Location> blocks = this.dragCaptureBlocks.get(player.getUniqueId());
-      return blocks != null && blocks.contains(new Location(player.getWorld(), input.x(), input.y(), input.z()));
+      return this.isCaptureBlock(player.getUniqueId(), input.x(), input.y(), input.z());
+   }
+
+   private boolean isCaptureBlock(UUID playerId, int x, int y, int z) {
+      Set<Location> blocks = this.dragCaptureBlocks.get(playerId);
+      if (blocks == null) return false;
+      return blocks.stream().anyMatch(block -> block.getBlockX() == x && block.getBlockY() == y && block.getBlockZ() == z);
    }
 
    private void updateDragCapture(Player player, long tick) {
@@ -3901,13 +3916,18 @@ public class UIcorePlugin extends JavaPlugin {
       String qualified = elementId.contains(":") ? elementId : menuKey + ":" + elementId;
       if (!qualified.startsWith(menuKey + ":")) return false;
       MenuLayout layout = this.getLayoutForPlayer(player, qualified);
-      if (layout == null || !layout.isVisible(player) || !this.tryAcquireLayoutClick(player, menuKey, layout.key)) return false;
+      if (layout == null || !layout.isVisible(player) || !this.tryAcquireLayoutClick(player, menuKey, layout.key)
+         || !this.authorizeMenuInteraction(player, menuKey, layout)) return false;
+      layout.runCommand(player);
+      return true;
+   }
+
+   private boolean authorizeMenuInteraction(Player player, String menuKey, MenuLayout layout) {
+      if (!layout.prepareInteraction(player)) return false;
       long generation = this.getMenuSessionGeneration(player);
       MenuClickEvent event = new MenuClickEvent(player, menuKey, layout.key, UIcoreApiImpl.snapshot(menuKey, layout));
       Bukkit.getPluginManager().callEvent(event);
-      if (event.isCancelled() || !this.isMenuSessionCurrent(player, generation) || !layout.isVisible(player)) return false;
-      layout.runCommand(player);
-      return true;
+      return !event.isCancelled() && this.isMenuSessionCurrent(player, generation) && layout.isInteractionStillAllowed(player);
    }
 
    public boolean isMenuInputField(Player player, String field) {
@@ -3954,8 +3974,13 @@ public class UIcorePlugin extends JavaPlugin {
                DiggingAction action = digging.getAction();
                if (action == DiggingAction.START_DIGGING || action == DiggingAction.CANCELLED_DIGGING || action == DiggingAction.FINISHED_DIGGING) {
                   Vector3i pos = digging.getBlockPosition();
-                  pendingDigInputs.computeIfAbsent(player.getUniqueId(), ignored -> new ConcurrentLinkedQueue<>())
-                     .add(new DigInput(generation, action, pos.getX(), pos.getY(), pos.getZ()));
+                  UUID playerId = player.getUniqueId();
+                  if (!isMenuSessionCurrent(player, generation) || !isCaptureBlock(playerId, pos.getX(), pos.getY(), pos.getZ())) return;
+                  BoundedInputQueue<DigInput> inputs = pendingDigInputs.computeIfAbsent(playerId,
+                     ignored -> new BoundedInputQueue<>(MAX_PENDING_DIG_INPUTS_PER_PLAYER));
+                  if (!inputs.offer(new DigInput(generation, action, pos.getX(), pos.getY(), pos.getZ()))) {
+                     dragInputOverflows.add(playerId);
+                  }
                   event.setCancelled(true);
                }
             }
@@ -4139,6 +4164,7 @@ public class UIcorePlugin extends JavaPlugin {
       this.dragCapturePlayers.remove(var1.getUniqueId());
       this.playerMenuSeats.remove(var1);
       this.pendingDigInputs.remove(var1.getUniqueId());
+      this.dragInputOverflows.remove(var1.getUniqueId());
       this.lastMenuRotations.remove(var1.getUniqueId());
       playerLocations.remove(var1);
       cursorExactLocations.remove(var1);

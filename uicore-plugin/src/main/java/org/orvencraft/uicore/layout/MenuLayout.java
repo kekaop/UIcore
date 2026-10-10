@@ -815,17 +815,7 @@ public class MenuLayout {
 
       ConfigurationSection clickRequirements = var1.getConfigurationSection("click-requirements");
       if (clickRequirements != null) {
-         this.clickRequiredPermissions = clickRequirements.getStringList("permissions");
-         this.clickPlaceholderRequirements = new ArrayList<>();
-         for (Map<?, ?> requirement : clickRequirements.getMapList("placeholders")) {
-            Object placeholder = requirement.get("placeholder");
-            Object operator = requirement.get("operator");
-            Object value = requirement.get("value");
-            if (placeholder != null && operator != null && value != null) {
-               this.clickPlaceholderRequirements
-                  .add(new PlaceholderRequirement(String.valueOf(placeholder), String.valueOf(operator), String.valueOf(value)));
-            }
-         }
+         this.loadClickRequirements(clickRequirements);
 
          ConfigurationSection denied = clickRequirements.getConfigurationSection("denied");
          if (denied != null) {
@@ -1238,17 +1228,7 @@ public class MenuLayout {
       if (!UIcorePlugin.plugin.isMenuSessionCurrent(var1, sessionGeneration)) {
          return;
       }
-      if (!this.hasPermission(var1)) {
-         this.handlePermissionDeniedClick(var1);
-      } else if (!this.isVisible(var1)) {
-         var1.sendMessage(UIcorePlugin.plugin.getLangMessage("menu.condition_not_met", "&c[UIcore] The condition was not met."));
-      } else if (!this.passesClickRequirements(var1)) {
-         this.handleClickRequirementDenied(var1);
-      } else if (this.conditionVariable != null && this.conditionOperator != null && this.conditionValue != null && !this.checkCondition(var1)) {
-         var1.sendMessage(UIcorePlugin.plugin.getLangMessage("menu.condition_not_met", "&c[UIcore] The condition was not met."));
-      } else if (!this.passesCooldown(var1)) {
-         this.handleCooldownDenied(var1);
-      } else {
+      if (this.prepareInteraction(var1)) {
           UIcorePlugin.plugin.selectedLayouts.put(var1, this);
           if (this.pendingClickPlayers.add(var1.getUniqueId())) {
             if (!this.extensionActionId.isBlank() && !UIcorePlugin.plugin.getExtensionManager().executeAction(
@@ -1321,6 +1301,45 @@ public class MenuLayout {
             }
          }
       }
+   }
+
+   /** Applies the same permission, requirement, condition and cooldown gates as a click. */
+   public boolean prepareInteraction(Player player) {
+      return this.isInteractionAllowed(player, true);
+   }
+
+   /** Rechecks interaction state after an event listener has run, without duplicate feedback. */
+   public boolean isInteractionStillAllowed(Player player) {
+      return this.isInteractionAllowed(player, false);
+   }
+
+   /** Records a non-command interaction, such as a drag, against this layout's cooldown. */
+   public void recordInteraction(Player player) {
+      this.startCooldown(player);
+   }
+
+   private boolean isInteractionAllowed(Player player, boolean notifyPlayer) {
+      if (!this.hasPermission(player)) {
+         if (notifyPlayer) this.handlePermissionDeniedClick(player);
+         return false;
+      }
+      if (!this.isVisible(player)) {
+         if (notifyPlayer) player.sendMessage(UIcorePlugin.plugin.getLangMessage("menu.condition_not_met", "&c[UIcore] The condition was not met."));
+         return false;
+      }
+      if (!this.passesClickRequirements(player)) {
+         if (notifyPlayer) this.handleClickRequirementDenied(player);
+         return false;
+      }
+      if (this.conditionVariable != null && this.conditionOperator != null && this.conditionValue != null && !this.checkCondition(player)) {
+         if (notifyPlayer) player.sendMessage(UIcorePlugin.plugin.getLangMessage("menu.condition_not_met", "&c[UIcore] The condition was not met."));
+         return false;
+      }
+      if (!this.passesCooldown(player)) {
+         if (notifyPlayer) this.handleCooldownDenied(player);
+         return false;
+      }
+      return true;
    }
 
    private void scheduleMenuRefresh(Player player, long sessionGeneration) {
@@ -1397,6 +1416,55 @@ public class MenuLayout {
       }
 
       return true;
+   }
+
+   private void loadClickRequirements(ConfigurationSection clickRequirements) {
+      String location = (this.ownerMenuKey == null || this.ownerMenuKey.isBlank() ? "<unknown>" : this.ownerMenuKey)
+         + ":" + this.key + ".click-requirements";
+      Object configuredPermissions = clickRequirements.get("permissions");
+      if (configuredPermissions != null && !(configuredPermissions instanceof List<?>)) {
+         throw new IllegalArgumentException(location + ".permissions must be a list of permission strings");
+      }
+      List<String> permissions = new ArrayList<>();
+      if (configuredPermissions instanceof List<?> configuredList) {
+         for (Object value : configuredList) {
+            if (!(value instanceof String permission) || permission.isBlank()) {
+               throw new IllegalArgumentException(location + ".permissions must contain only non-blank strings");
+            }
+            permissions.add(permission);
+         }
+      }
+      this.clickRequiredPermissions = List.copyOf(permissions);
+
+      Object configuredPlaceholders = clickRequirements.get("placeholders");
+      if (configuredPlaceholders != null && !(configuredPlaceholders instanceof List<?>)) {
+         throw new IllegalArgumentException(location + ".placeholders must be a list");
+      }
+      List<PlaceholderRequirement> placeholders = new ArrayList<>();
+      if (configuredPlaceholders instanceof List<?> configuredList) {
+         for (Object rawRequirement : configuredList) {
+            if (!(rawRequirement instanceof Map<?, ?> requirement)) {
+               throw new IllegalArgumentException(location + ".placeholders entries must be maps");
+            }
+            Object placeholder = requirement.get("placeholder");
+            Object operator = requirement.get("operator");
+            Object value = requirement.get("value");
+            if (!(placeholder instanceof String placeholderText) || placeholderText.isBlank()
+               || !(operator instanceof String operatorText) || !isSupportedPlaceholderOperator(operatorText)
+               || value == null || value instanceof Map<?, ?> || value instanceof List<?>) {
+               throw new IllegalArgumentException(location + ".placeholders entries require placeholder, operator and scalar value");
+            }
+            placeholders.add(new PlaceholderRequirement(placeholderText, operatorText, String.valueOf(value)));
+         }
+      }
+      this.clickPlaceholderRequirements = List.copyOf(placeholders);
+   }
+
+   private static boolean isSupportedPlaceholderOperator(String operator) {
+      return operator != null && switch (operator.toLowerCase(Locale.ROOT)) {
+         case ">", ">=", "<", "<=", "==", "!=", "contains", "!contains", "not_contains" -> true;
+         default -> false;
+      };
    }
 
    private void handleClickRequirementDenied(Player player) {

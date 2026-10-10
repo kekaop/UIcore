@@ -79,6 +79,27 @@ class MenuLayoutParsingTest {
    }
 
    @Test
+   void rejectsMalformedClickRequirementsInsteadOfSilentlyAllowingThem() {
+      org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> loadLayout("""
+         click-requirements:
+           permissions: qa.allow
+         """));
+      org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> loadLayout("""
+         click-requirements:
+           placeholders:
+             - operator: '=='
+               value: blocked
+         """));
+      org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> loadLayout("""
+         click-requirements:
+           placeholders:
+             - placeholder: '%rank%'
+               operator: mystery
+               value: admin
+         """));
+   }
+
+   @Test
    void parsesBooleanVisibleIf() throws Exception {
       MenuLayout hidden = loadLayout(
          """
