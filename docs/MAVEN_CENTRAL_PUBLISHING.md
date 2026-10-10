@@ -1,5 +1,12 @@
 # Публикация UIcore API в Maven Central
 
+**Статус версии 1.0.0: опубликована.** Deployment
+`587d6925-332d-4b7b-963b-452928d71503` имеет состояние `PUBLISHED`.
+[Публичный POM](https://repo.maven.apache.org/maven2/io/github/kekaop/uicore-api/1.0.0/uicore-api-1.0.0.pom),
+JAR, sources, Javadoc и подписи доступны в Maven Central. Тег исходников:
+`api-v1.0.0-r2`. Повторно загружать эту версию нельзя: компоненты Maven Central
+неизменяемы.
+
 Этот документ предназначен владельцу репозитория. Подготовленная конфигурация
 выпускает **один** компонент версии `1.0.0`: `uicore-api` (JAR, sources и Javadoc).
 Для публикации создаётся отдельный POM с полными метаданными и без ссылки на
@@ -7,14 +14,13 @@
 `uicore-parent`, `uicore-plugin` и `uicore-example-extension` не публикуются.
 Java package names остаются `org.orvencraft.uicore`.
 
-Пока выпуск не подтверждён в Central Portal, этого компонента в Maven Central нет.
 Обычный `mvn clean verify` не публикует ничего. Профили `central-release,paper-build`
 создают потребительский POM и подписи и подключают официальный
 `central-publishing-maven-plugin` версии `0.11.0`.
 Плагин формирует контрольные суммы. `autoPublish=false` оставляет окончательное
 решение о публикации владельцу в Central Portal.
 
-До выпуска можно установить parent и API только в локальный Maven-репозиторий:
+Для локальной проверки можно установить parent и API в Maven-репозиторий компьютера:
 
 ```bash
 mvn -B -ntp -pl uicore-api -am install
@@ -87,19 +93,18 @@ snapshot-зависимостей и ссылки на parent. Компилир�
 После загрузки обязательно проверьте результат валидации Portal и соберите
 внешний проект с опубликованными POM и JAR.
 
-## 4. Запустите выпуск по тегу вручную
+## 4. Как был запущен выпуск 1.0.0
 
-Тег `v1.0.0` уже занят существующим GitHub-релизом плагина. Тег `api-v1.0.0`
-фиксирует первую попытку подготовки API, которую Portal отклонил. После проверки
-создайте тег `api-v1.0.0-r2` **на исправленном коммите**, затем отправьте его:
+Тег `v1.0.0` занят существующим GitHub-релизом плагина. Тег `api-v1.0.0`
+фиксирует первую попытку подготовки API, которую Portal отклонил. Успешный выпуск
+собран из `api-v1.0.0-r2`. Для него использованы команды:
 
 ```bash
-git tag api-v1.0.0-r2 <COMMIT_SHA>
+git tag api-v1.0.0-r2 151d884
 git push origin api-v1.0.0-r2
 ```
 
-После того как workflow окажется в default branch, запустите его из этой ветки
-через GitHub CLI. Workflow сам загрузит содержимое указанного тега:
+Workflow запущен из default branch; он загрузил содержимое указанного тега:
 
 ```bash
 gh workflow run publish-api.yml --ref orven/normal-source-build -f release_tag=api-v1.0.0-r2
@@ -111,9 +116,8 @@ Workflow не запускается при обычном push и заверш�
 сборку и тесты, проверяет JAR, sources, Javadoc, POM и GPG-подписи. После этого
 Maven загружает bundle в Portal с ручным выпуском.
 
-Если job пропущен, проверьте, что workflow уже находится в default branch и
-команда указала `release_tag`. Не запускайте deploy повторно после успешной загрузки:
-найдите уже созданный deployment в Portal.
+Для следующей версии обновите версию, тег и проверки workflow, затем повторите
+процедуру. Текущую версию повторно не загружайте.
 
 Для ручной загрузки с локального компьютера настройте `~/.m2/settings.xml` с
 `<server><id>central</id>` и частями publishing token в `username` и `password`.
@@ -127,20 +131,17 @@ python3 scripts/check-central-artifacts.py --require-signatures
 mvn -B -ntp -Pcentral-release,paper-build -pl uicore-api -am deploy -DskipTests
 ```
 
-Последняя команда **загружает** bundle в Portal. Не выполняйте её без разрешения
-владельца на этот конкретный выпуск. Она не нажимает **Publish** в Portal.
+Последняя команда **загружает** bundle в Portal. Для опубликованной версии `1.0.0`
+её повторять нельзя. Она не нажимает **Publish** в Portal.
 
 ## 5. Проверьте deployment и подключите API
 
 В [Central Portal Deployments](https://central.sonatype.com/publishing/deployments)
-найдите созданный deployment. Проверьте состояние **Validated**, отсутствие
-ошибок, координаты `io.github.kekaop`, версию `1.0.0` и ровно один компонент:
-`uicore-api`. Просмотрите POM, JAR, sources, Javadoc и подписи.
-После разрешения владельца нажмите **Publish** и дождитесь **Published**.
-Проверьте доступность API в Maven Central; она может появиться
-не сразу.
+найдите deployment `587d6925-332d-4b7b-963b-452928d71503`. Его состояние —
+**Published**; в нём ровно один компонент `io.github.kekaop:uicore-api:1.0.0`.
+Публичные POM, JAR, sources, Javadoc и подписи доступны в Maven Central.
 
-После подтверждённой публикации другой плагин подключает API так:
+Другой плагин подключает API так:
 
 ```xml
 <repositories>

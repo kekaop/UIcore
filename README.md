@@ -47,10 +47,9 @@ The build produces:
 </dependency>
 ```
 
-The API is being prepared for Maven Central and is not published there yet. Until the
-release is confirmed, build this repository and install the API locally. The server
-must also run the matching UIcore plugin; `provided` keeps its API classes out of your
-plugin JAR. See the [publishing guide](docs/MAVEN_CENTRAL_PUBLISHING.md).
+The API is published in Maven Central as `io.github.kekaop:uicore-api:1.0.0`.
+The server must also run the matching UIcore plugin; `provided` keeps its API
+classes out of your plugin JAR. See the [publishing guide](docs/MAVEN_CENTRAL_PUBLISHING.md).
 Declare the Paper API dependency and Paper repository in your plugin build when
 compiling against UIcore's Paper types.
 
