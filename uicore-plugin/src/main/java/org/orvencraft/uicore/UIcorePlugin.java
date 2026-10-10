@@ -3930,15 +3930,12 @@ public class UIcorePlugin extends JavaPlugin {
          return false;
       }
 
-      Location cameraOrigin;
       Pig cameraMount = playerSit.get(player);
-      if (cameraMount != null && cameraMount.isValid() && world.equals(cameraMount.getWorld())) {
-         cameraOrigin = cameraMount.getLocation();
-      } else {
-         cameraOrigin = new Location(world, section.cameraX, section.cameraY, section.cameraZ);
+      if (cameraMount == null || !cameraMount.isValid() || !world.equals(cameraMount.getWorld())) {
+         return false;
       }
-      cameraOrigin.setYaw(section.yaw);
-      cameraOrigin.setPitch(section.pitch);
+      Location cameraOrigin = MenuCameraGeometry.viewOrigin(cameraMount,
+         this.cameraEdgePanOffsets.getOrDefault(player.getUniqueId(), CameraEdgePan.Offset.ZERO));
 
       Vector forward = cameraOrigin.getDirection().normalize();
       Vector right = new Vector(-forward.getZ(), 0.0, forward.getX());
