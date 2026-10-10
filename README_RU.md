@@ -27,6 +27,22 @@ mvn clean package
 
 Результаты находятся в `uicore-api/target/`, `uicore-plugin/target/` и `uicore-example-extension/target/`.
 
+## Подключение API к другому плагину
+
+```xml
+<dependency>
+  <groupId>io.github.kekaop</groupId>
+  <artifactId>uicore-api</artifactId>
+  <version>1.0.0</version>
+  <scope>provided</scope>
+</dependency>
+```
+
+API готовится к публикации в Maven Central, но пока там недоступен. До подтверждения
+публикации соберите репозиторий и установите API локально. На сервере должен быть
+совместимый плагин UIcore. Инструкции для владельца — в
+[руководстве по публикации](docs/MAVEN_CENTRAL_PUBLISHING.md).
+
 ## Требования
 
 - Minecraft 1.21.1 и новее на Paper, Folia, Purpur или совместимом форке.

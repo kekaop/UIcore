@@ -1,0 +1,75 @@
+name: Stage UIcore API in Maven Central
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-uicore-api-1.0.0
+  cancel-in-progress: false
+
+jobs:
+  stage-api:
+    # The plugin release already owns v1.0.0; use a separate API release tag.
+    if: github.ref == 'refs/tags/api-v1.0.0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 21 and Maven Central credentials
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          server-id: central
+          server-username: CENTRAL_TOKEN_USERNAME
+          server-password: CENTRAL_TOKEN_PASSWORD
+
+      - name: Check release coordinates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/tags/api-v1.0.0'
+          version="$(mvn -q -ntp -pl uicore-api help:evaluate -Dexpression=project.version -DforceStdout)"
+          group="$(mvn -q -ntp -pl uicore-api help:evaluate -Dexpression=project.groupId -DforceStdout)"
+          test "$version" = '1.0.0'
+          test "$group" = 'io.github.kekaop'
+          [[ "$version" != *-SNAPSHOT ]]
+
+      - name: Build and run all tests
+        run: mvn -B -ntp clean verify
+
+      - name: Check publishing secrets
+        shell: bash
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$CENTRAL_TOKEN_USERNAME"
+          test -n "$CENTRAL_TOKEN_PASSWORD"
+          test -n "$GPG_PRIVATE_KEY"
+          test -n "$GPG_PASSPHRASE"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Build and sign parent POM and API artifacts
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: mvn -B -ntp -Pcentral-release -pl uicore-api -am verify -DskipTests
+
+      - name: Inspect artifacts and signatures
+        run: python3 scripts/check-central-artifacts.py --require-signatures
+
+      - name: Upload bundle for manual publishing in Central Portal
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+        run: mvn -B -ntp -Pcentral-release -pl uicore-api -am deploy -DskipTests

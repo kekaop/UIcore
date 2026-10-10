@@ -40,11 +40,17 @@ The build produces:
 
 ```xml
 <dependency>
-  <groupId>org.orvencraft.uicore</groupId>
+  <groupId>io.github.kekaop</groupId>
   <artifactId>uicore-api</artifactId>
   <version>1.0.0</version>
+  <scope>provided</scope>
 </dependency>
 ```
+
+The API is being prepared for Maven Central and is not published there yet. Until the
+release is confirmed, build this repository and install the API locally. The server
+must also run the matching UIcore plugin; `provided` keeps its API classes out of your
+plugin JAR. See the [publishing guide](docs/MAVEN_CENTRAL_PUBLISHING.md).
 
 ## Runtime requirements
 

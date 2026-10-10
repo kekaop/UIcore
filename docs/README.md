@@ -25,6 +25,7 @@ English is the repository's primary documentation language. Use the pages below 
 
 ## Release and maintenance notes
 
+- [Prepare the API for Maven Central](MAVEN_CENTRAL_PUBLISHING.md) (Russian)
 - [Current release check](../release/VALIDATION.md) · [Русская версия](../release/VALIDATION_RU.md)
 - [Short English description](../release/DESCRIPTION.md) · [Русское описание в BBCode](../release/DESCRIPTION_RU.bbcode)
 - [Audit fixes](AUDIT_FIXES.md) · [Русская версия](AUDIT_FIXES_RU.md)

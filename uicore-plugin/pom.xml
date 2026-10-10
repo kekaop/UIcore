@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.orvencraft.uicore</groupId>
+        <groupId>io.github.kekaop</groupId>
         <artifactId>uicore-parent</artifactId>
         <version>1.0.0</version>
     </parent>
@@ -22,7 +22,7 @@
             <version>1.8</version>
         </dependency>
         <dependency>
-            <groupId>org.orvencraft.uicore</groupId>
+            <groupId>io.github.kekaop</groupId>
             <artifactId>uicore-api</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -106,7 +106,7 @@
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <artifactSet>
                                 <includes>
-                                    <include>org.orvencraft.uicore:uicore-api</include>
+                                    <include>io.github.kekaop:uicore-api</include>
                                     <include>com.google.re2j:re2j</include>
                                 </includes>
                             </artifactSet>

@@ -4,12 +4,41 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.orvencraft.uicore</groupId>
+    <groupId>io.github.kekaop</groupId>
     <artifactId>uicore-parent</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
 
     <name>UIcore</name>
+    <description>World-space user interfaces for Paper and Folia Minecraft servers.</description>
+    <url>https://github.com/kekaop/UIcore</url>
+
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License, Version 3.0</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>Orven</name>
+            <roles>
+                <role>UIcore maintainer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>wuhaoxian123</name>
+            <roles>
+                <role>Original CustomScreenMenu author</role>
+            </roles>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:https://github.com/kekaop/UIcore.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/kekaop/UIcore.git</developerConnection>
+        <url>https://github.com/kekaop/UIcore</url>
+    </scm>
 
     <modules>
         <module>uicore-api</module>
@@ -25,6 +54,7 @@
         <placeholderapi.version>2.12.3</placeholderapi.version>
         <minimessage.version>4.14.0</minimessage.version>
         <junit.version>5.13.4</junit.version>
+        <central.skipPublishing>false</central.skipPublishing>
     </properties>
 
     <repositories>
@@ -105,4 +135,44 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <!-- Only select this profile with -pl uicore-api -am: it publishes the parent POM and API. -->
+        <profile>
+            <id>central-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.8</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.11.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>false</autoPublish>
+                            <skipPublishing>${central.skipPublishing}</skipPublishing>
+                            <excludeArtifacts>
+                                <excludeArtifact>uicore-plugin</excludeArtifact>
+                                <excludeArtifact>uicore-example-extension</excludeArtifact>
+                            </excludeArtifacts>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
