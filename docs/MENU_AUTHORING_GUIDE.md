@@ -246,7 +246,7 @@ schematics:
 
 Files are limited to simple `.schem` names with no subdirectories. UIcore restores the real world blocks when the menu closes or changes. It does not reproduce block-entity contents, entities, or biomes.
 
-FancyNpcs powers the optional personal NPC mirror. Configure global defaults in `npc_config.yml` or override them under the menu's `npc:` section. See [animations, NPCs, and input](ANIMATION_NPC_INPUT.md) for its settings.
+FancyNpcs powers the optional personal NPC mirror. Configure global defaults in `npc_config.yml` or override them under the menu's `npc:` section. The [animation and display section](#animate-an-element-or-position) explains related display options.
 
 ## Move a group or rotate one element
 

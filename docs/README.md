@@ -14,10 +14,8 @@ English is the repository's primary documentation language. Use the pages below 
 ## Create menus
 
 - [Author a menu](MENU_AUTHORING_GUIDE.md) · [Русская версия](MENU_AUTHORING_GUIDE_RU.md)
-- [Use animations, NPCs, and input fields](ANIMATION_NPC_INPUT.md)
 - [Use dynamic coordinates](DYNAMIC_COORDINATES.md)
 - [Use slots and templates](SLOTS_AND_TEMPLATES.md)
-- [Understand cursor range](CURSOR_RANGE_NOTES.md)
 
 ## Extend UIcore
 

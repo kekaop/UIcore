@@ -45,7 +45,6 @@ def main() -> None:
             raise SystemExit("Incorrect plugin.yml version")
 
     files = {
-        "docs/ANIMATION_NPC_INPUT.md": ROOT / "docs" / "ANIMATION_NPC_INPUT.md",
         "docs/API_USAGE.md": ROOT / "docs" / "API_USAGE.md",
         "docs/AUDIT_FIXES.md": ROOT / "docs" / "AUDIT_FIXES.md",
         "docs/AUDIT_FIXES_RU.md": ROOT / "docs" / "AUDIT_FIXES_RU.md",
@@ -55,7 +54,6 @@ def main() -> None:
         "docs/BUILTIN_INTEGRATIONS_RU.md": ROOT / "docs" / "BUILTIN_INTEGRATIONS_RU.md",
         "docs/COMPATIBILITY.md": ROOT / "docs" / "COMPATIBILITY.md",
         "docs/COMPATIBILITY_RU.md": ROOT / "docs" / "COMPATIBILITY_RU.md",
-        "docs/CURSOR_RANGE_NOTES.md": ROOT / "docs" / "CURSOR_RANGE_NOTES.md",
         "docs/DYNAMIC_COORDINATES.md": ROOT / "docs" / "DYNAMIC_COORDINATES.md",
         "docs/EXTENSION_API.md": ROOT / "docs" / "EXTENSION_API.md",
         "docs/EXTENSION_API_RU.md": ROOT / "docs" / "EXTENSION_API_RU.md",
