@@ -2,6 +2,11 @@ name: Stage UIcore API in Maven Central
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Git tag containing the API release
+        required: true
+        default: api-v1.0.0
 
 permissions:
   contents: read
@@ -12,19 +17,19 @@ concurrency:
 
 jobs:
   stage-api:
-    # The plugin release already owns v1.0.0; use a separate API release tag.
-    if: github.ref == 'refs/tags/api-v1.0.0'
+    if: inputs.release_tag == 'api-v1.0.0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ inputs.release_tag }}
 
       - name: Set up JDK 21 and Maven Central credentials
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
           cache: maven
           server-id: central
           server-username: CENTRAL_TOKEN_USERNAME
@@ -34,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = 'refs/tags/api-v1.0.0'
+          git tag --points-at HEAD | grep -Fx 'api-v1.0.0'
           version="$(mvn -q -ntp -pl uicore-api help:evaluate -Dexpression=project.version -DforceStdout)"
           group="$(mvn -q -ntp -pl uicore-api help:evaluate -Dexpression=project.groupId -DforceStdout)"
           test "$version" = '1.0.0'
@@ -58,6 +63,17 @@ jobs:
           test -n "$GPG_PRIVATE_KEY"
           test -n "$GPG_PASSPHRASE"
           printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Verify signing key and unlock GPG agent
+        shell: bash
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$GPG_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --local-user D291E02BD69C9C2D6B77A3C9EC619C915E42C024 \
+            --armor --detach-sign --output "$RUNNER_TEMP/uicore-signing-check.asc" README.md
+          gpg --batch --verify "$RUNNER_TEMP/uicore-signing-check.asc" README.md
 
       - name: Build and sign parent POM and API artifacts
         env:

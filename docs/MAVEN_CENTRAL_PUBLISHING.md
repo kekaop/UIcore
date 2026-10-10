@@ -93,21 +93,21 @@ git tag api-v1.0.0 <COMMIT_SHA>
 git push origin api-v1.0.0
 ```
 
-После того как workflow окажется в default branch, запустите его на теге через
-GitHub CLI:
+После того как workflow окажется в default branch, запустите его из этой ветки
+через GitHub CLI. Workflow сам загрузит содержимое указанного тега:
 
 ```bash
-gh workflow run publish-api.yml --ref api-v1.0.0
+gh workflow run publish-api.yml --ref orven/normal-source-build -f release_tag=api-v1.0.0
 gh run watch
 ```
 
-Workflow не запускается при обычном push и завершается без работы при запуске
-из ветки или с иным тегом. Он сверяет `groupId`, версию `1.0.0`, запускает полную
+Workflow не запускается при обычном push и завершается без работы при указании
+иного тега. Он сверяет тег, `groupId`, версию `1.0.0`, запускает полную
 сборку и тесты, проверяет JAR, sources, Javadoc, POM и GPG-подписи. После этого
 Maven загружает bundle в Portal с ручным выпуском.
 
 Если job пропущен, проверьте, что workflow уже находится в default branch и
-команда указала ref тега. Не запускайте deploy повторно после успешной загрузки:
+команда указала `release_tag`. Не запускайте deploy повторно после успешной загрузки:
 найдите уже созданный deployment в Portal.
 
 Для ручной загрузки с локального компьютера настройте `~/.m2/settings.xml` с
