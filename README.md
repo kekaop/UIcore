@@ -62,18 +62,28 @@ English is the primary documentation language. Each translated page links to its
 - [Installation guide](release/INSTALL.md) · [Русская версия](release/INSTALL_RU.md)
 - [Runtime contracts](docs/RUNTIME_CONTRACTS.md) · [Smoke checklist](docs/SMOKE_CHECKLIST.md)
 
+## Try the demo menus
+
+Open `/uicore run demo_main` to explore the three bundled examples. They use vanilla Minecraft items and work without a resource pack or optional plugins.
+
+| Menu                                                                   | Features                                                                       |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [demo_main](uicore-plugin/src/main/resources/menu/demo_main.yml)       | Hover effects, cursor changes, chat input, toggles, and click cooldowns        |
+| [demo_gallery](uicore-plugin/src/main/resources/menu/demo_gallery.yml) | Item displays, your avatar, and a template slot with three selectable previews |
+| [demo_states](uicore-plugin/src/main/resources/menu/demo_states.yml)   | Text, material, visibility, permission styles, and click requirements          |
+
+The gallery selectors require `uicore.slot` (granted to OP players by default). See the [demo walkthrough](showcase/README.md) · [Русская версия](showcase/README_RU.md).
+
 ## Showcase videos
 
-The README is ready for the final recordings. Replace each `VIDEO_*_URL` marker with the public video link after uploading it.
+Replace each `VIDEO_*_URL` marker with the final public video link after uploading it.
 
-| Video | Link |
-| --- | --- |
-| Full UIcore tour | `VIDEO_FULL_TOUR_URL` |
-| Interactions: hover, click, states, and input | `VIDEO_INTERACTIONS_URL` |
-| Dragging: groups and individual elements | `VIDEO_DRAGGING_URL` |
-| Vault and LuckPerms integrations | `VIDEO_INTEGRATIONS_URL` |
-| Slots and schematic previews | `VIDEO_SLOTS_SCHEMATICS_URL` |
+| Video                                          | Link                     |
+| ---------------------------------------------- | ------------------------ |
+| Interactions: hover, click, toggles, and input | `VIDEO_INTERACTIONS_URL` |
+| Gallery: items, avatars, and template slots    | `VIDEO_GALLERY_URL`      |
+| States and permission controls                 | `VIDEO_STATES_URL`       |
 
-The matching showcase menus are in [`showcase/menus`](showcase/menus), with recording notes in [`showcase/videos`](showcase/videos). They stay outside the Maven resource tree and are not included in the plugin JAR.
+[Recording notes](showcase/videos/README.md) stay outside the plugin JAR. The three demo menus are also the plugin's default examples and are installed on a fresh server.
 
 The repository contains source and documentation only. The plugin JAR is created by the Maven build and is not committed to Git.

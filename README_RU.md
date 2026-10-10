@@ -32,6 +32,16 @@ mvn clean package
 
 PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault и LuckPerms подключаются по необходимости.
 
+## Демонстрационные меню
+
+Открой `/uicore run demo_main`. Три примера входят в плагин и устанавливаются при первом запуске:
+
+- [demo_main](uicore-plugin/src/main/resources/menu/demo_main.yml) — наведение, смена курсора, ввод через чат, переключатель и задержка между кликами.
+- [demo_gallery](uicore-plugin/src/main/resources/menu/demo_gallery.yml) — предметы, аватар игрока и смена шаблонов в слоте.
+- [demo_states](uicore-plugin/src/main/resources/menu/demo_states.yml) — изменение текста, материала и видимости, оформление по правам и ограничения кликов.
+
+Ресурс-пак и дополнительные плагины не нужны. Для кнопок выбора в галерее требуется `uicore.slot`; OP получает это право по умолчанию. [Инструкция и сценарий демонстрации](showcase/README_RU.md) · [English](showcase/README.md).
+
 ## Документация
 
 - [Английский индекс документации](docs/README.md)

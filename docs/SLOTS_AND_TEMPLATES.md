@@ -62,4 +62,4 @@ Player-scoped assignment affects that player's menu. It takes precedence over a 
 
 The transition animates the slot's current item away and assigns the new template. Directions are `top`, `bottom`, `left`, `right`, `front`, and `back`. Duration is in ticks; optional distance and easing configure the outgoing movement. The replacement currently appears at its target position without a coordinated incoming animation, even when the template declares `entrance-animation`. Account for this behavior when designing a carousel. The command updates the selected ItemDisplay and its hitbox.
 
-The menu author's examples are `demo_slots` and `item_carousel`. The comprehensive author guide also documents interaction with coordinates, hitboxes, and display transforms.
+The bundled `demo_gallery` menu switches between three templates using player-specific slot overrides; its selector buttons require `uicore.slot`. The comprehensive author guide also documents interaction with coordinates, hitboxes, and display transforms.

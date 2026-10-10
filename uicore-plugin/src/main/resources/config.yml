@@ -81,7 +81,7 @@ cursor-item:
   x: 0.0
   y: 0.0
   # Extra distance from the camera/menu plane along the camera forward vector.
-  z-offset: 0.0
+  z-offset: 1.0
 
   # Gently shifts the player's client-side fixed camera toward the cursor near the screen edges.
   # The server-side camera mount remains fixed, so edge pan does not move or dismount the player.

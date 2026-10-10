@@ -43,4 +43,4 @@ An invalid expression is reported during configuration loading and the static ax
 
 For a slot, the slot owns its position and the selected template supplies its display settings. A slot can specify `position-update` values too; those values override the template's corresponding position-update options.
 
-Open the included `demo_dynamic_position` menu with `/uicore run demo_dynamic_position`.
+Copy the example above into your own menu to try dynamic coordinates. The bundled `demo_main`, `demo_gallery`, and `demo_states` examples use static positions.

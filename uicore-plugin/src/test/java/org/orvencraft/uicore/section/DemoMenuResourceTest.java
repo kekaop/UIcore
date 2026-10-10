@@ -1,170 +1,143 @@
 package org.orvencraft.uicore.section;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.orvencraft.uicore.layout.MenuLayout;
 
 class DemoMenuResourceTest {
-   @org.junit.jupiter.api.io.TempDir java.nio.file.Path installed;
+   @TempDir Path installed;
 
    @Test
-   void dragDemoCombinesGroupMovementAndTargetRotation() {
-      InputStream stream = getClass().getResourceAsStream("/menu/demo_drag.yml");
-      assertNotNull(stream);
-      YamlConfiguration config = YamlConfiguration.loadConfiguration(
-         new InputStreamReader(stream, StandardCharsets.UTF_8)
-      );
-      assertEquals("sample-list", config.getString("demo_drag.layout.list_first.drag-group"));
-      assertEquals("sample-list", config.getString("demo_drag.layout.list_second.drag-group"));
-      assertEquals("move-group", config.getString("demo_drag.layout.move_list.drag.mode"));
-      assertEquals("sample-list", config.getString("demo_drag.layout.move_list.drag.group"));
-      assertEquals("rotate-element", config.getString("demo_drag.layout.turn_model.drag.mode"));
-      assertEquals("model", config.getString("demo_drag.layout.turn_model.drag.target"));
+   void freshInstallationHasThreeMenusWithWorkingNavigationAndExit() throws Exception {
+      Map<String, ConfigurationSection> menus = installMenus();
+      assertEquals(Set.of("demo_main", "demo_gallery", "demo_states"), menus.keySet());
+      for (var entry : menus.entrySet()) {
+         String id = entry.getKey();
+         ConfigurationSection menu = entry.getValue();
+         assertEquals("player", menu.getString("camera-position.type"), id);
+         assertFalse(menu.getBoolean("npc.enabled"), id);
+         ConfigurationSection layout = menu.getConfigurationSection("layout");
+         assertNotNull(layout, id);
+         Set<String> destinations = new java.util.HashSet<>();
+         for (String key : layout.getKeys(false)) {
+            ConfigurationSection element = layout.getConfigurationSection(key);
+            assertNotNull(element, id + "." + key);
+            if (element.getBoolean("next-menu.enabled")) {
+               destinations.add(element.getString("next-menu.menu"));
+            }
+         }
+         Set<String> otherMenus = new java.util.HashSet<>(menus.keySet());
+         otherMenus.remove(id);
+         assertEquals(otherMenus, destinations, id + " navigation");
+         assertTrue(layout.getBoolean("close.stop-menu.enabled"), id);
+         assertTrue(layout.getBoolean("close.stop-menu.teleport.back-original"), id);
+      }
    }
 
    @Test
-   void cleanInstallationIncludesEveryStaticMenuTransitionTarget() throws Exception {
-      java.util.Set<String> definitions = new java.util.HashSet<>();
-      java.util.List<YamlConfiguration> configs = new java.util.ArrayList<>();
+   void shippedElementsParseAndStateChangesResolveTheirTargets() throws Exception {
+      for (var entry : installMenus().entrySet()) {
+         String id = entry.getKey();
+         ConfigurationSection menu = entry.getValue();
+         for (String group : List.of("layout", "templates")) {
+            ConfigurationSection elements = menu.getConfigurationSection(group);
+            if (elements == null) continue;
+            for (String key : elements.getKeys(false)) {
+               ConfigurationSection source = elements.getConfigurationSection(key);
+               MenuLayout parsed = parse(id, key, source);
+               assertFalse(parsed.isItemRotate(), id + "." + key);
+               assertFalse(source.contains("drag"), id + "." + key);
+               assertFalse(source.contains("drag-group"), id + "." + key);
+               for (var change : parsed.getClickElementStates().entrySet()) {
+                  ConfigurationSection target = menu.getConfigurationSection("layout." + change.getKey());
+                  assertNotNull(target, id + " missing state target " + change.getKey());
+                  assertTrue(parse(id, change.getKey(), target).hasElementState(change.getValue()),
+                     id + " unknown state " + change.getValue());
+               }
+               boolean interactive = !source.getStringList("command").isEmpty()
+                  || source.getBoolean("next-menu.enabled") || source.getBoolean("stop-menu.enabled")
+                  || source.getBoolean("toggle-content.enabled") || source.contains("set-states")
+                  || "input-field".equals(source.getString("type")) || source.contains("hover-tooltip");
+               if (interactive) {
+                  assertTrue(parsed.hasCustomHitbox(), id + "." + key);
+                  assertTrue(parsed.getHitboxWidth() > 0 && parsed.getHitboxHeight() > 0
+                     && parsed.getHitboxDepth() > 0, id + "." + key);
+               }
+            }
+         }
+      }
+   }
+
+   @Test
+   void gallerySelectorsResolveExistingSlotAndTemplates() throws Exception {
+      ConfigurationSection menu = installMenus().get("demo_gallery");
+      ConfigurationSection templates = menu.getConfigurationSection("templates");
+      ConfigurationSection slots = menu.getConfigurationSection("slots");
+      assertNotNull(templates);
+      assertNotNull(slots);
+      for (String slot : slots.getKeys(false)) {
+         for (String field : List.of("content", "fallback")) {
+            assertTrue(templates.isConfigurationSection(slots.getString(slot + "." + field)));
+         }
+      }
+      Set<String> selectable = new java.util.HashSet<>();
+      ConfigurationSection layout = menu.getConfigurationSection("layout");
+      for (String key : layout.getKeys(false)) {
+         for (String command : layout.getStringList(key + ".command")) {
+            if (!command.startsWith("[player] uicore slot set ")) continue;
+            String[] args = command.split("\\s+");
+            assertEquals(8, args.length, command);
+            assertEquals("%player%", args[4], command);
+            assertEquals("demo_gallery", args[5], command);
+            assertTrue(slots.isConfigurationSection(args[6]), command);
+            assertTrue(templates.isConfigurationSection(args[7]), command);
+            assertTrue(layout.getStringList(key + ".click-requirements.permissions").contains("uicore.slot"));
+            selectable.add(args[7]);
+         }
+      }
+      assertEquals(templates.getKeys(false), selectable);
+   }
+
+   private Map<String, ConfigurationSection> installMenus() throws Exception {
+      Map<String, ConfigurationSection> menus = new LinkedHashMap<>();
       try (var manifest = getClass().getResourceAsStream("/menu-resources.txt")) {
          assertNotNull(manifest);
          for (String resource : new String(manifest.readAllBytes(), StandardCharsets.UTF_8).lines().toList()) {
             if (resource.isBlank() || resource.startsWith("#")) continue;
-            java.nio.file.Path target = installed.resolve(resource);
-            java.nio.file.Files.createDirectories(target.getParent());
+            Path target = installed.resolve(resource);
+            Files.createDirectories(target.getParent());
             try (var source = getClass().getResourceAsStream("/" + resource)) {
                assertNotNull(source, resource);
-               java.nio.file.Files.copy(source, target);
+               Files.copy(source, target);
             }
             YamlConfiguration config = new YamlConfiguration();
             config.load(target.toFile());
-            definitions.addAll(config.getKeys(false)); configs.add(config);
+            assertEquals(1, config.getKeys(false).size(), resource);
+            for (String key : config.getKeys(false)) {
+               assertNull(menus.put(key, config.getConfigurationSection(key)), "Duplicate menu " + key);
+            }
          }
       }
-      for (YamlConfiguration config : configs) for (String key : config.getKeys(true)) {
-         if (key.endsWith("next-menu.menu")) {
-            String target = config.getString(key, "");
-            if (!target.isBlank() && !target.contains("%") && !target.contains("{"))
-               assertTrue(definitions.contains(target), "Missing installed transition target: " + target);
-         }
-      }
-      assertTrue(definitions.contains("demo_styles"));
-      assertTrue(definitions.contains("demo_toggle_input"));
+      return menus;
    }
 
-   @Test
-   void entranceNpcDemoIsValidYaml() {
-      InputStream stream = getClass().getResourceAsStream("/menu/demo_entrance_npc.yml");
-      assertNotNull(stream);
-
-      YamlConfiguration config = YamlConfiguration.loadConfiguration(
-         new InputStreamReader(stream, StandardCharsets.UTF_8)
-      );
-
-      assertNotNull(config.getConfigurationSection("demo_entrance_npc.layout"));
-      assertTrue(config.getBoolean("demo_entrance_npc.npc.enabled"));
-      assertEquals(1.5, config.getDouble("demo_entrance_npc.camera-position.distance"));
-      assertEquals(
-         60L,
-         config.getLong("demo_entrance_npc.layout.delayed_message.entrance-animation.delay")
-      );
-   }
-
-   @Test
-   void playerRelativeDemoIsValidYaml() {
-      InputStream stream = getClass().getResourceAsStream("/menu/demo_player_menu.yml");
-      assertNotNull(stream);
-
-      YamlConfiguration config = YamlConfiguration.loadConfiguration(
-         new InputStreamReader(stream, StandardCharsets.UTF_8)
-      );
-
-      assertEquals("player", config.getString("demo_player_menu.camera-position.type"));
-      assertEquals(1.5, config.getDouble("demo_player_menu.camera-position.distance"));
-      assertNotNull(config.getConfigurationSection("demo_player_menu.layout"));
-   }
-
-   @Test
-   void slotDemoDeclaresTemplatesAndDynamicSlots() {
-      InputStream stream = getClass().getResourceAsStream("/menu/demo_slots.yml");
-      assertNotNull(stream);
-
-      YamlConfiguration config = YamlConfiguration.loadConfiguration(
-         new InputStreamReader(stream, StandardCharsets.UTF_8)
-      );
-
-      assertNotNull(config.getConfigurationSection("demo_slots.templates.guardian"));
-      assertNotNull(config.getConfigurationSection("demo_slots.templates.haste"));
-      assertNotNull(config.getConfigurationSection("demo_slots.templates.vampirism"));
-      assertEquals("guardian", config.getString("demo_slots.slots.perk_left.content"));
-      assertEquals("%orvenperks_roll_2%", config.getString("demo_slots.slots.perk_center.content"));
-      assertEquals("{state.selected_perk}", config.getString("demo_slots.slots.perk_right.content"));
-      assertEquals(3.5, config.getDouble("demo_slots.slots.perk_right.z"));
-   }
-
-   @Test
-   void dynamicPositionDemoUsesExpressionsAndWorldDepth() {
-      InputStream stream = getClass().getResourceAsStream("/menu/demo_dynamic_position.yml");
-      assertNotNull(stream);
-
-      YamlConfiguration config = YamlConfiguration.loadConfiguration(
-         new InputStreamReader(stream, StandardCharsets.UTF_8)
-      );
-
-      assertEquals("0.9 * sin(t * 1.4)", config.getString("demo_dynamic_position.layout.horizontal.x"));
-      assertEquals("0.25 * t", config.getString("demo_dynamic_position.layout.rising.y"));
-      assertEquals(3.5, config.getDouble("demo_dynamic_position.layout.horizontal.z"));
-      assertEquals(0.18, config.getDouble("demo_dynamic_position.layout.horizontal.position-update.smoothing"));
-   }
-
-   @Test
-   void itemCarouselAvoidsEntityOutlinePostEffects() {
-      InputStream stream = getClass().getResourceAsStream("/menu/item_carousel.yml");
-      assertNotNull(stream);
-
-      YamlConfiguration config = YamlConfiguration.loadConfiguration(
-         new InputStreamReader(stream, StandardCharsets.UTF_8)
-      );
-
-      assertEquals(3.5, config.getDouble("item_carousel.layout.next.z"));
-      assertTrue(config.getBoolean("item_carousel.layout.next.hover-enlarge.enabled"));
-      for (String template : config.getConfigurationSection("item_carousel.templates").getKeys(false)) {
-         assertTrue(!config.getBoolean("item_carousel.templates." + template + ".glow"));
-      }
-      assertTrue(config.getBoolean("item_carousel.templates.item_2_from_right.entrance-animation.enabled"));
-      assertEquals("right", config.getString("item_carousel.templates.item_2_from_right.entrance-animation.from"));
-   }
-
-   @Test
-   void playerAvatarDemoUsesViewerSkinAndHeadTransform() {
-      InputStream stream = getClass().getResourceAsStream("/menu/demo_player_avatar.yml");
-      assertNotNull(stream);
-
-      YamlConfiguration config = YamlConfiguration.loadConfiguration(
-         new InputStreamReader(stream, StandardCharsets.UTF_8)
-      );
-
-      String path = "demo_player_avatar.layout.avatar";
-      assertEquals("player-avatar", config.getString(path + ".type"));
-      assertEquals("self", config.getString(path + ".player"));
-      assertTrue(config.getBoolean(path + ".face-only"));
-      assertEquals(false, config.getBoolean(path + ".rotate"));
-      assertEquals(3.5, config.getDouble(path + ".z"));
-   }
-
-   @Test
-   void elementStatesDemoKeepsHitboxesOnItsButtons() {
-      InputStream stream = getClass().getResourceAsStream("/menu/demo_element_states.yml");
-      assertNotNull(stream);
-      YamlConfiguration config = YamlConfiguration.loadConfiguration(new InputStreamReader(stream, StandardCharsets.UTF_8));
-      for (String button : new String[]{"show", "hide", "close"}) {
-         assertNotNull(config.getConfigurationSection("demo_element_states.layout." + button + ".hitbox"), button);
-      }
+   private static MenuLayout parse(String menu, String key, ConfigurationSection source) {
+      MenuLayout layout = new MenuLayout(key, source.getString("name", key), source.getStringList("command"),
+         false, source.getDouble("x"), source.getDouble("y"), source.getDouble("z", 3.5),
+         false, false, null, false, List.of(), 0.0F, 0.0F, 0.0F, "", false, "", "");
+      layout.setOwnerMenuKey(menu);
+      layout.loadConfig(source);
+      return layout;
    }
 }

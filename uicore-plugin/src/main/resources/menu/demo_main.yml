@@ -1,122 +1,141 @@
+# Entry point: /uicore run demo_main. No resource pack or optional plugin required.
 demo_main:
   permission: ""
-  camera-position:
-    type: player
-    distance: 1.5
+  camera-position: { type: player, distance: 1.5 }
+  npc: { enabled: false }
   layout:
-    title:
-      name: "<gold><bold>UIcore Patch Demo</bold>"
-      x: 0.0
+    eyebrow:
+      name: "<#94A3B8>01 / INTERACTION LAB"
+      x: 0
       y: 1.18
       z: 3.5
-      text-size: 0.88
+      text-size: 0.3
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    title:
+      name: "<gradient:#5EEAD4:#93C5FD><bold>UIcore</bold></gradient>"
+      x: 0
+      y: 0.87
+      z: 3.5
+      text-size: 0.85
+      entrance-animation: { enabled: true, from: top, duration: 12, distance: 0.3, easing: ease-out-cubic }
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
     subtitle:
-      name: "<gray>Clean English examples for the patched feature set."
-      x: 0.0
-      y: 0.86
+      name: "<#CBD5E1>An interface inside your world."
+      x: 0
+      y: 0.56
       z: 3.5
-      text-size: 0.48
-    styles:
-      name: "<aqua>Styles + hover"
-      x: -1.45
-      y: 0.32
+      text-size: 0.34
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    avatar:
+      type: player-avatar
+      player: self
+      face-only: true
+      scale: 0.58
+      billboard: center
+      rotate: false
+      glow: false
+      x: -0.95
+      y: 0.14
       z: 3.5
-      text-size: 0.56
-      hover-enlarge:
-        enabled: true
-        scale: 1.1
-      hover-style:
-        color: "#ffffff"
-        underlined: true
-        transition:
-          type: smooth
-          duration: 6
-      pressed-style:
-        text: "<green>Opening styles..."
-        duration: 5
-      hover-tooltip:
-        type: actionbar
-        text: "<aqua>Hover colors, cursor, tooltip, permission style, pressed style."
-      next-menu:
-        enabled: true
-        menu: demo_styles
-      stop-menu:
-        enabled: true
-        teleport:
-          enabled: false
-    toggle_input:
-      name: "<green>Toggle + input"
-      x: 0.0
-      y: 0.32
+      hitbox: { width: 0.6, height: 0.6, depth: 0.3 }
+      hover-tooltip: { type: actionbar, text: "<#5EEAD4>Your skin, displayed just for you." }
+      command: ["[actionbar] <#5EEAD4>This avatar uses your current skin."]
+    nickname:
+      type: input-field
+      name: "<#CBD5E1>Name: <white>{input.showcase_name}"
+      field: showcase_name
+      x: 0.6
+      y: 0.25
       z: 3.5
-      text-size: 0.56
-      hover-enlarge:
-        enabled: true
-        scale: 1.1
-      hover-style:
-        color: "#ffffff"
-        underlined: true
-      pressed-style:
-        text: "<green>Opening input..."
-        duration: 5
-      next-menu:
-        enabled: true
-        menu: demo_toggle_input
-      stop-menu:
-        enabled: true
-        teleport:
-          enabled: false
-    items_api:
-      name: "<light_purple>Items + API"
-      x: 1.45
-      y: 0.32
+      text-size: 0.42
+      hitbox: { width: 1.35, height: 0.25, depth: 0.25 }
+      input-field:
+        prompt: "<#5EEAD4>Type a short name in chat, then click Save name."
+      hover-style: { color: "#5EEAD4", underlined: true, transition: { type: smooth, duration: 6 } }
+      hover-enlarge: { enabled: true, scale: 1.06 }
+      hover-cursor: { enabled: true, material: FEATHER, scale: 0.65 }
+      pressed-style: { text: "<#93C5FD>Waiting for chat...", duration: 8 }
+    save:
+      name: "<#5EEAD4>[ Save name ]"
+      x: 0.6
+      y: -0.08
       z: 3.5
-      text-size: 0.56
-      hover-enlarge:
-        enabled: true
-        scale: 1.1
-      hover-style:
-        color: "#ffffff"
-        underlined: true
-      pressed-style:
-        text: "<green>Opening items..."
-        duration: 5
-      next-menu:
-        enabled: true
-        menu: demo_items_api
-      stop-menu:
-        enabled: true
-        teleport:
-          enabled: false
-    conditions:
-      name: "<yellow>Conditions"
-      x: -0.55
-      y: -0.34
+      text-size: 0.42
+      hitbox: { width: 1.35, height: 0.25, depth: 0.25 }
+      click-requirements:
+        placeholders:
+          - { placeholder: "%input_showcase_name%", operator: "!=", value: "" }
+        denied:
+          actionbar: "<#FCA5A5>Click the name field and enter a name first."
+      hover-style: { color: "#FFFFFF", underlined: true }
+      pressed-style: { text: "<#5EEAD4>Name saved!", duration: 10 }
+      command: ["[message] <#5EEAD4>Saved: <white>{input.showcase_name}"]
+    notifications:
+      name: "Notifications"
+      x: -0.85
+      y: -0.48
       z: 3.5
-      text-size: 0.66
-      hover-enlarge:
+      text-size: 0.42
+      hitbox: { width: 1.45, height: 0.27, depth: 0.25 }
+      toggle-content:
         enabled: true
-        scale: 1.08
-      hover-style:
-        color: "#ffffff"
-        underlined: true
-      next-menu:
-        enabled: true
-        menu: demo_conditions
-      stop-menu:
-        enabled: true
-        teleport:
-          enabled: false
+        'off': "[ ] Notifications"
+        'on': "[x] Notifications"
+        on-commands: ["[actionbar] <#5EEAD4>Notifications enabled."]
+        off-commands: ["[actionbar] <#94A3B8>Notifications disabled."]
+      toggle-style:
+        'off': { color: "#94A3B8" }
+        'on': { color: "#5EEAD4", bold: true }
+      hover-style: { underlined: true }
+      hover-enlarge: { enabled: true, scale: 1.06 }
+    cooldown:
+      name: "<#93C5FD>[ Send signal ]"
+      x: 0.85
+      y: -0.48
+      z: 3.5
+      text-size: 0.42
+      hitbox: { width: 1.45, height: 0.27, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true, transition: { type: smooth, duration: 6 } }
+      hover-cursor: { enabled: true, material: AMETHYST_SHARD, scale: 0.65 }
+      pressed-style: { text: "<#5EEAD4>Signal sent!", duration: 8 }
+      cooldown:
+        key: demo_main_signal
+        time: 3s
+        denied: { actionbar: "<#FCA5A5>Ready again in {cooldown.left}s." }
+      command: ["[actionbar] <#5EEAD4>Signal received. Click again to see the cooldown."]
+    hint:
+      name: "<#64748B>Hover, click, toggle, and type."
+      x: 0
+      y: -0.82
+      z: 3.5
+      text-size: 0.3
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    gallery:
+      name: "<#93C5FD>[ Gallery ]"
+      x: -0.9
+      y: -1.13
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.8, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      next-menu: { enabled: true, menu: demo_gallery }
+    states:
+      name: "<#C4B5FD>[ States ]"
+      x: 0
+      y: -1.13
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.8, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      next-menu: { enabled: true, menu: demo_states }
     close:
-      name: "<red>Close"
-      x: 0.65
-      y: -0.34
+      name: "<#FCA5A5>[ Close ]"
+      x: 0.9
+      y: -1.13
       z: 3.5
-      text-size: 0.66
-      hover-enlarge:
-        enabled: true
-        scale: 1.08
+      text-size: 0.38
+      hitbox: { width: 0.8, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
       stop-menu:
         enabled: true
-        teleport:
-          enabled: false
+        teleport: { enabled: true, back-original: true }

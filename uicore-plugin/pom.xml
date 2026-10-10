@@ -84,9 +84,6 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
-                <excludes>
-                    <exclude>menu/oc_*.yml</exclude>
-                </excludes>
             </resource>
             <resource>
                 <directory>${project.basedir}/../release/third-party</directory>

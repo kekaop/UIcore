@@ -1,0 +1,182 @@
+# Static items and a player-scoped slot. Selectors require uicore.slot (OP by default).
+demo_gallery:
+  permission: ""
+  camera-position: { type: player, distance: 1.5 }
+  npc: { enabled: false }
+  templates:
+    knight:
+      type: item
+      material: DIAMOND_SWORD
+      transform: gui
+      billboard: fixed
+      scale: 0.72
+      rotate: false
+      glow: false
+      hitbox: { width: 0.72, height: 0.72, depth: 0.3 }
+      hover-tooltip: { type: actionbar, text: "<#93C5FD>Knight loadout — diamond sword." }
+      command: ["[actionbar] <#93C5FD>You selected the knight preview."]
+    miner:
+      type: item
+      material: GOLDEN_PICKAXE
+      transform: gui
+      billboard: fixed
+      scale: 0.72
+      rotate: false
+      glow: false
+      hitbox: { width: 0.72, height: 0.72, depth: 0.3 }
+      hover-tooltip: { type: actionbar, text: "<#FDE68A>Miner loadout — golden pickaxe." }
+      command: ["[actionbar] <#FDE68A>You selected the miner preview."]
+    scout:
+      type: item
+      material: COMPASS
+      transform: gui
+      billboard: fixed
+      scale: 0.72
+      rotate: false
+      glow: false
+      hitbox: { width: 0.72, height: 0.72, depth: 0.3 }
+      hover-tooltip: { type: actionbar, text: "<#5EEAD4>Scout loadout — compass." }
+      command: ["[actionbar] <#5EEAD4>You selected the scout preview."]
+  slots:
+    loadout:
+      x: 0
+      y: 0.05
+      z: 3.5
+      content: knight
+      fallback: knight
+  layout:
+    eyebrow:
+      name: "<#94A3B8>02 / DISPLAY GALLERY"
+      x: 0
+      y: 1.18
+      z: 3.5
+      text-size: 0.3
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    title:
+      name: "<gradient:#93C5FD:#C4B5FD><bold>Your loadout</bold></gradient>"
+      x: 0
+      y: 0.87
+      z: 3.5
+      text-size: 0.7
+      entrance-animation: { enabled: true, from: top, duration: 12, distance: 0.3, easing: ease-out-cubic }
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    subtitle:
+      name: "<#CBD5E1>One scene. Different content for every player."
+      x: 0
+      y: 0.55
+      z: 3.5
+      text-size: 0.31
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    book:
+      type: item
+      material: ENCHANTED_BOOK
+      transform: gui
+      billboard: fixed
+      scale: 0.55
+      rotate: false
+      glow: false
+      x: -1.05
+      y: 0.05
+      z: 3.5
+      hitbox: { width: 0.6, height: 0.6, depth: 0.3 }
+      hover-tooltip: { type: actionbar, text: "<#C4B5FD>A plain Minecraft item; no resource pack needed." }
+      command: ["[actionbar] <#C4B5FD>Items can be interactive menu elements."]
+    avatar:
+      type: player-avatar
+      player: self
+      face-only: true
+      billboard: center
+      scale: 0.55
+      rotate: false
+      glow: false
+      x: 1.05
+      y: 0.05
+      z: 3.5
+      hitbox: { width: 0.6, height: 0.6, depth: 0.3 }
+      hover-tooltip: { type: actionbar, text: "<#5EEAD4>The viewer's own avatar." }
+    book_caption:
+      name: "<#94A3B8>Item display"
+      x: -1.05
+      y: -0.37
+      z: 3.5
+      text-size: 0.3
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    slot_caption:
+      name: "<#94A3B8>Template slot"
+      x: 0
+      y: -0.37
+      z: 3.5
+      text-size: 0.3
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    avatar_caption:
+      name: "<#94A3B8>Your avatar"
+      x: 1.05
+      y: -0.37
+      z: 3.5
+      text-size: 0.3
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    knight:
+      name: "<#93C5FD>[ Knight ]"
+      x: -0.95
+      y: -0.67
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.85, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      click-requirements:
+        permissions: [uicore.slot]
+        denied: { actionbar: "<#FCA5A5>Ask an administrator for uicore.slot to try this demo." }
+      command: ["[player] uicore slot set %player% demo_gallery loadout knight"]
+    miner:
+      name: "<#FDE68A>[ Miner ]"
+      x: 0
+      y: -0.67
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.85, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      click-requirements:
+        permissions: [uicore.slot]
+        denied: { actionbar: "<#FCA5A5>Ask an administrator for uicore.slot to try this demo." }
+      command: ["[player] uicore slot set %player% demo_gallery loadout miner"]
+    scout:
+      name: "<#5EEAD4>[ Scout ]"
+      x: 0.95
+      y: -0.67
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.85, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      click-requirements:
+        permissions: [uicore.slot]
+        denied: { actionbar: "<#FCA5A5>Ask an administrator for uicore.slot to try this demo." }
+      command: ["[player] uicore slot set %player% demo_gallery loadout scout"]
+    home:
+      name: "<#93C5FD>[ Home ]"
+      x: -0.9
+      y: -1.13
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.8, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      next-menu: { enabled: true, menu: demo_main }
+    states:
+      name: "<#C4B5FD>[ States ]"
+      x: 0
+      y: -1.13
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.8, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      next-menu: { enabled: true, menu: demo_states }
+    close:
+      name: "<#FCA5A5>[ Close ]"
+      x: 0.9
+      y: -1.13
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.8, height: 0.26, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      stop-menu:
+        enabled: true
+        teleport: { enabled: true, back-original: true }

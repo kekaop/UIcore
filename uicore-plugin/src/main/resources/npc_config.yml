@@ -26,7 +26,7 @@ disabled-players: []
 # Used only when a menu has no explicit `npc.enabled` setting.
 menu-settings:
   enable-for-all-menus: false
-  enabled-menus: ["demo_entrance_npc"]
+  enabled-menus: []
   use-whitelist-mode: true
 
 name-display:

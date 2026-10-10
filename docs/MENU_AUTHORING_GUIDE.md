@@ -2,7 +2,7 @@
 
 > **Language:** English | [Русская версия](MENU_AUTHORING_GUIDE_RU.md)
 
-Use this guide to create a YAML menu, position it around the camera, add interactive elements, and verify the finished scene. UIcore installs example `demo_*` files in `plugins/UIcore/menu/`; copy an example before changing it.
+Use this guide to create a YAML menu, position it around the camera, add interactive elements, and verify the finished scene. UIcore installs `demo_main`, `demo_gallery`, and `demo_states` in `plugins/UIcore/menu/`; copy an example before changing it. See the [demo walkthrough](../showcase/README.md).
 
 ## Create and reload a menu
 
@@ -32,17 +32,19 @@ welcome:
 
 `x`, `y`, and `z` are positions relative to the menu camera. Positive `x` moves right, positive `y` moves up, and positive `z` moves forward from the camera. Keep interactive elements close enough to the cursor range configured in `config.yml`.
 
+The source config uses `cursor-item.z-offset: 1.0` to offset the visual cursor along the camera direction. Updating the plugin preserves an existing server config.
+
 ## Choose an element type
 
 Elements live under `layout:`. Text is the default when `type` is omitted.
 
-| Type | Use it for |
-| --- | --- |
-| `text` | Labels, buttons, tooltips, and formatted MiniMessage text. |
-| `item` | An `ItemDisplay` with a material, model data, transform, and optional rotation. |
-| `avatar` | A player's face or full head display. |
-| `input` | A chat-backed field that accepts text from the player. |
-| `bar-text` | A text progress bar. |
+| Type            | Use it for                                                                      |
+| --------------- | ------------------------------------------------------------------------------- |
+| `text`          | Labels, buttons, tooltips, and formatted MiniMessage text.                      |
+| `item`          | An `ItemDisplay` with a material, model data, transform, and optional rotation. |
+| `player-avatar` | A player's face or full head display.                                           |
+| `input-field`   | A chat-backed field that accepts text from the player.                          |
+| `bar-text`      | A text progress bar.                                                            |
 
 Common fields include `name`, `x`, `y`, `z`, `scale`, `billboard`, `tilt`, `hitbox`, `hover-style`, `pressed-style`, `visible-if`, and `permission`.
 
@@ -55,8 +57,8 @@ layout:
     z: 3.5
     hitbox: { width: 1.4, height: 0.42, depth: 0.25 }
     hover-style:
-      color: "<yellow>"
-    left-click:
+      color: "#FFFF55"
+    command:
       - "[player] warp spawn"
 ```
 
@@ -94,7 +96,7 @@ layout:
     rotate-speed: 2
 ```
 
-An `avatar` can render a named player. Set `face-only: true` for a face display. Give it a separate hitbox if it is clickable.
+A `player-avatar` can render a named player. Set `player: self` for the viewer and `face-only: true` for a face display. Give it a separate hitbox if it is clickable.
 
 ## Control visibility, permissions, and clicks
 
@@ -112,11 +114,16 @@ layout:
     y: 0
     z: 3.5
     permission: "server.rank.reward"
-    visible-if: "%player_level% >= 10"
+    visible-if:
+      placeholder: "%player_level%"
+      operator: ">="
+      value: "10"
     click-requirements:
-      - "%player_level% >= 20"
-    deny-message: "<red>You need level 20."
-    left-click:
+      placeholders:
+        - { placeholder: "%player_level%", operator: ">=", value: "20" }
+      denied:
+        actionbar: "<red>You need level 20."
+    command:
       - "[player] rewards claim"
 ```
 
@@ -133,38 +140,37 @@ layout:
     x: 0
     y: 0.2
     z: 3.5
-    initial-state: off
+    initial-state: idle
     states:
-      off: { name: "<gray>Mode: off" }
-      on: { name: "<green>Mode: on" }
+      idle: { text: "<gray>Mode: off" }
+      active: { text: "<green>Mode: on" }
   enable:
     name: "<green>Enable"
     x: 0
     y: -0.2
     z: 3.5
     set-state:
-      target: mode
-      state: on
+      element: mode
+      state: active
 ```
 
 Use `next-menu.menu` to change scenes and `stop-menu.enabled: true` to close the current menu. Give each button a `cooldown` when an action should not run repeatedly.
 
 ## Collect chat input
 
-An input element opens a chat capture for the player. Set length limits and mark password-like values as secret when needed.
+An input element opens a chat capture for the player. Configure field validation and password handling in `input.yml`.
 
 ```yaml
 layout:
   nickname:
-    type: input
+    type: input-field
     name: "<yellow>Enter a nickname"
+    field: nickname
     x: 0
     y: 0
     z: 3.5
-    input:
-      id: nickname
-      max-length: 24
-      placeholder: "Your name"
+    input-field:
+      prompt: "<yellow>Type your nickname in chat."
 ```
 
 Use `{input.nickname}` only in actions that need the value. UIcore inserts input as literal display text, masks password fields, and omits their values from denied-command logs.
@@ -181,7 +187,9 @@ layout:
     y: 0.4
     z: 3.5
     entrance-animation:
-      type: fade
+      enabled: true
+      from: top
+      distance: 0.3
       duration: 12
     animation:
       type: move
