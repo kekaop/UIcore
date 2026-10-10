@@ -18,7 +18,8 @@ class CursorRotationTrackerTest {
 
    @Test
    void hostileFiniteYawCompletesInSeparateProcess() throws Exception {
-      String javaExecutable = java.nio.file.Path.of(System.getProperty("java.home"), "bin", "java.exe").toString();
+      java.nio.file.Path javaBin = java.nio.file.Path.of(System.getProperty("java.home"), "bin");
+      String javaExecutable = javaBin.resolve(java.nio.file.Files.isExecutable(javaBin.resolve("java")) ? "java" : "java.exe").toString();
       Process process = new ProcessBuilder(javaExecutable, "-cp", System.getProperty("java.class.path"),
          YawProbe.class.getName()).redirectErrorStream(true).start();
       try {

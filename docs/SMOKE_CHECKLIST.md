@@ -29,3 +29,12 @@ These are pending server checks, not a record of passed integration tests.
 - Test damaged YAML reload without rewriting the file; check invalid material/world/numbers and recovery journal conflicts.
 - Enter MiniMessage tags, RGB codes, Unicode, and a password. Check literal display, raw configured action arguments, and absence of arguments in denied logs.
 - Run FancyNpcs/SkinsRestorer/CraftEngine both present and absent, then profile 1/10/50 viewers and unrelated displays.
+
+## Multiplayer privacy and recovery checks
+
+- With two players nearby, toggle each of the four menu settings independently. Check menu text, items, the cursor, temporary text, player bodies, and the tab list. Camera mounts must remain private.
+- Open two menus with opposing visibility rules. Close or switch one menu; check that the other player's active rule remains in effect. Repeat with a third player joining, reconnecting, changing worlds, and respawning.
+- Test a vanish plugin alongside menu privacy. Closing a menu must remove only UIcore's hide request.
+- Attack the menu owner directly and with a projectile with `can-damaged: false`, then `true`. Verify normal PvP restrictions remain effective, and damage from mobs or the environment is unchanged.
+- On Folia, put legacy blockcache entries in two separate regions: an air block, a conflicting non-air block, and an unavailable world. Verify safe restoration and retention of unresolved entries after restart.
+- From two Folia player regions, edit the same global API element concurrently. Confirm both changes survive and both open menus refresh without collection errors.

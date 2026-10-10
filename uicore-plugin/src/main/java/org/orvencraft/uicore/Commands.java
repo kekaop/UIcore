@@ -488,10 +488,10 @@ public class Commands implements TabExecutor {
                choices.addAll(UIcorePlugin.sectionManager.keySet());
             } else if (args.length - 1 == slotIndex) {
                Section section = UIcorePlugin.sectionManager.get(args[menuIndex]);
-               if (section != null) choices.addAll(section.slots.keySet());
+               if (section != null) choices.addAll(section.definition().slots().keySet());
             } else if (("set".equals(operation) || "set-global".equals(operation)) && args.length - 1 == templateIndex) {
                Section section = UIcorePlugin.sectionManager.get(args[menuIndex]);
-               if (section != null) choices.addAll(section.templates.keySet());
+               if (section != null) choices.addAll(section.definition().templates().keySet());
             }
          }
          return StringUtil.copyPartialMatches(args[args.length - 1], choices, new ArrayList<>());

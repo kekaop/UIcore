@@ -34,6 +34,38 @@ welcome:
 
 The source config uses `cursor-item.z-offset: 1.0` to offset the visual cursor along the camera direction. Updating the plugin preserves an existing server config.
 
+## Set menu privacy and player damage
+
+Put these settings directly under the menu ID, alongside `camera-position` and `layout`. The values below are the defaults, including for existing menus that omit the settings.
+
+```yaml
+welcome:
+  hide-menu-for-other-player: true
+  hide-player-for-other-player: true
+  hide-other-players: false
+  can-damaged: false
+  camera-position: { type: player, distance: 1.5 }
+  layout:
+    title:
+      name: "<gold>Welcome"
+      x: 0
+      y: 0.45
+      z: 3.5
+```
+
+| Setting                        | Default | Behavior                                                                                                                                   |
+| ------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `hide-menu-for-other-player`   | `true`  | Shows menu text, items, the cursor, and temporary menu text only to the menu owner. Set `false` to let nearby players see those displays.  |
+| `hide-player-for-other-player` | `true`  | Hides the menu owner from other players using Bukkit player visibility, including the tab list. Set `false` to retain ordinary visibility. |
+| `hide-other-players`           | `false` | Set `true` to hide other players from the menu owner.                                                                                      |
+| `can-damaged`                  | `false` | Blocks incoming damage caused by other players, including their projectiles. Set `true` to let the server's usual damage rules apply.      |
+
+The visibility settings are independent. If one player hides themselves and another hides other players, both rules apply. Closing one menu removes only that visit's rule. Settings change when switching menus and are reapplied for new observers and world changes. Closing, death, or disconnect ends the visit's damage protection and restores ordinary player visibility; another plugin's hide requests remain in effect. Existing invisibility isn't removed when a menu opens.
+
+Public displays show the owner's rendered content, including placeholders and input values, to nearby players. They remain interactive only for the owner. Password fields still use their configured masking. Personal NPC mirrors and client-only schematic previews remain personal.
+
+`can-damaged` controls incoming damage from other players only. It doesn't grant permission to attack, override PvP restrictions, or prevent damage from mobs or the environment. Use actual YAML booleans (`true` or `false`); invalid values reject the menu during loading.
+
 ## Choose an element type
 
 Elements live under `layout:`. Text is the default when `type` is omitted.

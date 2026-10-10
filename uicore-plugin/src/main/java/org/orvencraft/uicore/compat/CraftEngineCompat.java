@@ -1,68 +1,44 @@
 package org.orvencraft.uicore.compat;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Method;
-import java.util.function.Consumer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.TextDisplay;
 
 public class CraftEngineCompat {
-   private static boolean available = false;
-   private static Object craftEngineMiniMessage;
+   private static volatile MiniMessage craftEngineMiniMessage;
 
    public static void init() {
-      available = false;
       craftEngineMiniMessage = null;
+      var plugin = Bukkit.getPluginManager().getPlugin("CraftEngine");
+      if (plugin == null) return;
       try {
-         if (Bukkit.getPluginManager().getPlugin("CraftEngine") == null) {
-            return;
-         }
-
-         Object imageTag = Class.forName("net.momirealms.craftengine.core.plugin.text.minimessage.ImageTag").getField("INSTANCE").get(null);
-         Object shiftTag = Class.forName("net.momirealms.craftengine.core.plugin.text.minimessage.ShiftTag").getField("INSTANCE").get(null);
-         Class<?> miniMessageClass = Class.forName("net.kyori.adventure.text.minimessage.MiniMessage");
-         Object builder = miniMessageClass.getMethod("builder").invoke(null);
-         Class<?> tagResolverClass = Class.forName("net.kyori.adventure.text.minimessage.tag.resolver.TagResolver");
-         Class<?> builderClass = Class.forName("net.kyori.adventure.text.minimessage.MiniMessage$Builder");
-         Method editTagsMethod = builderClass.getMethod("editTags", Consumer.class);
-         Class<?> resolverArrayClass = Array.newInstance(tagResolverClass, 0).getClass();
-         Method resolverMethod = tagResolverClass.getMethod("resolver", resolverArrayClass);
-         Object resolvers = Array.newInstance(tagResolverClass, 2);
-         Array.set(resolvers, 0, imageTag);
-         Array.set(resolvers, 1, shiftTag);
-         Object combinedResolver = resolverMethod.invoke(null, resolvers);
-         Method resolverConfigMethod = builderClass.getMethod("resolver", tagResolverClass);
-         if (editTagsMethod != null) {
-            Consumer<Object> tagConsumer = builderConfig -> {
-               try {
-                  resolverConfigMethod.invoke(builderConfig, combinedResolver);
-               } catch (ReflectiveOperationException ignored) {
-               }
-            };
-            editTagsMethod.invoke(builder, tagConsumer);
-         }
-
-         craftEngineMiniMessage = builderClass.getMethod("build").invoke(builder);
-         available = true;
+         ClassLoader loader = plugin.getClass().getClassLoader();
+         TagResolver imageTag = (TagResolver) Class.forName("net.momirealms.craftengine.core.plugin.text.minimessage.ImageTag", true, loader).getField("INSTANCE").get(null);
+         TagResolver shiftTag = (TagResolver) Class.forName("net.momirealms.craftengine.core.plugin.text.minimessage.ShiftTag", true, loader).getField("INSTANCE").get(null);
+         craftEngineMiniMessage = createMiniMessage(imageTag, shiftTag);
          Bukkit.getLogger().info("[UIcore] CraftEngine detected, enabling CraftEngine text format support.");
-      } catch (ReflectiveOperationException | LinkageError var12) {
-         available = false;
-         Bukkit.getLogger().info("[UIcore] CraftEngine not found or incompatible, CraftEngine text format disabled.");
+      } catch (ReflectiveOperationException | ClassCastException | LinkageError exception) {
+         Bukkit.getLogger().warning("[UIcore] CraftEngine text format disabled: " + exception.getClass().getSimpleName() + ": " + exception.getMessage());
       }
    }
 
+   static MiniMessage createMiniMessage(TagResolver... resolvers) {
+      return MiniMessage.builder().editTags(tags -> tags.resolvers(resolvers)).build();
+   }
+
    public static boolean isAvailable() {
-      return available;
+      return craftEngineMiniMessage != null;
    }
 
    public static Component parse(String input) {
-      if (available && input != null && craftEngineMiniMessage != null) {
+      MiniMessage parser = craftEngineMiniMessage;
+      if (input != null && parser != null) {
          try {
-            return (Component)MiniMessage.class.getMethod("deserialize", String.class).invoke(craftEngineMiniMessage, input);
-         } catch (ReflectiveOperationException | LinkageError var6) {
+            return parser.deserialize(input);
+         } catch (RuntimeException | LinkageError exception) {
             return null;
          }
       } else {
@@ -81,7 +57,7 @@ public class CraftEngineCompat {
 
    public static void applyToTextDisplay(TextDisplay display, String input) {
       if (display != null && input != null) {
-         if (available && containsCraftEngineTags(input)) {
+         if (isAvailable() && containsCraftEngineTags(input)) {
             Component component = parse(input);
             if (component != null) {
                display.text(component);

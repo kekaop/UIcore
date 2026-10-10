@@ -96,8 +96,8 @@ public class ChunkLoaderManager {
       if (section == null || section.world == null) return Set.of();
       Set<ChunkReference> required = new HashSet<>();
       addChunk(required, section.world, section.cameraX, section.cameraZ);
-      if (section.layouts != null) {
-         for (MenuLayout layout : section.layouts.values()) {
+      if (section.definition().layouts() != null) {
+         for (MenuLayout layout : section.definition().layouts().values()) {
             Location location = layoutLocation(section, layout.x, layout.y, layout.z);
             addChunk(required, section.world, location.getX(), location.getZ());
          }

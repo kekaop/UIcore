@@ -12,6 +12,7 @@ The project exists thanks to **wuhaoxian123**, the original CustomScreenMenu aut
 
 ## What is included
 
+- Per-menu privacy for displays and players, with optional protection from player damage.
 - World-space menus rendered around the player camera.
 - Text, item, button, input, state, slot, and schematic-preview systems.
 - A public API for menus, elements, input fields, slots, state, actions, data providers, conditions, and components.

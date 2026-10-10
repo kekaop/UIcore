@@ -163,8 +163,9 @@ public final class UIcoreApiImpl implements UIcoreApi {
          return List.of();
       }
 
-      LinkedHashSet<String> ids = new LinkedHashSet<>(section.layouts.keySet());
-      ids.addAll(section.slots.keySet());
+      Section.Definition definition = section.definition();
+      LinkedHashSet<String> ids = new LinkedHashSet<>(definition.layouts().keySet());
+      ids.addAll(definition.slots().keySet());
       return new ArrayList<>(ids);
    }
 
@@ -265,12 +266,12 @@ public final class UIcoreApiImpl implements UIcoreApi {
 
    public Set<String> getSlotIds(String menuId) {
       Section section = UIcorePlugin.sectionManager.get(menuId);
-      return section == null ? Set.of() : new LinkedHashSet<>(section.slots.keySet());
+      return section == null ? Set.of() : new LinkedHashSet<>(section.definition().slots().keySet());
    }
 
    public Set<String> getTemplateIds(String menuId) {
       Section section = UIcorePlugin.sectionManager.get(menuId);
-      return section == null ? Set.of() : new LinkedHashSet<>(section.templates.keySet());
+      return section == null ? Set.of() : new LinkedHashSet<>(section.definition().templates().keySet());
    }
 
    public Optional<String> getSlot(String menuId, String slotId) {
@@ -381,7 +382,9 @@ public final class UIcoreApiImpl implements UIcoreApi {
       }
 
       MenuLayout layout = MenuConfigLoader.loadLayout(menuId, element.id(), element.model(), section.world);
-      section.add(element.id(), layout);
+      if (!section.addIfAbsent(element.id(), layout)) {
+         return MenuMutationResult.failure("Element already exists: " + menuId + ":" + element.id());
+      }
       int refreshed = this.refreshMenuElement(menuId, element.id());
       return MenuMutationResult.success("Element added: " + menuId + ":" + element.id(), refreshed);
    }
@@ -448,21 +451,18 @@ public final class UIcoreApiImpl implements UIcoreApi {
          return MenuMutationResult.failure("Menu not found: " + menuId);
       }
 
-      MenuLayout existing = section.get(elementId);
-      if (existing == null) {
-         return MenuMutationResult.failure("Element not found: " + menuId + ":" + elementId);
-      }
       if (editor == null) {
          return MenuMutationResult.failure("Editor is null");
       }
 
-      MenuElementEditor mutable = new MenuElementEditor(existing.copySourceConfig());
-      editor.accept(mutable);
-      org.orvencraft.uicore.api.model.UiElementModel updated = mutable.model();
-      if (!updated.contains("name")) updated = updated.with("name", existing.name);
-
-      MenuLayout replacement = MenuConfigLoader.loadLayout(menuId, elementId, updated, section.world);
-      section.add(elementId, replacement);
+      boolean changed = section.edit(elementId, existing -> {
+         MenuElementEditor mutable = new MenuElementEditor(existing.copySourceConfig());
+         editor.accept(mutable);
+         org.orvencraft.uicore.api.model.UiElementModel updated = mutable.model();
+         if (!updated.contains("name")) updated = updated.with("name", existing.name);
+         return MenuConfigLoader.loadLayout(menuId, elementId, updated, section.world);
+      });
+      if (!changed) return MenuMutationResult.failure("Element not found: " + menuId + ":" + elementId);
       int refreshed = this.replaceMenuElement(menuId, elementId);
       return MenuMutationResult.success("Element edited: " + menuId + ":" + elementId, refreshed);
    }

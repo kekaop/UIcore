@@ -233,11 +233,12 @@ public final class ExtensionManager implements Listener {
    public void validateMenuReferences(Map<String, Section> menus) {
       int diagnostics = 0;
       for (Map.Entry<String, Section> menu : menus.entrySet()) {
-         for (Map.Entry<String, MenuLayout> element : menu.getValue().layouts.entrySet()) {
+         Section.Definition definition = menu.getValue().definition();
+         for (Map.Entry<String, MenuLayout> element : definition.layouts().entrySet()) {
             diagnostics += this.validateElement(menu.getKey(), element.getKey(), element.getValue());
             if (diagnostics >= 200) return;
          }
-         for (Map.Entry<String, MenuLayout> template : menu.getValue().templates.entrySet()) {
+         for (Map.Entry<String, MenuLayout> template : definition.templates().entrySet()) {
             diagnostics += this.validateElement(menu.getKey(), "template/" + template.getKey(), template.getValue());
             if (diagnostics >= 200) return;
          }

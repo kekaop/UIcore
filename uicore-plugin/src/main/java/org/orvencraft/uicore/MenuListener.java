@@ -4,6 +4,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -14,6 +17,24 @@ public class MenuListener implements Listener {
 
    public MenuListener(UIcorePlugin plugin) {
       this.plugin = plugin;
+   }
+
+   @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+   public void onIncomingPlayerDamage(EntityDamageByEntityEvent event) {
+      if (!(event.getEntity() instanceof Player victim) || !this.plugin.blocksIncomingPlayerDamage(victim)) return;
+      if (isPlayerDamage(event)) event.setCancelled(true);
+   }
+
+   static boolean isPlayerDamage(EntityDamageByEntityEvent event) {
+      if (event.getDamageSource().getCausingEntity() instanceof Player player) return !player.getUniqueId().equals(event.getEntity().getUniqueId());
+      if (event.getDamager() instanceof Player player) return !player.getUniqueId().equals(event.getEntity().getUniqueId());
+      return event.getDamager() instanceof Projectile projectile && projectile.getShooter() instanceof Player player
+         && !player.getUniqueId().equals(event.getEntity().getUniqueId());
+   }
+
+   @EventHandler
+   public void onPlayerPostRespawn(com.destroystokyo.paper.event.player.PlayerPostRespawnEvent event) {
+      this.plugin.refreshMenuPlayerVisibility();
    }
 
    @EventHandler

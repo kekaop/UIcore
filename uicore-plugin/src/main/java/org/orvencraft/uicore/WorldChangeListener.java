@@ -19,6 +19,7 @@ public class WorldChangeListener implements Listener {
    @EventHandler
    public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
       Player player = event.getPlayer();
+      this.plugin.refreshMenuPlayerVisibility();
       if (this.plugin.isMenuTransitionActive(player)) {
          return;
       }

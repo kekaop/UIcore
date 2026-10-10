@@ -1,5 +1,9 @@
 # Entry point: /uicore run demo_main. No resource pack or optional plugin required.
 demo_main:
+  hide-menu-for-other-player: true
+  hide-player-for-other-player: true
+  hide-other-players: false
+  can-damaged: false
   permission: ""
   camera-position: { type: player, distance: 1.5 }
   npc: { enabled: false }

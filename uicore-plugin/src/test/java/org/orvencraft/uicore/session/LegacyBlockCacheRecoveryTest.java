@@ -69,6 +69,71 @@ class LegacyBlockCacheRecoveryTest {
       return new LegacyBlockCacheRecovery(lookup, value -> value != null && value.matches("[a-z_]+") ? value : null, warnings::add);
    }
 
+   @Test
+   void waitsForAllRegionsThenPersistsOnceOffTheRegion() throws Exception {
+      Path journal = journal("regions.yml", "0,64,0", "world", "stone", "48,64,0", "world", "dirt", "96,64,0", "world", "stone");
+      FakeLookup lookup = new FakeLookup();
+      FakeBlock first = lookup.add("world", 0, 64, 0, "air", true);
+      FakeBlock second = lookup.add("world", 48, 64, 0, "air", true);
+      lookup.add("world", 96, 64, 0, "diamond_block", false);
+      Map<Integer, Runnable> regions = new HashMap<>();
+      List<Runnable> persistence = new java.util.ArrayList<>();
+      ThreadLocal<Integer> owner = new ThreadLocal<>();
+      var recovery = new LegacyBlockCacheRecovery((world, x, y, z) -> {
+         assertEquals(x, owner.get(), "Block lookup must happen inside its region callback");
+         return lookup.find(world, x, y, z);
+      }, value -> value, ignored -> { }, (world, x, z, work) -> {
+         var complete = new java.util.concurrent.CompletableFuture<Void>();
+         regions.put(x, () -> {
+            owner.set(x);
+            try { work.run(); complete.complete(null); }
+            finally { owner.remove(); }
+         });
+         return complete;
+      }, work -> persistence.add(() -> { assertEquals(null, owner.get()); work.run(); }));
+
+      var result = recovery.recoverAllAsync(temporaryDirectory);
+      assertEquals("air", first.data);
+      assertTrue(persistence.isEmpty());
+      regions.get(48).run();
+      regions.get(0).run();
+      assertEquals("stone", first.data);
+      assertEquals("dirt", second.data);
+      assertFalse(result.isDone());
+      assertTrue(YamlConfiguration.loadConfiguration(journal.toFile()).contains("0,64,0"));
+      regions.get(96).run();
+      assertEquals(1, persistence.size());
+      persistence.get(0).run();
+      assertEquals(2, result.join().restored());
+      assertEquals(1, result.join().conflicts());
+      var remaining = YamlConfiguration.loadConfiguration(journal.toFile());
+      assertEquals(java.util.Set.of("96,64,0"), remaining.getKeys(false));
+   }
+
+   @Test
+   void lookupReadWriteAndSchedulingFailuresKeepEntriesAndAllowOtherRegionsToFinish() throws Exception {
+      Path journal = journal("failure.yml", "0,64,0", "world", "stone", "16,64,0", "world", "stone",
+         "32,64,0", "world", "stone", "48,64,0", "world", "stone", "64,64,0", "world", "stone");
+      var recovery = new LegacyBlockCacheRecovery((world, x, y, z) -> {
+         if (x == 0) throw new IllegalStateException("lookup failed");
+         return new LegacyBlockCacheRecovery.BlockAccess() {
+            public boolean isAir() { return true; }
+            public String blockData() { if (x == 16) throw new IllegalStateException("read failed"); return "air"; }
+            public void setBlockData(String data) { if (x == 32) throw new IllegalStateException("write failed"); }
+         };
+      }, value -> value, ignored -> { }, (world, x, z, work) -> {
+         if (x == 48) return java.util.concurrent.CompletableFuture.failedFuture(new IllegalStateException("region unavailable"));
+         work.run();
+         return java.util.concurrent.CompletableFuture.completedFuture(null);
+      }, Runnable::run);
+
+      var result = recovery.recoverAllAsync(temporaryDirectory).join();
+      assertEquals(4, result.unresolved());
+      assertEquals(1, result.restored());
+      var remaining = YamlConfiguration.loadConfiguration(journal.toFile());
+      assertEquals(java.util.Set.of("0,64,0", "16,64,0", "32,64,0", "48,64,0"), remaining.getKeys(false));
+   }
+
    private Path journal(String name, String... values) throws Exception {
       Path directory = Files.createDirectories(temporaryDirectory.resolve("blockcache"));
       YamlConfiguration yaml = new YamlConfiguration();
@@ -79,6 +144,25 @@ class LegacyBlockCacheRecoveryTest {
       Path journal = directory.resolve(name);
       yaml.save(journal.toFile());
       return journal;
+   }
+
+   @Test
+   void retainsJournalWhenPersistenceIsRejectedAndRetryIsIdempotent() throws Exception {
+      Path journal = journal("retry.yml", "0,64,0", "world", "stone");
+      String original = Files.readString(journal);
+      FakeLookup lookup = new FakeLookup();
+      FakeBlock block = lookup.add("world", 0, 64, 0, "air", true);
+      LegacyBlockCacheRecovery recovery = new LegacyBlockCacheRecovery(lookup, value -> value, ignored -> { },
+         (world, x, z, work) -> { work.run(); return java.util.concurrent.CompletableFuture.completedFuture(null); },
+         work -> { throw new java.util.concurrent.RejectedExecutionException("plugin disabled"); });
+      org.junit.jupiter.api.Assertions.assertThrows(java.util.concurrent.CompletionException.class,
+         () -> recovery.recoverAllAsync(temporaryDirectory).join());
+      assertEquals("stone", block.data);
+      assertEquals(original, Files.readString(journal));
+      LegacyBlockCacheRecovery.RecoveryResult retry = recovery(lookup, new java.util.ArrayList<>()).recoverAll(temporaryDirectory);
+      assertEquals(0, retry.restored());
+      assertEquals(1, retry.alreadyRestored());
+      assertFalse(Files.exists(journal));
    }
 
    private static final class FakeLookup implements LegacyBlockCacheRecovery.BlockLookup {

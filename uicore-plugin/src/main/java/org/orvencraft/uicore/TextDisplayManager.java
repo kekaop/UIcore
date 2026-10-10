@@ -208,7 +208,7 @@ public class TextDisplayManager {
          if (!group.isActive()) {
             return;
          }
-         TextDisplay display = world.spawn(location, TextDisplay.class);
+         TextDisplay display = world.spawn(location, TextDisplay.class, created -> created.setVisibleByDefault(false));
          ActiveTextDisplay entry = new ActiveTextDisplay(display, location.clone(), index);
          if (!group.addDisplay(entry)) {
             display.remove();
@@ -230,7 +230,7 @@ public class TextDisplayManager {
             display.setDefaultBackground(false);
             display.setShadowed(true);
             display.setBillboard(Billboard.CENTER);
-            display.setVisibleByDefault(false);
+            UIcorePlugin.plugin.configureMenuEntityVisibility(player, display);
             display.setInterpolationDuration(2);
             Transformation oldTransformation = display.getTransformation();
             display.setTransformation(new Transformation(

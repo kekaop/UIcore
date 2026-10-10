@@ -217,6 +217,7 @@ public class UIcorePlugin extends JavaPlugin {
    private final Map<UUID, Long> playerMenuTicks = new ConcurrentHashMap<>();
    private final Map<UUID, space.arim.morepaperlib.scheduling.ScheduledTask> menuTickTasks = new ConcurrentHashMap<>();
    private final Map<UUID, MenuSession> menuSessions = new ConcurrentHashMap<>();
+   private org.orvencraft.uicore.session.MenuVisibilityManager menuVisibility;
    private final Map<UUID, java.util.concurrent.CompletableFuture<Boolean>> closingSessions = new ConcurrentHashMap<>();
    private final Set<UUID> recoveringSessions = ConcurrentHashMap.newKeySet();
    private final Map<UUID, Long> sessionGenerations = new ConcurrentHashMap<>();
@@ -569,11 +570,12 @@ public class UIcorePlugin extends JavaPlugin {
    public Map<String, MenuLayout> getLayoutsForPlayer(Player player, String menuKey, Section section) {
       LinkedHashMap<String, MenuLayout> layouts = new LinkedHashMap<>();
       if (section != null) {
-         layouts.putAll(section.layouts);
-         for (MenuSlot slot : section.slots.values()) {
-            String templateId = this.resolveMenuSlotTemplate(player, menuKey, section, slot);
+         Section.Definition definition = section.definition();
+         layouts.putAll(definition.layouts());
+         for (MenuSlot slot : definition.slots().values()) {
+            String templateId = this.resolveMenuSlotTemplate(player, menuKey, definition, slot);
             if (!templateId.isEmpty()) {
-               MenuLayout materialized = section.materializeSlot(menuKey, slot.id(), templateId);
+               MenuLayout materialized = section.materializeSlot(menuKey, slot.id(), templateId, definition);
                if (materialized != null) {
                   layouts.put(slot.id(), materialized);
                }
@@ -679,11 +681,13 @@ public class UIcorePlugin extends JavaPlugin {
          return "";
       }
 
-      MenuSlot slot = section.slots.get(slotId);
-      return slot == null ? "" : this.resolveMenuSlotTemplate(player, menuKey, section, slot);
+      Section.Definition definition = section.definition();
+      MenuSlot slot = definition.slots().get(slotId);
+      return slot == null ? "" : this.resolveMenuSlotTemplate(player, menuKey, definition, slot);
    }
 
-   private String resolveMenuSlotTemplate(Player player, String menuKey, Section section, MenuSlot slot) {
+   private String resolveMenuSlotTemplate(Player player, String menuKey, Section.Definition definition, MenuSlot slot) {
+      if (slot == null) return "";
       String selected = null;
       boolean explicitlyAssigned = false;
       if (player != null) {
@@ -708,11 +712,11 @@ public class UIcorePlugin extends JavaPlugin {
       }
 
       String resolved = explicitlyAssigned ? selected.trim() : this.resolveSlotExpression(player, menuKey, slot.content());
-      if (section.hasTemplate(resolved)) {
+      if (definition.templates().containsKey(resolved)) {
          return resolved;
       }
 
-      return section.hasTemplate(slot.fallback()) ? slot.fallback() : "";
+      return definition.templates().containsKey(slot.fallback()) ? slot.fallback() : "";
    }
 
    private String resolveSlotExpression(Player player, String menuKey, String expression) {
@@ -1135,19 +1139,20 @@ public class UIcorePlugin extends JavaPlugin {
       Map<String, String> states = this.playerElementStates
          .computeIfAbsent(player.getUniqueId(), ignored -> new ConcurrentHashMap<>())
          .computeIfAbsent(menuKey, ignored -> new ConcurrentHashMap<>());
+      Section.Definition definition = section.definition();
       boolean changed = false;
       for (Map.Entry<String, String> change : changes.entrySet()) {
          String elementId = change.getKey();
          String state = change.getValue();
-         MenuLayout target = section.layouts.get(elementId);
+         MenuLayout target = definition.layouts().get(elementId);
          if (target == null) {
             Map<String, Map<String, MenuLayout>> byMenu = this.playerMenuLayoutOverrides.get(player.getUniqueId());
             Map<String, MenuLayout> overrides = byMenu == null ? null : byMenu.get(menuKey);
             target = overrides == null ? null : overrides.get(elementId);
          }
-         if (target == null && section.hasSlot(elementId)) {
-            String templateId = this.resolveMenuSlotTemplate(player, menuKey, section, section.slots.get(elementId));
-            target = section.materializeSlot(menuKey, elementId, templateId);
+         if (target == null && definition.slots().containsKey(elementId)) {
+            String templateId = this.resolveMenuSlotTemplate(player, menuKey, definition, definition.slots().get(elementId));
+            target = section.materializeSlot(menuKey, elementId, templateId, definition);
          }
          if (target == null || !target.hasElementState(state)) {
             this.getLogger().warning("Unknown element state " + menuKey + ":" + elementId + "=" + state);
@@ -1168,6 +1173,32 @@ public class UIcorePlugin extends JavaPlugin {
       } else {
          entity.teleport(target);
       }
+   }
+
+   public boolean isMenuHiddenFromOtherPlayers(Player player) {
+      return this.menuVisibility == null || this.menuVisibility.settings(player.getUniqueId()).hideMenuForOtherPlayer();
+   }
+
+   public boolean blocksIncomingPlayerDamage(Player player) {
+      return this.menuVisibility != null && this.menuVisibility.blocksPlayerDamage(player.getUniqueId());
+   }
+
+   public void refreshMenuPlayerVisibility() {
+      if (this.menuVisibility != null) this.menuVisibility.refresh();
+   }
+
+   /** Called on the menu entity's owning region, including configured temporary text. */
+   public void configureMenuEntityVisibility(Player owner, Entity entity) {
+      entity.setVisibleByDefault(!this.isMenuHiddenFromOtherPlayers(owner));
+   }
+
+   private void applyMenuPrivacy(Player player, Section section) {
+      if (this.menuVisibility == null) return;
+      this.menuVisibility.open(player, section.privacy);
+      ItemDisplay cursor = this.playerItemDisplays.get(player);
+      if (cursor != null) org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, cursor, () -> {
+         if (cursor.isValid()) this.configureMenuEntityVisibility(player, cursor);
+      });
    }
 
    private void showMenuDisplay(Player player, Display display, MenuLayout layout) {
@@ -1216,6 +1247,7 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private void showDisplayToPlayer(Player player, Display display) {
+      this.configureMenuEntityVisibility(player, display);
       foliaLib.scheduling().entitySpecificScheduler(player).run(() -> {
          if (player.isOnline() && display.isValid()) player.showEntity(this, display);
       }, null);
@@ -1653,7 +1685,11 @@ public class UIcorePlugin extends JavaPlugin {
 
       this.reloadLangConfig();
       this.loadConfig();
-      org.orvencraft.uicore.session.LegacyBlockCacheRecovery.recoverAll(this.getDataFolder());
+      this.menuVisibility = new org.orvencraft.uicore.session.MenuVisibilityManager(this, Bukkit::getOnlinePlayers,
+         (viewer, work) -> org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, viewer, work));
+      org.orvencraft.uicore.session.LegacyBlockCacheRecovery.recoverAll(this).whenComplete((result, failure) -> {
+         if (failure != null) this.getLogger().warning("Legacy blockcache recovery incomplete; journals retained: " + failure.getMessage());
+      });
       this.purgeOrphanedMenuEntities();
       this.menuApi = new UIcoreApiImpl(this);
       this.extensionManager = new ExtensionManager(this);
@@ -1783,6 +1819,7 @@ public class UIcorePlugin extends JavaPlugin {
             this.getLogger().warning("Some player sessions could not close before disable; recovery journals will be used on their next login: " + exception.getMessage());
          }
       }
+      if (this.menuVisibility != null) this.menuVisibility.shutdown();
       if (this.menuApi != null) {
          Bukkit.getServicesManager().unregister(UIcoreApi.class, this.menuApi);
       }
@@ -2010,6 +2047,7 @@ public class UIcorePlugin extends JavaPlugin {
             if (var9 && var7 != null && this.menuSessions.get(var1.getUniqueId()).stage() == MenuSession.Stage.ACTIVE && !this.isMenuTransitionActive(var1) && this.isSameLocation(var7, var4)) {
                this.activeMenuTransitions.remove(var1.getUniqueId());
                this.playerRuntimeSections.put(var1, var4);
+               this.applyMenuPrivacy(var1, var4);
                if (var5 != null && !var5.equals(var2)) {
                   long eventGeneration = this.getMenuSessionGeneration(var1);
                   Bukkit.getPluginManager().callEvent(new MenuSwitchEvent(var1, var5, var2));
@@ -2034,6 +2072,7 @@ public class UIcorePlugin extends JavaPlugin {
          this.activeMenuTransitions.put(var1.getUniqueId(), menuTransitionToken);
          this.currentPlayerMenus.put(var1, var2);
          this.playerRuntimeSections.put(var1, var4);
+         this.applyMenuPrivacy(var1, var4);
          if (previousMenuForEvent != null && !previousMenuForEvent.equals(var2)) {
             this.getLogger().info("Switching " + var1.getName() + " from menu '" + previousMenuForEvent + "' to '" + var2 + "'.");
          }
@@ -2168,7 +2207,7 @@ public class UIcorePlugin extends JavaPlugin {
                                  continue;
                               }
 
-                              TextDisplay var22 = this.tagMenuEntity((TextDisplay)var16.spawn(var21, TextDisplay.class));
+                              TextDisplay var22 = this.tagMenuEntity((TextDisplay)var16.spawn(var21, TextDisplay.class, created -> created.setVisibleByDefault(false)));
                               var17x.add(var22);
                               String var23 = var19.renderStyledName(var1, false, false);
                               if (var19.isTypewriterEnabled()) {
@@ -2236,7 +2275,6 @@ public class UIcorePlugin extends JavaPlugin {
                               var29,
                               menuItemDisplays
                            );
-                           var1.setInvisible(true);
                            var1.setCollidable(false);
                            if (!playerSeat.addPassenger(var1)) {
                               this.cleanupMenuViewSnapshot(var1, newViewSnapshot);
@@ -2336,6 +2374,7 @@ public class UIcorePlugin extends JavaPlugin {
       this.stopMenuTick(player);
       this.clearDragCapture(player);
       String closingMenu = this.currentPlayerMenus.remove(player);
+      if (this.menuVisibility != null) this.closeSessionStep(() -> this.menuVisibility.close(player));
       if (session == null && closingMenu == null) {
          this.clearPlayerSessionReferences(player);
          completion.complete(true);
@@ -2457,6 +2496,7 @@ public class UIcorePlugin extends JavaPlugin {
 
    private ArmorStand spawnCursorArmorStand(Location var1) {
       ArmorStand var2 = this.tagMenuEntity((ArmorStand)var1.getWorld().spawn(var1, ArmorStand.class));
+      var2.setVisibleByDefault(false);
       var2.setGravity(false);
       var2.setVisible(false);
       var2.setMarker(true);
@@ -2478,7 +2518,7 @@ public class UIcorePlugin extends JavaPlugin {
 
    private TextDisplay spawnCursorTextDisplay(Player var1, Location var2, String var3, String var4, String var5, double var6, double var8, double var10) {
       Location var12 = var2.clone().add(var6, var8, var10);
-      TextDisplay var13 = this.tagMenuEntity((TextDisplay)var2.getWorld().spawn(var12, TextDisplay.class));
+      TextDisplay var13 = this.tagMenuEntity((TextDisplay)var2.getWorld().spawn(var12, TextDisplay.class, created -> created.setVisibleByDefault(false)));
       var13.setCustomName(var3 + ":" + var4);
       var13.setCustomNameVisible(false);
       var13.setText(var5);
@@ -2486,12 +2526,13 @@ public class UIcorePlugin extends JavaPlugin {
       var13.setDefaultBackground(false);
       var13.setBillboard(Billboard.CENTER);
       var13.setVisibleByDefault(false);
+      this.configureMenuEntityVisibility(var1, var13);
       var1.showEntity(this, var13);
       return var13;
    }
 
    private ItemDisplay spawnCursorItemDisplay(Player var1, Location var2) {
-      ItemDisplay var3 = this.tagMenuEntity((ItemDisplay)var2.getWorld().spawn(var2, ItemDisplay.class));
+      ItemDisplay var3 = this.tagMenuEntity((ItemDisplay)var2.getWorld().spawn(var2, ItemDisplay.class, created -> created.setVisibleByDefault(false)));
       ItemStack var4 = new ItemStack(Material.valueOf(cursorItem));
       ItemMeta var5 = var4.getItemMeta();
       var5.setCustomModelData(cursorModelData);
@@ -2508,6 +2549,7 @@ public class UIcorePlugin extends JavaPlugin {
          var6.getRightRotation()
       );
       var3.setTransformation(var7);
+      this.configureMenuEntityVisibility(var1, var3);
       var1.showEntity(this, var3);
       this.setTeleportDurationSafe(var3, 2);
       return var3;
@@ -2525,7 +2567,7 @@ public class UIcorePlugin extends JavaPlugin {
          }
       }
 
-      ItemDisplay display = this.tagMenuEntity((ItemDisplay)world.spawn(spawnLocation, ItemDisplay.class));
+      ItemDisplay display = this.tagMenuEntity((ItemDisplay)world.spawn(spawnLocation, ItemDisplay.class, created -> created.setVisibleByDefault(false)));
       display.setCustomName(menuKey + ":" + layout.key + ":item");
       display.setCustomNameVisible(false);
       display.setItemStack(stack);
@@ -2585,7 +2627,7 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private TextDisplay spawnMenuItemHitbox(Player player, World world, Location loc, String menuKey, MenuLayout layout) {
-      TextDisplay hitbox = this.tagMenuEntity((TextDisplay)world.spawn(loc, TextDisplay.class));
+      TextDisplay hitbox = this.tagMenuEntity((TextDisplay)world.spawn(loc, TextDisplay.class, created -> created.setVisibleByDefault(false)));
       hitbox.setCustomName(menuKey + ":" + layout.key);
       hitbox.setCustomNameVisible(false);
       hitbox.setText(layout.getHitboxText());
@@ -2775,7 +2817,7 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private TextDisplay spawnMenuTextDisplay(Player player, World world, Location location, String menuKey, MenuLayout layout) {
-      TextDisplay display = this.tagMenuEntity((TextDisplay)world.spawn(location, TextDisplay.class));
+      TextDisplay display = this.tagMenuEntity((TextDisplay)world.spawn(location, TextDisplay.class, created -> created.setVisibleByDefault(false)));
       display.setCustomName(menuKey + ":" + layout.key);
       display.setCustomNameVisible(false);
       display.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
@@ -3503,8 +3545,20 @@ public class UIcorePlugin extends JavaPlugin {
    private void refreshMenuContent(Player var1, String var2, String var3) {
       this.endDrag(var1);
       this.currentPlayerMenus.put(var1, var2);
+      Section privacySection = this.getRuntimeSection(var1, var2);
+      if (privacySection != null) this.applyMenuPrivacy(var1, privacySection);
       if (Objects.equals(var2, var3)) {
          this.reconcileMenuContent(var1, var2);
+         for (Entity display : new ArrayList<>(this.playerDisplays.getOrDefault(var1, List.of()))) {
+            org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, display, () -> {
+               if (display.isValid()) this.configureMenuEntityVisibility(var1, display);
+            });
+         }
+         for (Entity display : new ArrayList<>(this.playerMenuItemDisplays.getOrDefault(var1, List.of()))) {
+            org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, display, () -> {
+               if (display.isValid()) this.configureMenuEntityVisibility(var1, display);
+            });
+         }
          return;
       }
       Section var25 = this.getRuntimeSection(var1, var2);
@@ -3550,7 +3604,7 @@ public class UIcorePlugin extends JavaPlugin {
                   continue;
                }
 
-               TextDisplay var17 = this.tagMenuEntity((TextDisplay)var8.spawn(var16, TextDisplay.class));
+               TextDisplay var17 = this.tagMenuEntity((TextDisplay)var8.spawn(var16, TextDisplay.class, created -> created.setVisibleByDefault(false)));
                var7.add(var17);
                String var18 = var14.renderStyledName(var1, false, false);
                String var19 = var18;
@@ -4224,6 +4278,7 @@ public class UIcorePlugin extends JavaPlugin {
       @EventHandler
       public void onPlayerJoin(PlayerJoinEvent var1) {
          Player var2 = var1.getPlayer();
+         if (UIcorePlugin.this.menuVisibility != null) UIcorePlugin.this.menuVisibility.joined(var2);
          if (UIcorePlugin.joinRunBool) {
             long var3 = UIcorePlugin.runDelay * 20L;
             UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(var2).runDelayed(var2x -> {
@@ -4252,6 +4307,7 @@ public class UIcorePlugin extends JavaPlugin {
       )
       public void onQuit(PlayerQuitEvent var1) {
          this.cleanup(var1.getPlayer());
+         if (UIcorePlugin.this.menuVisibility != null) UIcorePlugin.this.menuVisibility.quit(var1.getPlayer());
       }
 
       @EventHandler(
