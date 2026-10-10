@@ -79,13 +79,17 @@ The gallery selectors require `uicore.slot` (granted to OP players by default). 
 
 ## Showcase videos
 
-Replace each `VIDEO_*_URL` marker with the final public video link after uploading it.
+### Custom server menu
 
-| Video                                          | Link                     |
-| ---------------------------------------------- | ------------------------ |
-| Interactions: hover, click, toggles, and input | `VIDEO_INTERACTIONS_URL` |
-| Gallery: items, avatars, and template slots    | `VIDEO_GALLERY_URL`      |
-| States and permission controls                 | `VIDEO_STATES_URL`       |
+An example of a server interface built with UIcore: a player profile, world selection, friends, and settings, connected through menu navigation.
+
+https://github.com/user-attachments/assets/50bd8035-eb6a-4ecd-9941-b3f17b2cd196
+
+### Bundled demo menus
+
+A walkthrough of `demo_main`, `demo_states`, and `demo_gallery`: hover feedback, chat input, toggles, element states, item displays, avatars, and template selection.
+
+https://github.com/user-attachments/assets/60c09f38-9699-4fa7-9ec8-5ccf51af7e2b
 
 [Recording notes](showcase/videos/README.md) stay outside the plugin JAR. The three demo menus are also the plugin's default examples and are installed on a fresh server.
 

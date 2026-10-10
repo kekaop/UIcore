@@ -45,6 +45,22 @@ PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault и LuckPerms под
 
 Ресурс-пак и дополнительные плагины не нужны. Для кнопок выбора в галерее требуется `uicore.slot`; OP получает это право по умолчанию. [Инструкция и сценарий демонстрации](showcase/README_RU.md) · [English](showcase/README.md).
 
+## Видео
+
+### Пример меню сервера
+
+Интерфейс сервера на UIcore: профиль игрока, выбор миров, друзья и настройки с переходами между меню.
+
+https://github.com/user-attachments/assets/50bd8035-eb6a-4ecd-9941-b3f17b2cd196
+
+### Демонстрационные меню плагина
+
+Обзор `demo_main`, `demo_states` и `demo_gallery`: эффекты наведения, ввод через чат, переключатели, состояния элементов, предметы, аватары и выбор шаблонов.
+
+https://github.com/user-attachments/assets/60c09f38-9699-4fa7-9ec8-5ccf51af7e2b
+
+[Инструкция для записи новых роликов](showcase/videos/README_RU.md). Видео находятся вне JAR плагина.
+
 ## Документация
 
 - [Английский индекс документации](docs/README.md)
