@@ -65,6 +65,7 @@ https://github.com/user-attachments/assets/60c09f38-9699-4fa7-9ec8-5ccf51af7e2b
 
 ## Документация
 
+- [GitHub Wiki](https://github.com/kekaop/UIcore/wiki) · [Главная страница на русском](https://github.com/kekaop/UIcore/wiki/Home-RU)
 - [Английский индекс документации](docs/README.md)
 - [Справочник автора меню](docs/MENU_AUTHORING_GUIDE_RU.md) · [English](docs/MENU_AUTHORING_GUIDE.md)
 - [API расширений](docs/EXTENSION_API_RU.md) · [English](docs/EXTENSION_API.md)

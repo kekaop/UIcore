@@ -59,6 +59,7 @@ The build produces:
 
 English is the primary documentation language. Each translated page links to its Russian counterpart.
 
+- [GitHub Wiki](https://github.com/kekaop/UIcore/wiki) · [Русская главная страница](https://github.com/kekaop/UIcore/wiki/Home-RU)
 - [Documentation index](docs/README.md)
 - [Menu authoring guide](docs/MENU_AUTHORING_GUIDE.md) · [Русская версия](docs/MENU_AUTHORING_GUIDE_RU.md)
 - [Extension API](docs/EXTENSION_API.md) · [Русская версия](docs/EXTENSION_API_RU.md)
