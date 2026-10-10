@@ -6,7 +6,7 @@ on:
       release_tag:
         description: Git tag containing the API release
         required: true
-        default: api-v1.0.0
+        default: api-v1.0.0-r2
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   stage-api:
-    if: inputs.release_tag == 'api-v1.0.0'
+    if: inputs.release_tag == 'api-v1.0.0-r2'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git tag --points-at HEAD | grep -Fx 'api-v1.0.0'
+          git tag --points-at HEAD | grep -Fx 'api-v1.0.0-r2'
           mvn --version | grep -F 'Apache Maven 3.9.16'
           version="$(mvn -q -ntp -pl uicore-api help:evaluate -Dexpression=project.version -DforceStdout)"
           group="$(mvn -q -ntp -pl uicore-api help:evaluate -Dexpression=project.groupId -DforceStdout)"
@@ -89,10 +89,10 @@ jobs:
             --armor --detach-sign --output "$RUNNER_TEMP/uicore-signing-check.asc" README.md
           gpg --batch --verify "$RUNNER_TEMP/uicore-signing-check.asc" README.md
 
-      - name: Build and sign parent POM and API artifacts
+      - name: Build and sign standalone API artifacts
         env:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: mvn -B -ntp -Pcentral-release -pl uicore-api -am verify -DskipTests
+        run: mvn -B -ntp -Pcentral-release,paper-build -pl uicore-api -am verify -DskipTests
 
       - name: Inspect artifacts and signatures
         run: python3 scripts/check-central-artifacts.py --require-signatures
@@ -102,4 +102,4 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-        run: mvn -B -ntp -Pcentral-release -pl uicore-api -am deploy -DskipTests
+        run: mvn -B -ntp -Pcentral-release,paper-build -pl uicore-api -am deploy -DskipTests

@@ -1,4 +1,4 @@
-"""Check the two Maven components prepared for Central without uploading them."""
+"""Check the standalone API component prepared for Central without uploading it."""
 
 import argparse
 from pathlib import Path
@@ -24,26 +24,22 @@ def element_text(project, path):
     return node.text.strip() if node is not None and node.text else None
 
 
-def check_pom(path, artifact):
+def check_pom(path):
     project = ET.parse(path).getroot()
-    require(element_text(project, "m:artifactId") == artifact, f"Wrong artifactId: {path}")
+    require(element_text(project, "m:artifactId") == "uicore-api", "Wrong API artifactId")
+    require(element_text(project, "m:groupId") == GROUP, "Wrong API groupId")
+    require(element_text(project, "m:version") == VERSION, "Wrong API version")
     require(element_text(project, "m:description"), f"Missing description: {path}")
-    if artifact == "uicore-parent":
-        require(element_text(project, "m:groupId") == GROUP, "Wrong parent groupId")
-        require(element_text(project, "m:version") == VERSION, "Wrong parent version")
-        require(element_text(project, "m:packaging") == "pom", "Parent must have pom packaging")
-        require(element_text(project, "m:url"), "Missing project URL")
-        require(project.find("m:licenses/m:license", NS) is not None, "Missing license")
-        require(len(project.findall("m:developers/m:developer", NS)) >= 2, "Missing developers")
-        require(element_text(project, "m:scm/m:connection"), "Missing SCM connection")
-    else:
-        require(element_text(project, "m:parent/m:groupId") == GROUP, "Wrong API parent groupId")
-        require(element_text(project, "m:parent/m:artifactId") == "uicore-parent", "Wrong API parent")
-        require(element_text(project, "m:parent/m:version") == VERSION, "Wrong API parent version")
-        require(element_text(project, "m:packaging") == "jar", "API must have jar packaging")
-        paper = next((dep for dep in project.findall("m:dependencies/m:dependency", NS)
-                      if element_text(dep, "m:artifactId") == "paper-api"), None)
-        require(paper is not None, "Paper API dependency missing")
+    require(element_text(project, "m:packaging") in (None, "jar"), "API must have jar packaging")
+    require(element_text(project, "m:url") == "https://github.com/kekaop/UIcore", "Wrong project URL")
+    require(project.find("m:licenses/m:license", NS) is not None, "Missing license")
+    require(len(project.findall("m:developers/m:developer", NS)) >= 2, "Missing developers")
+    require(element_text(project, "m:scm/m:connection") ==
+            "scm:git:https://github.com/kekaop/UIcore.git", "Wrong SCM connection")
+    require(project.find("m:parent", NS) is None, "Published API POM must be standalone")
+    require(project.find("m:dependencies", NS) is None, "Published API POM has dependencies")
+    require(project.find("m:profiles", NS) is None, "Published API POM has build profiles")
+    require("SNAPSHOT" not in path.read_text(encoding="utf-8"), "Published API POM has snapshot coordinates")
 
 
 def check_signature(path, signature):
@@ -56,15 +52,14 @@ def main():
     parser.add_argument("--require-signatures", action="store_true")
     args = parser.parse_args()
 
-    parent_pom = ROOT / "pom.xml"
-    api_pom = ROOT / "uicore-api" / "pom.xml"
+    api_pom = ROOT / "uicore-api" / ".flattened-pom.xml"
     target = ROOT / "uicore-api" / "target"
     main_jar = target / f"uicore-api-{VERSION}.jar"
     sources_jar = target / f"uicore-api-{VERSION}-sources.jar"
     javadoc_jar = target / f"uicore-api-{VERSION}-javadoc.jar"
 
-    check_pom(parent_pom, "uicore-parent")
-    check_pom(api_pom, "uicore-api")
+    require(api_pom.is_file(), "Flattened API POM is missing; run central-release profile")
+    check_pom(api_pom)
     for path in (main_jar, sources_jar, javadoc_jar):
         require(path.is_file() and path.stat().st_size > 0, f"Missing or empty artifact: {path}")
 
@@ -82,11 +77,10 @@ def main():
         require("index.html" in jar.namelist(), "Javadoc index is absent")
 
     if args.require_signatures:
-        check_signature(parent_pom, ROOT / "target" / f"uicore-parent-{VERSION}.pom.asc")
         check_signature(api_pom, target / f"uicore-api-{VERSION}.pom.asc")
         for path in (main_jar, sources_jar, javadoc_jar):
             check_signature(path, Path(f"{path}.asc"))
-    print("Parent POM, API POM, Java 17 JAR, sources, Javadoc"
+    print("Standalone API POM, Java 17 JAR, sources, Javadoc"
           + (", and GPG signatures" if args.require_signatures else "") + " verified.")
 
 

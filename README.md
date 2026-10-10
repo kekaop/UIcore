@@ -51,6 +51,8 @@ The API is being prepared for Maven Central and is not published there yet. Unti
 release is confirmed, build this repository and install the API locally. The server
 must also run the matching UIcore plugin; `provided` keeps its API classes out of your
 plugin JAR. See the [publishing guide](docs/MAVEN_CENTRAL_PUBLISHING.md).
+Declare the Paper API dependency and Paper repository in your plugin build when
+compiling against UIcore's Paper types.
 
 ## Runtime requirements
 

@@ -23,6 +23,7 @@ release/morepaperlib-source/target/
 release/out/
 __pycache__/
 *.pyc
+.flattened-pom.xml
 
 # Local server runtime state.
 /server-data-current/

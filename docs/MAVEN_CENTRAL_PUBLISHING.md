@@ -1,14 +1,16 @@
 # Публикация UIcore API в Maven Central
 
 Этот документ предназначен владельцу репозитория. Подготовленная конфигурация
-выпускает **два** компонента версии `1.0.0`: `uicore-parent` (POM) и `uicore-api`
-(JAR, sources и Javadoc). API ссылается на parent POM, поэтому оба компонента
-должны попасть в один выпуск. `uicore-plugin` и `uicore-example-extension` не
-публикуются. Java package names остаются `org.orvencraft.uicore`.
+выпускает **один** компонент версии `1.0.0`: `uicore-api` (JAR, sources и Javadoc).
+Для публикации создаётся отдельный POM с полными метаданными и без ссылки на
+`uicore-parent`, поэтому потребителю достаточно одного компонента.
+`uicore-parent`, `uicore-plugin` и `uicore-example-extension` не публикуются.
+Java package names остаются `org.orvencraft.uicore`.
 
-Пока выпуск не подтверждён в Central Portal, этих компонентов в Maven Central нет.
-Обычный `mvn clean verify` не публикует ничего. Профиль `central-release` создаёт
-подписи и подключает официальный `central-publishing-maven-plugin` версии `0.11.0`.
+Пока выпуск не подтверждён в Central Portal, этого компонента в Maven Central нет.
+Обычный `mvn clean verify` не публикует ничего. Профили `central-release,paper-build`
+создают потребительский POM и подписи и подключают официальный
+`central-publishing-maven-plugin` версии `0.11.0`.
 Плагин формирует контрольные суммы. `autoPublish=false` оставляет окончательное
 решение о публикации владельцу в Central Portal.
 
@@ -68,7 +70,7 @@ metadata-файлы при работе `central-publishing-maven-plugin:0.11.0`
 
 ```bash
 mvn -B -ntp clean verify
-mvn -B -ntp -Pcentral-release -pl uicore-api -am verify -Dgpg.skip=true
+mvn -B -ntp -Pcentral-release,paper-build -pl uicore-api -am verify -Dgpg.skip=true
 python3 scripts/check-central-artifacts.py
 ```
 
@@ -78,28 +80,29 @@ python3 scripts/check-central-artifacts.py
 разрешение опубликованной зависимости окончательно проверяются только с настоящими
 ключом, токеном и доступом к Portal.
 
-В API POM указана `paper-api:1.21.1-R0.1-SNAPSHOT` с `provided` scope. Она
-получается из репозитория Paper, объявленного в parent POM. Это не транзитивная
-runtime-зависимость другого плагина, но компилирующему расширение проекту тоже
-потребуется репозиторий Paper. После загрузки обязательно проверьте результат
-валидации Portal и соберите внешний проект с опубликованными POM и JAR.
+В исходном API POM профиль `paper-build` подключает
+`paper-api:1.21.1-R0.1-SNAPSHOT` для компиляции. Публикуемый POM не содержит
+snapshot-зависимостей и ссылки на parent. Компилирующему расширение проекту
+нужно самому объявить `paper-api` с `provided` scope и репозиторий Paper.
+После загрузки обязательно проверьте результат валидации Portal и соберите
+внешний проект с опубликованными POM и JAR.
 
 ## 4. Запустите выпуск по тегу вручную
 
-Тег `v1.0.0` уже занят существующим GitHub-релизом плагина и указывает на более
-ранний коммит. После проверки и отдельного решения о выпуске API создайте
-отдельный тег `api-v1.0.0` **на проверенном коммите**, затем отправьте его:
+Тег `v1.0.0` уже занят существующим GitHub-релизом плагина. Тег `api-v1.0.0`
+фиксирует первую попытку подготовки API, которую Portal отклонил. После проверки
+создайте тег `api-v1.0.0-r2` **на исправленном коммите**, затем отправьте его:
 
 ```bash
-git tag api-v1.0.0 <COMMIT_SHA>
-git push origin api-v1.0.0
+git tag api-v1.0.0-r2 <COMMIT_SHA>
+git push origin api-v1.0.0-r2
 ```
 
 После того как workflow окажется в default branch, запустите его из этой ветки
 через GitHub CLI. Workflow сам загрузит содержимое указанного тега:
 
 ```bash
-gh workflow run publish-api.yml --ref orven/normal-source-build -f release_tag=api-v1.0.0
+gh workflow run publish-api.yml --ref orven/normal-source-build -f release_tag=api-v1.0.0-r2
 gh run watch
 ```
 
@@ -119,9 +122,9 @@ Maven загружает bundle в Portal с ручным выпуском.
 
 ```bash
 mvn -B -ntp clean verify
-mvn -B -ntp -Pcentral-release -pl uicore-api -am verify
+mvn -B -ntp -Pcentral-release,paper-build -pl uicore-api -am verify
 python3 scripts/check-central-artifacts.py --require-signatures
-mvn -B -ntp -Pcentral-release -pl uicore-api -am deploy -DskipTests
+mvn -B -ntp -Pcentral-release,paper-build -pl uicore-api -am deploy -DskipTests
 ```
 
 Последняя команда **загружает** bundle в Portal. Не выполняйте её без разрешения
@@ -131,10 +134,10 @@ mvn -B -ntp -Pcentral-release -pl uicore-api -am deploy -DskipTests
 
 В [Central Portal Deployments](https://central.sonatype.com/publishing/deployments)
 найдите созданный deployment. Проверьте состояние **Validated**, отсутствие
-ошибок, координаты `io.github.kekaop`, версию `1.0.0` и ровно два компонента:
-`uicore-parent` и `uicore-api`. Просмотрите POM, JAR, sources, Javadoc и подписи.
+ошибок, координаты `io.github.kekaop`, версию `1.0.0` и ровно один компонент:
+`uicore-api`. Просмотрите POM, JAR, sources, Javadoc и подписи.
 После разрешения владельца нажмите **Publish** и дождитесь **Published**.
-Проверьте доступность обоих компонентов в Maven Central; она может появиться
+Проверьте доступность API в Maven Central; она может появиться
 не сразу.
 
 После подтверждённой публикации другой плагин подключает API так:
@@ -147,6 +150,12 @@ mvn -B -ntp -Pcentral-release -pl uicore-api -am deploy -DskipTests
   </repository>
 </repositories>
 <dependencies>
+  <dependency>
+    <groupId>io.papermc.paper</groupId>
+    <artifactId>paper-api</artifactId>
+    <version>1.21.1-R0.1-SNAPSHOT</version>
+    <scope>provided</scope>
+  </dependency>
   <dependency>
     <groupId>io.github.kekaop</groupId>
     <artifactId>uicore-api</artifactId>

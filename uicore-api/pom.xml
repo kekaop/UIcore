@@ -15,13 +15,12 @@
 
     <name>UIcore API</name>
     <description>Public Java API for UIcore menus and extensions on Paper and Folia.</description>
-
-    <dependencies>
-        <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
-        </dependency>
-    </dependencies>
+    <url>https://github.com/kekaop/UIcore</url>
+    <scm>
+        <connection>scm:git:https://github.com/kekaop/UIcore.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/kekaop/UIcore.git</developerConnection>
+        <url>https://github.com/kekaop/UIcore</url>
+    </scm>
 
     <build>
         <resources>
@@ -36,6 +35,18 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>paper-build</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.papermc.paper</groupId>
+                    <artifactId>paper-api</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
         <profile>
             <id>central-release</id>
             <build>

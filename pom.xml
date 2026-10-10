@@ -137,11 +137,36 @@
     </build>
 
     <profiles>
-        <!-- Only select this profile with -pl uicore-api -am: it publishes the parent POM and API. -->
+        <!-- Only select this profile with -pl uicore-api -am: it publishes the standalone API. -->
         <profile>
             <id>central-release</id>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>flatten-maven-plugin</artifactId>
+                        <version>1.8.0</version>
+                        <configuration>
+                            <flattenMode>oss</flattenMode>
+                            <updatePomFile>true</updatePomFile>
+                            <pomElements>
+                                <dependencies>remove</dependencies>
+                                <dependencyManagement>remove</dependencyManagement>
+                                <profiles>remove</profiles>
+                                <repositories>remove</repositories>
+                                <pluginRepositories>remove</pluginRepositories>
+                            </pomElements>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>flatten-release-pom</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>flatten</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
@@ -166,6 +191,7 @@
                             <autoPublish>false</autoPublish>
                             <skipPublishing>${central.skipPublishing}</skipPublishing>
                             <excludeArtifacts>
+                                <excludeArtifact>uicore-parent</excludeArtifact>
                                 <excludeArtifact>uicore-plugin</excludeArtifact>
                                 <excludeArtifact>uicore-example-extension</excludeArtifact>
                             </excludeArtifacts>
