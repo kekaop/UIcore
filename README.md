@@ -50,6 +50,8 @@ The build produces:
 - PacketEvents 2.14.0 is required.
 - PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault, and LuckPerms are optional.
 
+**Client compatibility:** NoChatReports may cause chat input to fail, including after a menu closes. See the [symptoms, cause, and workaround](docs/COMPATIBILITY.md#nochatreports-can-break-chat-input).
+
 ## Documentation
 
 English is the primary documentation language. Each translated page links to its Russian counterpart.

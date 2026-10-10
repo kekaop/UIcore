@@ -32,6 +32,8 @@ mvn clean package
 
 PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault и LuckPerms подключаются по необходимости.
 
+**Совместимость клиента:** NoChatReports может нарушать ввод через чат, в том числе после закрытия меню. [Симптомы, причина и обходное решение](docs/COMPATIBILITY_RU.md#проблемы-чата-с-nochatreports).
+
 ## Демонстрационные меню
 
 Открой `/uicore run demo_main`. Три примера входят в плагин и устанавливаются при первом запуске:
