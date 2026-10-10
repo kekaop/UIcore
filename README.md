@@ -8,7 +8,7 @@ UIcore turns the game world into a stage for menus. Text, items, buttons, input 
 
 This is the first public release of UIcore: a focused, extensible continuation of CustomScreenMenu with a proper Java API, YAML authoring, Paper/Folia support, and built-in integrations for Vault and LuckPerms.
 
-The project exists thanks to **wuhaoxian123**, the original CustomScreenMenu author. UIcore is based on the paid 1.4.8 build, with permission to publish the complete source under AGPL-3.0. See the [original plugin page](https://builtbybit.com/resources/customscreenmenu.108929/) and [LICENSE](LICENSE).
+The project exists thanks to **wuhaoxian123** (Discord: @wuhaoxian123), the original CustomScreenMenu author. UIcore is based on the paid 1.4.8 build, with permission to publish the complete source under AGPL-3.0. See the [original plugin page](https://builtbybit.com/resources/customscreenmenu.108929/) and [LICENSE](LICENSE).
 
 ## What is included
 
