@@ -1,6 +1,8 @@
 # UIcore Smoke Checklist
 
-Run on each target Minecraft/server combination with its required Java version and PacketEvents 2.14.0 installed. The combinations in the [compatibility matrix](COMPATIBILITY_RU.md) passed local startup, `/uicore reload`, and shutdown checks. The detailed visual and interaction checks below remain pending.
+> **Language:** English | [Русская версия плана аудита](BUG_AUDIT_PLAN_RU.md)
+
+Run on each target Minecraft/server combination with its required Java version and PacketEvents 2.14.0 installed. The combinations in the [compatibility matrix](COMPATIBILITY.md) passed local startup, `/uicore reload`, and shutdown checks. The detailed visual and interaction checks below remain pending.
 
 1. Start the server and confirm UIcore enables without errors.
 2. Run `/uicore reload` and verify menus reload once.

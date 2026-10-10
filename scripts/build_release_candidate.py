@@ -45,15 +45,36 @@ def main() -> None:
             raise SystemExit("Incorrect plugin.yml version")
 
     files = {
+        "docs/ANIMATION_NPC_INPUT.md": ROOT / "docs" / "ANIMATION_NPC_INPUT.md",
+        "docs/API_USAGE.md": ROOT / "docs" / "API_USAGE.md",
+        "docs/AUDIT_FIXES.md": ROOT / "docs" / "AUDIT_FIXES.md",
+        "docs/AUDIT_FIXES_RU.md": ROOT / "docs" / "AUDIT_FIXES_RU.md",
+        "docs/BUG_AUDIT_PLAN.md": ROOT / "docs" / "BUG_AUDIT_PLAN.md",
+        "docs/BUG_AUDIT_PLAN_RU.md": ROOT / "docs" / "BUG_AUDIT_PLAN_RU.md",
+        "docs/BUILTIN_INTEGRATIONS.md": ROOT / "docs" / "BUILTIN_INTEGRATIONS.md",
+        "docs/BUILTIN_INTEGRATIONS_RU.md": ROOT / "docs" / "BUILTIN_INTEGRATIONS_RU.md",
+        "docs/COMPATIBILITY.md": ROOT / "docs" / "COMPATIBILITY.md",
         "docs/COMPATIBILITY_RU.md": ROOT / "docs" / "COMPATIBILITY_RU.md",
+        "docs/CURSOR_RANGE_NOTES.md": ROOT / "docs" / "CURSOR_RANGE_NOTES.md",
+        "docs/DYNAMIC_COORDINATES.md": ROOT / "docs" / "DYNAMIC_COORDINATES.md",
+        "docs/EXTENSION_API.md": ROOT / "docs" / "EXTENSION_API.md",
+        "docs/EXTENSION_API_RU.md": ROOT / "docs" / "EXTENSION_API_RU.md",
+        "docs/MENU_AUTHORING_GUIDE.md": ROOT / "docs" / "MENU_AUTHORING_GUIDE.md",
         "docs/MENU_AUTHORING_GUIDE_RU.md": ROOT / "docs" / "MENU_AUTHORING_GUIDE_RU.md",
-        "docs/UIcore_GitBook.html": ROOT / "docs" / "UIcore_GitBook.html",
+        "docs/PLANNED_TASKS.md": ROOT / "docs" / "PLANNED_TASKS.md",
+        "docs/PLANNED_TASKS_RU.md": ROOT / "docs" / "PLANNED_TASKS_RU.md",
+        "docs/PORT_26_2.md": ROOT / "docs" / "PORT_26_2.md",
+        "docs/PORT_26_2_RU.md": ROOT / "docs" / "PORT_26_2_RU.md",
+        "docs/RUNTIME_CONTRACTS.md": ROOT / "docs" / "RUNTIME_CONTRACTS.md",
+        "docs/SLOTS_AND_TEMPLATES.md": ROOT / "docs" / "SLOTS_AND_TEMPLATES.md",
+        "docs/SMOKE_CHECKLIST.md": ROOT / "docs" / "SMOKE_CHECKLIST.md",
         "third-party/RE2J-LICENSE.txt": ROOT / "release" / "third-party" / "RE2J-LICENSE.txt",
         "third-party/BSTATS-METRICS-LICENSE.txt": ROOT / "release" / "third-party" / "BSTATS-METRICS-LICENSE.txt",
         "third-party/MOREPAPERLIB-LICENSE.txt": ROOT / "release" / "third-party" / "MOREPAPERLIB-LICENSE.txt",
         "third-party/GPL-3.0.txt": ROOT / "release" / "third-party" / "GPL-3.0.txt",
         "morepaperlib-source/pom.xml": ROOT / "release" / "morepaperlib-source" / "pom.xml",
         "morepaperlib-source/relink.py": ROOT / "release" / "morepaperlib-source" / "relink.py",
+        "morepaperlib-source/README.md": ROOT / "release" / "morepaperlib-source" / "README.md",
         "morepaperlib-source/README_RU.md": ROOT / "release" / "morepaperlib-source" / "README_RU.md",
     }
     library_sources = ROOT / "uicore-plugin" / "src" / "main" / "java" / "space" / "arim" / "morepaperlib"
@@ -73,12 +94,22 @@ def main() -> None:
         package.write(JAR, "UIcore.jar")
         for name, source in files.items():
             package.write(source, name)
+        package.write(ROOT / "PROVENANCE.md", "PROVENANCE.md")
         for name, source in {
+            "README.md": ROOT / "release" / "INSTALL.md",
             "README_RU.md": ROOT / "release" / "INSTALL_RU.md",
+            "RELEASE_NOTES.md": ROOT / "release" / "RELEASE_NOTES.md",
             "RELEASE_NOTES_RU.md": ROOT / "release" / "RELEASE_NOTES_RU.md",
+            "THIRD_PARTY_NOTICES.md": ROOT / "release" / "THIRD_PARTY_NOTICES.md",
             "THIRD_PARTY_NOTICES_RU.md": ROOT / "release" / "THIRD_PARTY_NOTICES_RU.md",
         }.items():
             text = source.read_text(encoding="utf-8").replace("../docs/", "docs/")
+            if name == "README.md":
+                text = text.replace("](INSTALL_RU.md)", "](README_RU.md)")
+            elif name == "README_RU.md":
+                text = text.replace("](INSTALL.md)", "](README.md)")
+            elif name in {"THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES_RU.md"}:
+                text = text.replace("](../PROVENANCE.md)", "](PROVENANCE.md)")
             package.writestr(name, text)
         package.writestr(
             "NOT_FOR_DISTRIBUTION.txt",

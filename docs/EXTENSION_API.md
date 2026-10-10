@@ -1,10 +1,10 @@
 # UIcore extensions
 
-[Русская версия](EXTENSION_API_RU.md).
+> **Language:** English | [Русская версия](EXTENSION_API_RU.md)
 
 A plugin can register actions, data providers, conditions, and components. Server admins use them in ordinary YAML menus. Each registration belongs to a Bukkit plugin and is removed when that plugin disables.
 
-Vault and LuckPerms support is built into UIcore. See the [built-in integrations guide](BUILTIN_INTEGRATIONS_EN.md) for ready-to-use IDs and YAML examples.
+Vault and LuckPerms support is built into UIcore. See the [built-in integrations guide](BUILTIN_INTEGRATIONS.md) for ready-to-use IDs and YAML examples.
 
 The buildable [`uicore-example-extension`](../uicore-example-extension/) module registers all four extension types. Place its JAR alongside UIcore and copy [`example_extension.yml`](../uicore-example-extension/example_extension.yml) into `plugins/UIcore/menu/`.
 

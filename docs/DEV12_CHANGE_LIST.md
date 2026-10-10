@@ -1,6 +1,6 @@
 # UIcore local dev change list
 
-> Historical changelog. It does not describe the current supported runtime or certify testing. See [Runtime and API contracts](RUNTIME_CONTRACTS.md) and [audit fixes](AUDIT_FIXES_RU.md).
+> Historical changelog. It does not describe the current supported runtime or certify testing. See [Runtime and API contracts](RUNTIME_CONTRACTS.md) and [audit fixes](AUDIT_FIXES.md).
 
 
 This is the full local change list prepared on top of the original

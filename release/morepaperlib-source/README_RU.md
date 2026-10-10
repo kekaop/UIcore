@@ -1,5 +1,7 @@
 # Исходники MorePaperLib в UIcore
 
+> **Язык:** [English](README.md) | Русский
+
 Эта папка содержит исходный код классов `space.arim.morepaperlib`, включённых в UIcore. Код MorePaperLib распространяется по GNU LGPL v3 или более поздней версии. Исходный проект: https://github.com/A248/MorePaperLib . Версия, встроенная в UIcore, взята из исходной кодовой базы CustomScreenMenu; в `GracefulScheduling.java` добавлены методы `isOnGlobalRegionThread()` и `cancelGlobalTasks()` для этого выпуска. Эта папка включает и остальной код библиотеки, чтобы можно было собрать её целиком.
 
 Копии LGPL v3 и GPL v3 находятся в `../third-party/`. Эти условия относятся к MorePaperLib, а не дают права на исходники UIcore.

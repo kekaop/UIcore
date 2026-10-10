@@ -1,5 +1,7 @@
 # UIcore на Paper и Folia 26.2
 
+> **Язык:** [English](PORT_26_2.md) | Русский
+
 Сборка использует bytecode Java 17 и API Paper 1.21.1. Сервер 26.2 запускается на Java 25. В `plugin.yml` включён `folia-supported: true`; экспериментальная Folia 26.2 beta build 7 загрузила плагин с PacketEvents 2.14.0. Результаты по другим серверам — в [матрице совместимости](COMPATIBILITY_RU.md).
 
 ## Что перенесено

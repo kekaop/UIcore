@@ -1,5 +1,7 @@
 # UIcore
 
+> **Language:** English | [Русская версия](README_RU.md)
+
 ### A world-space UI framework for Minecraft servers
 
 UIcore turns the game world into a stage for menus. Text, items, buttons, input fields, stateful elements, animated slots, NPC mirrors, and per-player previews live in the same scene as the player instead of inside a flat inventory window.
@@ -50,10 +52,15 @@ The build produces:
 
 ## Documentation
 
-- [Menu authoring guide](docs/MENU_AUTHORING_GUIDE_RU.md) · [English extension API](docs/EXTENSION_API_EN.md)
-- [Русская документация API](docs/EXTENSION_API_RU.md) · [Built-in integrations](docs/BUILTIN_INTEGRATIONS_EN.md)
-- [Встроенные интеграции Vault и LuckPerms](docs/BUILTIN_INTEGRATIONS_RU.md)
-- [Runtime contracts](docs/RUNTIME_CONTRACTS.md) · [Compatibility matrix](docs/COMPATIBILITY_RU.md)
+English is the primary documentation language. Each translated page links to its Russian counterpart.
+
+- [Documentation index](docs/README.md)
+- [Menu authoring guide](docs/MENU_AUTHORING_GUIDE.md) · [Русская версия](docs/MENU_AUTHORING_GUIDE_RU.md)
+- [Extension API](docs/EXTENSION_API.md) · [Русская версия](docs/EXTENSION_API_RU.md)
+- [Built-in integrations](docs/BUILTIN_INTEGRATIONS.md) · [Русская версия](docs/BUILTIN_INTEGRATIONS_RU.md)
+- [Compatibility matrix](docs/COMPATIBILITY.md) · [Русская версия](docs/COMPATIBILITY_RU.md)
+- [Installation guide](release/INSTALL.md) · [Русская версия](release/INSTALL_RU.md)
+- [Runtime contracts](docs/RUNTIME_CONTRACTS.md) · [Smoke checklist](docs/SMOKE_CHECKLIST.md)
 
 ## Showcase videos
 

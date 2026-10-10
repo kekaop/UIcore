@@ -1,6 +1,8 @@
 # UIcore Runtime API
 
-Full GitBook-style documentation is available in `docs/UIcore_GitBook.html`.
+> **Language:** English | [Русская версия основных сценариев](MENU_AUTHORING_GUIDE_RU.md)
+
+For YAML configuration, see the [menu authoring guide](MENU_AUTHORING_GUIDE.md). This page documents the Java runtime API.
 
 This API is for other plugins that need to open menus or mutate loaded menus at runtime. Call it on the Bukkit main thread. See [runtime contracts](RUNTIME_CONTRACTS.md) for session, input, and snapshot guarantees.
 

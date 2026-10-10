@@ -1,6 +1,8 @@
 # UIcore runtime and API contracts
 
-This source build compiles against Paper 1.21.1 with Java 17 bytecode (`release 17`). The manifest declares `api-version: '1.21'` and `folia-supported: true`. Local startup/reload/shutdown results across Paper, Folia, Purpur, and Leaf are in the [compatibility matrix](COMPATIBILITY_RU.md). Visual and interaction checks are still needed. See [Folia port status](PORT_26_2_RU.md).
+> **Language:** English | [Русская версия ключевых ограничений](COMPATIBILITY_RU.md)
+
+This source build compiles against Paper 1.21.1 with Java 17 bytecode (`release 17`). The manifest declares `api-version: '1.21'` and `folia-supported: true`. Local startup/reload/shutdown results across Paper, Folia, Purpur, and Leaf are in the [compatibility matrix](COMPATIBILITY.md). Visual and interaction checks are still needed. See [Folia port status](PORT_26_2.md).
 
 | Dependency | Compile target | Runtime role |
 | --- | --- | --- |
@@ -19,4 +21,4 @@ Camera block clearing sends client block changes only. It never changes live blo
 
 Input values enter display and message components as literal text. Password fields are masked for display, remain available as raw values to configured actions, and are omitted from denied-command logs. `[op]` never grants temporary operator status. Console/op actions remain controlled by `security` settings and exact command allowlist boundaries.
 
-`docs/UIcore_GitBook.html` is the source repository's bilingual reference. Documentation is kept outside the plugin JAR so the runtime package stays focused on the server code. Historical dev changelogs are not a support matrix. Actual validation for this correction is recorded in [audit fixes](AUDIT_FIXES_RU.md); the [smoke checklist](SMOKE_CHECKLIST.md) lists server scenarios that still need execution.
+The Markdown documentation in this repository is the maintained reference. Documentation is kept outside the plugin JAR so the runtime package stays focused on the server code. Historical dev changelogs are not a support matrix. Actual validation for this correction is recorded in [audit fixes](AUDIT_FIXES.md); the [smoke checklist](SMOKE_CHECKLIST.md) lists server scenarios that still need execution.

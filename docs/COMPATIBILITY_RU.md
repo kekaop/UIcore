@@ -1,5 +1,7 @@
 # Совместимость UIcore
 
+> **Язык:** [English](COMPATIBILITY.md) | Русский
+
 Один JAR собирается с `--release 17` против Paper API 1.21.1. В `plugin.yml` указан `api-version: '1.21'` и `folia-supported: true`. Поддерживаются Paper, Folia, Purpur и Leaf на Minecraft 1.21.1 и новее, если у серверного проекта есть сборка для нужной версии. PacketEvents 2.14.0 обязателен.
 
 | Сервер | Minecraft | Проверенная сборка | Java сервера | Результат |

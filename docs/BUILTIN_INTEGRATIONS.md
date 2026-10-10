@@ -1,6 +1,6 @@
 # Built-in Vault and LuckPerms support
 
-[Русская версия](BUILTIN_INTEGRATIONS_RU.md).
+> **Language:** English | [Русская версия](BUILTIN_INTEGRATIONS_RU.md)
 
 Vault and LuckPerms work directly with UIcore. You don't need a separate adapter. Both plugins are optional: UIcore starts without them, while their data and conditions remain unavailable. Install the plugin you need and restart the server.
 

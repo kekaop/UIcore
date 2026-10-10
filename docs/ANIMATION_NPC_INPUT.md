@@ -1,8 +1,8 @@
 # Animation, NPC, Input, And Cursor Notes
 
-The complete English and Russian authoring reference is maintained in
-`docs/UIcore_GitBook.html`. Documentation is distributed with the source
-repository and is not copied into the plugin JAR.
+> **Language:** English | [Русская версия](MENU_AUTHORING_GUIDE_RU.md)
+
+The complete authoring reference is the [menu authoring guide](MENU_AUTHORING_GUIDE.md). Documentation is distributed with the source repository and is not copied into the plugin JAR.
 
 The guide covers:
 
