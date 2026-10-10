@@ -21,10 +21,10 @@ Documentation check: 39 Markdown files and 176 local file links, no missing targ
 
 The regression tests cover command cancellation after a session changes, teleport destination/request matching, malformed access settings, and caching of empty or failed data results. The remaining drag implementation and its obsolete documentation were removed. Camera geometry and hitbox calculations were left as requested.
 
-Final artifact: `uicore-plugin/target/UIcore-1.0.0.jar`, 644,292 bytes, built with JDK 21.
+Final artifact: `UIcore-1.0.0.jar`, 644,292 bytes, built with JDK 21 on October 10, 2026.
 
 ```text
-SHA-256: 540b1c9b419ff2a773e3d9e008ec48e068f36c29a11bd7e160fa75c1a99853e6
+SHA-256: b3f33639427588fd3e90cd31e8de8f4b1d2a64a0ba5ec553f198c4bb41bcd696
 ```
 
 ## Checks still required
