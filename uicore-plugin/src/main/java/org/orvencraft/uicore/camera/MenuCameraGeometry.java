@@ -22,12 +22,4 @@ public final class MenuCameraGeometry {
       return eye.add(right.multiply(pan.right())).add(up.multiply(pan.up()));
    }
 
-   public static Location captureBlock(Location cameraEye, CameraEdgePan.Offset pan) {
-      Vector forward = cameraEye.getDirection().normalize();
-      double yaw = Math.toRadians(cameraEye.getYaw());
-      Vector right = new Vector(-Math.cos(yaw), 0.0, -Math.sin(yaw));
-      Vector up = forward.getCrossProduct(right).multiply(-1.0).normalize();
-      Location target = cameraEye.clone().add(right.multiply(pan.right())).add(up.multiply(pan.up())).add(forward);
-      return new Location(target.getWorld(), target.getBlockX(), target.getBlockY(), target.getBlockZ());
-   }
 }

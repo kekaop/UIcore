@@ -53,21 +53,4 @@ class MenuCameraGeometryTest {
       }
    }
 
-   @Test
-   void singleCaptureBlockIntersectsViewWithinReachIncludingNegativeCoordinatesAndPan() {
-      for (float yaw : new float[]{-180, -90, 0, 45, 90}) {
-         for (float pitch : new float[]{-90, -45, 0, 45, 90}) {
-            Location eye = new Location(null, 82.56, 96.765, -355.93, yaw, pitch);
-            for (CameraEdgePan.Offset pan : new CameraEdgePan.Offset[]{CameraEdgePan.Offset.ZERO, new CameraEdgePan.Offset(0.35, -0.2)}) {
-               Location block = MenuCameraGeometry.captureBlock(eye, pan);
-               Vector right = new Vector(-Math.cos(Math.toRadians(yaw)), 0, -Math.sin(Math.toRadians(yaw)));
-               Vector up = eye.getDirection().getCrossProduct(right).multiply(-1).normalize();
-               Vector origin = eye.toVector().add(right.multiply(pan.right())).add(up.multiply(pan.up()));
-               BoundingBox box = new BoundingBox(block.getX(), block.getY(), block.getZ(),
-                  block.getX() + 1, block.getY() + 1, block.getZ() + 1);
-               assertTrue(box.contains(origin) || box.rayTrace(origin, eye.getDirection(), 1.01) != null);
-            }
-         }
-      }
-   }
 }

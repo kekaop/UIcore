@@ -146,6 +146,8 @@ public class MenuConfigLoader {
    }
 
    private static void validateValues(String path, ConfigurationSection config) {
+      if (config.contains("permission") && !config.isString("permission"))
+         throw new IllegalArgumentException(path + ".permission must be a string");
       for (String key : config.getKeys(true)) {
          Object value = config.get(key);
          if (value instanceof Number number && (!Double.isFinite(number.doubleValue()) || Math.abs(number.doubleValue()) > 30_000_000D))

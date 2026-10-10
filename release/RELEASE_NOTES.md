@@ -16,4 +16,11 @@ Known limits: schematic previews do not show block-entity contents, entities, or
 - The subprocess test chooses `java` on Linux and `java.exe` on Windows.
 - Each menu has independent settings for public displays, player visibility in both directions, and incoming player damage. See the [menu privacy settings](../docs/MENU_AUTHORING_GUIDE.md#set-menu-privacy-and-player-damage).
 
+- Removed the remaining experimental drag capture, group movement, and interactive rotation code and its obsolete configuration examples.
+- Internal teleport markers match the requested destination and cannot be cleared by completion of an older request.
+- Commands queued across entity/global schedulers recheck their originating menu session before execution.
+- Configuration rejects non-string permissions and non-map click requirements.
+- Empty or failed extension data results respect the provider refresh interval.
+- Build instructions specify JDK 21 or newer; example extension build outputs are excluded from source control.
+
 Automated tests cover these paths. Multiplayer rendering and optional integrations still need checks on the target server. The subprocess test ran on Windows; an actual Linux run remains pending.

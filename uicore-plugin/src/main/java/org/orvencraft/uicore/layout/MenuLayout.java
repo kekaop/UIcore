@@ -116,10 +116,6 @@ public class MenuLayout {
    private double hitboxHeight = 0.7;
    private double hitboxDepth = 0.25;
    private boolean customHitboxConfigured;
-   private String dragGroup = "";
-   private String dragMode = "";
-   private String dragTarget = "";
-   private double dragSensitivity = 1.0;
    private List<String> clickRequiredPermissions = Collections.emptyList();
    private List<PlaceholderRequirement> clickPlaceholderRequirements = Collections.emptyList();
    private VisibilityCondition visibleIf = VisibilityCondition.always();
@@ -367,10 +363,6 @@ public class MenuLayout {
       return this.hitboxDepth;
    }
 
-   public String getDragGroup() { return this.dragGroup; }
-   public String getDragMode() { return this.dragMode; }
-   public String getDragTarget() { return this.dragTarget; }
-   public double getDragSensitivity() { return this.dragSensitivity; }
 
    public boolean hasCustomHitbox() {
       return this.customHitboxConfigured;
@@ -814,6 +806,8 @@ public class MenuLayout {
       }
 
       ConfigurationSection clickRequirements = var1.getConfigurationSection("click-requirements");
+      if (var1.contains("click-requirements") && clickRequirements == null)
+         throw new IllegalArgumentException(this.ownerMenuKey + ":" + this.key + ".click-requirements must be a map");
       if (clickRequirements != null) {
          this.loadClickRequirements(clickRequirements);
 
@@ -930,14 +924,7 @@ public class MenuLayout {
       }
 
       ConfigurationSection configuredHitbox = var1.getConfigurationSection("hitbox");
-      this.dragGroup = var1.getString("drag-group", "").trim();
-      ConfigurationSection drag = var1.getConfigurationSection("drag");
-      if (drag != null) {
-         this.dragMode = drag.getString("mode", "").trim().toLowerCase(Locale.ROOT);
-         this.dragTarget = drag.getString("target", drag.getString("group", "")).trim();
-         double sensitivity = drag.getDouble("sensitivity", 1.0);
-         this.dragSensitivity = Double.isFinite(sensitivity) ? Math.max(0.01, Math.min(10.0, sensitivity)) : 1.0;
-      }
+
       if (configuredHitbox != null) {
          this.customHitboxConfigured = true;
          this.hitboxText = configuredHitbox.getString("text", this.hitboxText);
@@ -1311,11 +1298,6 @@ public class MenuLayout {
    /** Rechecks interaction state after an event listener has run, without duplicate feedback. */
    public boolean isInteractionStillAllowed(Player player) {
       return this.isInteractionAllowed(player, false);
-   }
-
-   /** Records a non-command interaction, such as a drag, against this layout's cooldown. */
-   public void recordInteraction(Player player) {
-      this.startCooldown(player);
    }
 
    private boolean isInteractionAllowed(Player player, boolean notifyPlayer) {

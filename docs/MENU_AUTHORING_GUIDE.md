@@ -288,54 +288,6 @@ Files are limited to simple `.schem` names with no subdirectories. UIcore restor
 
 FancyNpcs powers the optional personal NPC mirror. Configure global defaults in `npc_config.yml` or override them under the menu's `npc:` section. The [animation and display section](#animate-an-element-or-position) explains related display options.
 
-## Move a group or rotate one element
-
-Use separate control elements for these independent gestures. All elements in a moving list share `drag-group`; a move handle names that group. A rotation handle names one target element.
-
-```yaml
-layout:
-  first:
-    name: "First"
-    drag-group: entries
-    x: -0.5
-    y: 0.3
-    z: 3.5
-  second:
-    name: "Second"
-    drag-group: entries
-    x: -0.5
-    y: 0
-    z: 3.5
-  move_entries:
-    name: "Move list"
-    x: -0.5
-    y: -0.5
-    z: 3.5
-    drag:
-      mode: move-group
-      group: entries
-      sensitivity: 1.0
-  preview:
-    type: item
-    material: DIAMOND_SWORD
-    x: 0.5
-    y: 0.2
-    z: 3.5
-  rotate_preview:
-    name: "Rotate item"
-    x: 0.5
-    y: -0.5
-    z: 3.5
-    drag:
-      mode: rotate-element
-      target: preview
-      sensitivity: 1.0
-```
-
-While the left mouse button is held, the cursor stays in place and mouse movement moves the group or rotates the target. Releasing the button ends the gesture and the cursor resumes from its stored position. `sensitivity` accepts values from `0.01` to `10`. UIcore stores the group position and rotation per player for the menu session.
-
-Drag capture uses a temporary client-only barrier block and survival mode only for the active gesture. UIcore restores the player's original game mode when the gesture or menu ends. Test the feature with a normal client on your target server build before publishing a menu that depends on it.
-
 ## Check the finished menu
 
 Before publishing a menu:

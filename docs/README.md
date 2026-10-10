@@ -25,6 +25,8 @@ English is the repository's primary documentation language. Use the pages below 
 
 ## Release and maintenance notes
 
+- [Current release check](../release/VALIDATION.md) · [Русская версия](../release/VALIDATION_RU.md)
+- [Short English description](../release/DESCRIPTION.md) · [Русское описание в BBCode](../release/DESCRIPTION_RU.bbcode)
 - [Audit fixes](AUDIT_FIXES.md) · [Русская версия](AUDIT_FIXES_RU.md)
 - [Audit plan](BUG_AUDIT_PLAN.md) · [Русская версия](BUG_AUDIT_PLAN_RU.md)
 - [Folia port status](PORT_26_2.md) · [Русская версия](PORT_26_2_RU.md)

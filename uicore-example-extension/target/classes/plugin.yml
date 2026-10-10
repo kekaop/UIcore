@@ -1,6 +1,0 @@
-name: UIcoreExampleExtension
-main: org.orvencraft.uicore.example.UIcoreExampleExtension
-version: 1.0.0
-api-version: '1.20'
-folia-supported: true
-depend: [UIcore]

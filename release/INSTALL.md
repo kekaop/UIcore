@@ -7,7 +7,7 @@ UIcore creates menus from world-space elements: text, items, buttons, element st
 ## Install the plugin
 
 1. Stop the server and back up the world and `plugins/UIcore/` if this is an update.
-2. Put `UIcore.jar` from the release archive and PacketEvents **2.14.0** in `plugins/`.
+2. Put `UIcore-1.0.0.jar` and PacketEvents **2.14.0** in `plugins/`.
 3. Start the server. UIcore creates its configuration and example menus in `plugins/UIcore/menu/`.
 4. Stand in an open area and run `/uicore run demo_main`. Close the menu with `/uicore stop`.
 

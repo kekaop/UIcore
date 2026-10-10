@@ -8,6 +8,22 @@ import org.junit.jupiter.api.Test;
 
 class CommandUtilsTest {
    @Test
+   void queuedCommandCannotEscapeAClosedOrReplacedSession() {
+      var generation = new java.util.concurrent.atomic.AtomicLong(7);
+      var active = new java.util.concurrent.atomic.AtomicBoolean(true);
+      var executed = new java.util.concurrent.atomic.AtomicInteger();
+      Runnable queued = CommandUtils.guardSession(() -> active.get() && generation.get() == 7, executed::incrementAndGet);
+      active.set(false);
+      queued.run();
+      assertEquals(0, executed.get(), "Close cancels pending console work");
+      active.set(true);
+      generation.set(8);
+      queued.run();
+      assertEquals(0, executed.get(), "Reopening cannot revive an old command");
+      CommandUtils.guardSession(() -> active.get() && generation.get() == 8, executed::incrementAndGet).run();
+      assertEquals(1, executed.get(), "The current visit still executes commands");
+   }
+   @Test
    void parsesExplicitInlineDelay() {
       CommandUtils.DelayedCommand parsed = CommandUtils.parseDelayedCommand("<delay=60>[message] Ready", 20L);
       assertEquals(60L, parsed.delayTicks());

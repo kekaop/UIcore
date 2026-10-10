@@ -29,6 +29,8 @@ import org.orvencraft.uicore.section.Section;
 public final class ExtensionManager implements Listener {
    private static final Pattern ID = Pattern.compile("[a-z][a-z0-9_.-]*:[a-z][a-z0-9_.-]*");
    private final UIcorePlugin plugin;
+   private final java.util.function.Predicate<Player> ownsPlayer;
+   private final java.util.function.LongSupplier serverTick;
    private final Map<String, Owned<ActionService.Handler>> actions = new ConcurrentHashMap<>();
    private final Map<String, Owned<DataService.Provider>> data = new ConcurrentHashMap<>();
    private final Map<String, Owned<ConditionService.Predicate>> conditions = new ConcurrentHashMap<>();
@@ -43,7 +45,14 @@ public final class ExtensionManager implements Listener {
    private record ComponentCacheKey(UUID playerId, String menuId, String elementId, String id, Map<String, Object> parameters) {}
    private record ComponentCacheValue(long tick, List<MenuElementSpec> children) {}
 
-   public ExtensionManager(UIcorePlugin plugin) { this.plugin = plugin; }
+   public ExtensionManager(UIcorePlugin plugin) { this(plugin, Bukkit::isOwnedByCurrentRegion, Bukkit::getCurrentTick); }
+
+   ExtensionManager(UIcorePlugin plugin, java.util.function.Predicate<Player> ownsPlayer,
+                    java.util.function.LongSupplier serverTick) {
+      this.plugin = plugin;
+      this.ownsPlayer = ownsPlayer;
+      this.serverTick = serverTick;
+   }
 
    public ActionService actions() {
       return new ActionService() {
@@ -153,25 +162,30 @@ public final class ExtensionManager implements Listener {
    public Optional<Object> resolveData(String id, Player player, String menuId, String elementId) {
       Owned<DataService.Provider> entry = this.data.get(id);
       if (entry == null || !entry.owner().isEnabled()) { this.missing("data", id, menuId, elementId); return Optional.empty(); }
-      if (player == null || !Bukkit.isOwnedByCurrentRegion(player)) return Optional.empty();
+      if (player == null || !ownsPlayer.test(player)) return Optional.empty();
       DataCacheKey cacheKey = new DataCacheKey(player.getUniqueId(), menuId, elementId, id);
-      long tick = Bukkit.getCurrentTick();
+      long tick = serverTick.getAsLong();
       DataCacheValue cached = this.dataCache.get(cacheKey);
       if (cached != null && tick - cached.tick() >= 0L && tick - cached.tick() < entry.minRefreshTicks())
-         return Optional.of(cached.value());
+         return Optional.ofNullable(cached.value());
       try {
          Object value = entry.handler().resolve(new ExtensionContext(player, menuId, elementId, Map.of()));
-         if (value == null) return Optional.empty();
+         if (value == null) { cacheData(cacheKey, tick, null); return Optional.empty(); }
          if (!(value instanceof String || value instanceof Number || value instanceof Boolean)) throw new IllegalArgumentException("Unsupported data type");
          if (value instanceof Number number && !Double.isFinite(number.doubleValue())) throw new IllegalArgumentException("Non-finite data value");
          if (String.valueOf(value).length() > 4096) throw new IllegalArgumentException("Data value is too long");
-         if (this.dataCache.size() > 4096) this.dataCache.clear();
-         this.dataCache.put(cacheKey, new DataCacheValue(tick, value));
+         cacheData(cacheKey, tick, value);
          return Optional.of(value);
       } catch (Exception | LinkageError exception) {
+         cacheData(cacheKey, tick, null);
          this.failed("data", id, exception);
          return Optional.empty();
       }
+   }
+
+   private void cacheData(DataCacheKey key, long tick, Object value) {
+      if (this.dataCache.size() >= 4096) this.dataCache.clear();
+      this.dataCache.put(key, new DataCacheValue(tick, value));
    }
 
    public Optional<Boolean> evaluateCondition(String id, Player player, String menuId, String elementId, Map<String, Object> args) {
@@ -192,7 +206,7 @@ public final class ExtensionManager implements Listener {
    }
 
    private void failed(String kind, String id, Throwable exception) {
-      if (this.shouldLog(kind + ":" + id + ":failure"))
+      if (this.plugin != null && this.shouldLog(kind + ":" + id + ":failure"))
          this.plugin.getLogger().warning("Extension " + kind + " '" + id + "' failed (" + exception.getClass().getSimpleName() + ")");
    }
 

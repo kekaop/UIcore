@@ -1,5 +1,7 @@
 package org.orvencraft.uicore.layout;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,29 +15,10 @@ import org.junit.jupiter.api.Test;
 
 class MenuLayoutParsingTest {
    @Test
-   void parsesIndependentGroupAndRotationDragSettings() throws Exception {
-      MenuLayout groupHandle = loadLayout("""
-         drag-group: controls
-         drag:
-           mode: move-group
-           group: entries
-           sensitivity: 1.5
-         """);
-      assertEquals("controls", groupHandle.getDragGroup());
-      assertEquals("move-group", groupHandle.getDragMode());
-      assertEquals("entries", groupHandle.getDragTarget());
-      assertEquals(1.5, groupHandle.getDragSensitivity());
-
-      MenuLayout rotationHandle = loadLayout("""
-         drag:
-           mode: rotate-element
-           target: preview
-         """);
-      assertEquals("rotate-element", rotationHandle.getDragMode());
-      assertEquals("preview", rotationHandle.getDragTarget());
-      assertEquals(1.0, rotationHandle.getDragSensitivity());
+   void rejectsScalarClickRequirementsInsteadOfGrantingAccess() {
+      assertThrows(IllegalArgumentException.class, () -> loadLayout("click-requirements: true\n"));
+      assertThrows(IllegalArgumentException.class, () -> loadLayout("click-requirements: uicore.admin\n"));
    }
-
    @Test
    void parsesQuotedToggleOnOffKeys() throws Exception {
       MenuLayout layout = loadLayout(

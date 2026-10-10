@@ -16,7 +16,8 @@ public class TeleportListener implements Listener {
    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
    public void onPlayerTeleport(PlayerTeleportEvent event) {
       Player player = event.getPlayer();
-      if (this.plugin.consumeInternalMenuTeleport(player)) {
+      if (event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN
+         && this.plugin.consumeInternalMenuTeleport(player, event.getTo())) {
          return;
       }
 

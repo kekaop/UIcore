@@ -34,7 +34,11 @@ public final class CommandUtils {
        * messages belong to the player's entity scheduler.
        */
       if (UIcorePlugin.plugin != null && !Bukkit.isOwnedByCurrentRegion(player)) {
-         player.getScheduler().execute(UIcorePlugin.plugin, () -> executeCommand(player, cmd, fallbackDelayTicks), null, 0L);
+         boolean fromMenu = UIcorePlugin.plugin.getCurrentPlayerMenu(player) != null;
+         long generation = UIcorePlugin.plugin.getMenuSessionGeneration(player);
+         player.getScheduler().execute(UIcorePlugin.plugin, guardSession(
+            () -> !fromMenu || UIcorePlugin.plugin.isMenuSessionCurrent(player, generation),
+            () -> executeCommand(player, cmd, fallbackDelayTicks)), null, 0L);
          return;
       }
 
@@ -77,6 +81,8 @@ public final class CommandUtils {
          return;
       }
 
+      boolean fromMenu = UIcorePlugin.plugin != null && UIcorePlugin.plugin.getCurrentPlayerMenu(player) != null;
+      long generation = fromMenu ? UIcorePlugin.plugin.getMenuSessionGeneration(player) : -1L;
       CommandAction action = parseCommandAction(cmd);
       String processedArgument = action.argument();
       if (UIcorePlugin.plugin != null) {
@@ -95,7 +101,8 @@ public final class CommandUtils {
                // Command-map access is global state and must not run from an entity region.
                Bukkit.getGlobalRegionScheduler().execute(
                   UIcorePlugin.plugin,
-                  () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd)
+                  guardSession(() -> !fromMenu || UIcorePlugin.plugin.isMenuSessionCurrent(player, generation),
+                     () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd))
                );
             }
          }
@@ -130,6 +137,11 @@ public final class CommandUtils {
          }
          }
       }
+   }
+
+   /** Recheck at execution time after crossing an entity/global scheduler boundary. */
+   static Runnable guardSession(java.util.function.BooleanSupplier current, Runnable action) {
+      return () -> { if (current.getAsBoolean()) action.run(); };
    }
 
    private static String replaceMessageBuiltinPlaceholders(Player player, String template) {

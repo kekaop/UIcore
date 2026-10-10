@@ -18,6 +18,7 @@
 /build/
 uicore-api/target/
 uicore-plugin/target/
+uicore-example-extension/target/
 release/morepaperlib-source/target/
 release/out/
 __pycache__/

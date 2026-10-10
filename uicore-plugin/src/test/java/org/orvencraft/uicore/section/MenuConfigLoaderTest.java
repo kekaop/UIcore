@@ -9,6 +9,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class MenuConfigLoaderTest {
+   @Test
+   void rejectsNonStringPermissionAtMenuAndElementScope() throws Exception {
+      Path file = temporaryDirectory.resolve("permissions.yml");
+      Files.writeString(file, "example:\n  permission: [uicore.admin]\n  camera-position:\n    type: player\n");
+      IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+         () -> MenuConfigLoader.loadMenuSections(temporaryDirectory.toFile()));
+      assertTrue(error.getMessage().contains("permission"));
+      var config = new org.bukkit.configuration.file.YamlConfiguration();
+      config.loadFromString("permission:\n  node: uicore.admin\n");
+      assertThrows(IllegalArgumentException.class, () -> MenuConfigLoader.loadLayout("example", "admin", config, "world"));
+   }
    @TempDir
    Path temporaryDirectory;
 

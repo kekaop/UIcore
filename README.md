@@ -22,6 +22,8 @@ The project exists thanks to **wuhaoxian123**, the original CustomScreenMenu aut
 
 ## Build UIcore
 
+Build with JDK 21 or newer and Maven 3.9 or newer. The output uses Java 17 bytecode; the SkinsRestorer compile dependency requires a newer JDK.
+
 Run:
 
 ```bash
