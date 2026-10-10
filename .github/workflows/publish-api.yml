@@ -35,11 +35,25 @@ jobs:
           server-username: CENTRAL_TOKEN_USERNAME
           server-password: CENTRAL_TOKEN_PASSWORD
 
+      - name: Use Maven 3.9.16 for Central bundle compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/apache-maven-3.9.16-bin.tar.gz"
+          curl --fail --silent --show-error --location \
+            'https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.tar.gz' \
+            --output "$archive"
+          echo '831a8591fe20c8243b1dbe7d71e3244f31d1665b0804b2e825e38cbbe5ce0cafb8338851f90780735568773e0a6cd07bbec107cda0b896b008b861075358b6f6  '"$archive" \
+            | sha512sum --check --status
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+
       - name: Check release coordinates
         shell: bash
         run: |
           set -euo pipefail
           git tag --points-at HEAD | grep -Fx 'api-v1.0.0'
+          mvn --version | grep -F 'Apache Maven 3.9.16'
           version="$(mvn -q -ntp -pl uicore-api help:evaluate -Dexpression=project.version -DforceStdout)"
           group="$(mvn -q -ntp -pl uicore-api help:evaluate -Dexpression=project.groupId -DforceStdout)"
           test "$version" = '1.0.0'
