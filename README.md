@@ -93,7 +93,3 @@ https://github.com/user-attachments/assets/50bd8035-eb6a-4ecd-9941-b3f17b2cd196
 A walkthrough of `demo_main`, `demo_states`, and `demo_gallery`: hover feedback, chat input, toggles, element states, item displays, avatars, and template selection.
 
 https://github.com/user-attachments/assets/60c09f38-9699-4fa7-9ec8-5ccf51af7e2b
-
-[Recording notes](showcase/videos/README.md) stay outside the plugin JAR. The three demo menus are also the plugin's default examples and are installed on a fresh server.
-
-The repository contains source and documentation only. The plugin JAR is created by the Maven build and is not committed to Git.
