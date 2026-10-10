@@ -63,10 +63,6 @@ jobs:
           test -n "$GPG_PRIVATE_KEY"
           test -n "$GPG_PASSPHRASE"
           printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
-          echo "Signing passphrase bytes: $(printf '%s' "$GPG_PASSPHRASE" | wc -c)"
-          echo "Signing passphrase fingerprint: $(printf '%s' "$GPG_PASSPHRASE" | sha256sum | cut -c1-16)"
-          echo "Signing key bytes: $(printf '%s' "$GPG_PRIVATE_KEY" | wc -c)"
-          echo "Signing key fingerprint: $(printf '%s' "$GPG_PRIVATE_KEY" | sha256sum | cut -c1-16)"
 
       - name: Verify signing key and unlock GPG agent
         shell: bash
