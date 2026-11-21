@@ -1,6 +1,7 @@
 # UIcore
 
 > **Language:** English | [Русская версия](README_RU.md)
+
 > **Note:** This project includes AI-generated code written with Codex.
 
 ### A world-space UI framework for Minecraft servers
