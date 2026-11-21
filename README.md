@@ -22,6 +22,10 @@ The project exists thanks to **wuhaoxian123** (Discord: @wuhaoxian123), the orig
 - Paper and Folia-aware scheduling with Java 17 bytecode.
 - Russian and English guides, including a full menu authoring reference.
 
+## Roadmap
+
+![UIcore roadmap for versions 1.1 to 1.3](docs/assets/roadmap-en.png)
+
 ## Build UIcore
 
 Build with JDK 21 or newer and Maven 3.9 or newer. The output uses Java 17 bytecode; the SkinsRestorer compile dependency requires a newer JDK.
