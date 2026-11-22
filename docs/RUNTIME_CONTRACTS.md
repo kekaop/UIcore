@@ -2,7 +2,7 @@
 
 > **Language:** English | [Русская версия ключевых ограничений](COMPATIBILITY_RU.md)
 
-This source build compiles against Paper 1.21.1 with Java 17 bytecode (`release 17`). The manifest declares `api-version: '1.21'` and `folia-supported: true`. Local startup/reload/shutdown results across Paper, Folia, Purpur, and Leaf are in the [compatibility matrix](COMPATIBILITY.md). Visual and interaction checks are still needed. See [Folia port status](PORT_26_2.md).
+UIcore compiles against Paper 1.21.1 with Java 17 bytecode (`release 17`). The manifest declares `api-version: '1.21'` and `folia-supported: true`. See the [compatibility matrix](COMPATIBILITY.md) for tested server builds and the scope of each test.
 
 | Dependency        | Compile target            | Runtime role                                                                                                                                                                                             |
 | ----------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -25,4 +25,4 @@ Camera block clearing sends client block changes only. It never changes live blo
 
 Input values enter display and message components as literal text. Password fields are masked for display, remain available as raw values to configured actions, and are omitted from denied-command logs. `[op]` never grants temporary operator status. Console/op actions remain controlled by `security` settings and exact command allowlist boundaries.
 
-The Markdown documentation in this repository is the maintained reference. Documentation is kept outside the plugin JAR so the runtime package stays focused on the server code. Historical dev changelogs are not a support matrix. Actual validation for this correction is recorded in [audit fixes](AUDIT_FIXES.md); the [smoke checklist](SMOKE_CHECKLIST.md) lists server scenarios that still need execution.
+Use the [1.1.0 release verification](../release/VALIDATION.md) to check the tested JAR hash and coverage. The [interaction checks](interaction-verification/README.md) explain how to repeat the server tests.
