@@ -8,6 +8,8 @@ UIcore строит меню вокруг камеры игрока. Текст,
 
 Основной язык репозитория и документации — английский. Эта страница помогает русскоязычным администраторам начать работу и ведёт к русским переводам справочника.
 
+В UIcore 1.1.0 появились катсцены, перетаскивание и зум колёсиком. [Скачать релиз](https://github.com/kekaop/UIcore/releases/tag/v1.1.0) · [Список изменений](release/RELEASE_NOTES_RU.md).
+
 ## Что входит
 
 - Настройки видимости меню и игроков, а также защиты от урона игроков для каждого меню.
@@ -16,6 +18,8 @@ UIcore строит меню вокруг камеры игрока. Текст,
 - Java API для действий, источников данных, условий, компонентов, меню и слотов.
 - Встроенная поддержка Vault и LuckPerms.
 - Планировщики Paper и Folia, bytecode Java 17.
+- Катсцены с маршрутами камеры, кривыми скорости, паузами и ветками выбора для каждого игрока.
+- Родительские группы, перетаскивание, ползунки и зум колёсиком.
 
 ## План развития
 
@@ -29,7 +33,7 @@ UIcore строит меню вокруг камеры игрока. Текст,
 mvn clean package
 ```
 
-Результаты находятся в `uicore-api/target/`, `uicore-plugin/target/` и `uicore-example-extension/target/`.
+Плагин собирается в `uicore-plugin/target/UIcore-1.1.0.jar`. JAR для разработки расширений находится в `uicore-api/target/`, а готовый пример расширения — в `uicore-example-extension/target/`.
 
 ## Подключение API к другому плагину
 
@@ -42,9 +46,10 @@ mvn clean package
 </dependency>
 ```
 
-API опубликован в Maven Central как `io.github.kekaop:uicore-api:1.0.0`.
-На сервере должен быть совместимый плагин UIcore. Инструкции для владельца — в
-[руководстве по публикации](docs/MAVEN_CENTRAL_PUBLISHING.md).
+В Maven Central доступен `io.github.kekaop:uicore-api:1.0.0`. Для нового API
+выполните `mvn -pl uicore-api -am install` из исходников 1.1.0 и укажите версию
+`1.1.0` в зависимости расширения. Установите UIcore на сервер и задайте
+`provided` при сборке расширения. [Справочник API](docs/API_USAGE.md).
 При компиляции расширения объявите отдельно зависимость `paper-api` и репозиторий
 Paper, если используете типы Paper из UIcore API.
 
@@ -52,7 +57,7 @@ Paper, если используете типы Paper из UIcore API.
 
 - Minecraft 1.21.1 и новее на Paper, Folia, Purpur или совместимом форке.
 - Java, требуемая выбранной сборкой сервера. Сам плагин собран с bytecode Java 17.
-- PacketEvents 2.14.0.
+- [PacketEvents 2.14.0 Spigot](https://modrinth.com/plugin/packetevents/version/m78nFxYg) обязателен.
 
 PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault и LuckPerms подключаются по необходимости.
 
@@ -60,13 +65,15 @@ PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault и LuckPerms под
 
 ## Демонстрационные меню
 
-Открой `/uicore run demo_main`. Три примера входят в плагин и устанавливаются при первом запуске:
+Начните с `/uicore run demo_main`. Плагин устанавливает недостающие примеры при запуске.
 
 - [demo_main](uicore-plugin/src/main/resources/menu/demo_main.yml) — наведение, смена курсора, ввод через чат, переключатель и задержка между кликами.
 - [demo_gallery](uicore-plugin/src/main/resources/menu/demo_gallery.yml) — предметы, аватар игрока и смена шаблонов в слоте.
 - [demo_states](uicore-plugin/src/main/resources/menu/demo_states.yml) — изменение текста, материала и видимости, оформление по правам и ограничения кликов.
 
 Ресурс-пак и дополнительные плагины не нужны. Для кнопок выбора в галерее требуется `uicore.slot`; OP получает это право по умолчанию. [Инструкция и сценарий демонстрации](showcase/README_RU.md) · [English](showcase/README.md).
+
+В 1.1.0 также входят `demo_cutscene` с ветками выбора, `demo_drag` с экспериментальным удержанием ЛКМ и `demo_zoom` с масштабированием колёсиком. [Настройки взаимодействия](docs/INTERACTIONS_1_1_RU.md).
 
 ## Видео
 
@@ -82,13 +89,15 @@ https://github.com/user-attachments/assets/50bd8035-eb6a-4ecd-9941-b3f17b2cd196
 
 https://github.com/user-attachments/assets/60c09f38-9699-4fa7-9ec8-5ccf51af7e2b
 
-[Инструкция для записи новых роликов](showcase/videos/README_RU.md). Видео находятся вне JAR плагина.
+[Сценарий для записи новых роликов](showcase/README_RU.md). Видео находятся вне JAR плагина.
 
 ## Документация
 
 - [GitHub Wiki](https://github.com/kekaop/UIcore/wiki) · [Главная страница на русском](https://github.com/kekaop/UIcore/wiki/Home-RU)
 - [Английский индекс документации](docs/README.md)
 - [Справочник автора меню](docs/MENU_AUTHORING_GUIDE_RU.md) · [English](docs/MENU_AUTHORING_GUIDE.md)
+- [Система катсцен](docs/CUTSCENES_RU.md) · [English](docs/CUTSCENES.md)
+- [Группы, перетаскивание и зум](docs/INTERACTIONS_1_1_RU.md) · [English](docs/INTERACTIONS_1_1.md)
 - [API расширений](docs/EXTENSION_API_RU.md) · [English](docs/EXTENSION_API.md)
 - [Vault и LuckPerms](docs/BUILTIN_INTEGRATIONS_RU.md) · [English](docs/BUILTIN_INTEGRATIONS.md)
 - [Совместимость](docs/COMPATIBILITY_RU.md) · [English](docs/COMPATIBILITY.md)

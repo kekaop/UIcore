@@ -8,7 +8,7 @@
 
 UIcore turns the game world into a stage for menus. Text, items, buttons, input fields, stateful elements, animated slots, NPC mirrors, and per-player previews live in the same scene as the player instead of inside a flat inventory window.
 
-This is the first public release of UIcore: a focused, extensible continuation of CustomScreenMenu with a proper Java API, YAML authoring, Paper/Folia support, and built-in integrations for Vault and LuckPerms.
+UIcore 1.1.0 adds camera cutscenes, drag and drop, and mouse-wheel zoom. [Download the release](https://github.com/kekaop/UIcore/releases/tag/v1.1.0) · [Release notes](release/RELEASE_NOTES.md).
 
 The project exists thanks to **wuhaoxian123** (Discord: @wuhaoxian123), the original CustomScreenMenu author. UIcore is based on the paid 1.4.8 build, with permission to publish the complete source under AGPL-3.0. See the [original plugin page](https://builtbybit.com/resources/customscreenmenu.108929/) and [LICENSE](LICENSE).
 
@@ -16,6 +16,8 @@ The project exists thanks to **wuhaoxian123** (Discord: @wuhaoxian123), the orig
 
 - Per-menu privacy for displays and players, with optional protection from player damage.
 - World-space menus rendered around the player camera.
+- Per-player camera cutscenes with routes, velocity curves, pauses, and branching choices.
+- Parent groups, drag and drop, sliders, and optional mouse-wheel zoom.
 - Text, item, button, input, state, slot, and schematic-preview systems.
 - A public API for menus, elements, input fields, slots, state, actions, data providers, conditions, and components.
 - Optional integrations built into the UIcore JAR: Vault and LuckPerms.
@@ -38,9 +40,9 @@ mvn clean package
 
 The build produces:
 
-- `uicore-api/target/uicore-api-1.0.0.jar`
-- `uicore-plugin/target/UIcore-1.0.0.jar`
-- `uicore-example-extension/target/uicore-example-extension-1.0.0.jar`
+- `uicore-api/target/uicore-api-1.1.0.jar`
+- `uicore-plugin/target/UIcore-1.1.0.jar`
+- `uicore-example-extension/target/uicore-example-extension-1.1.0.jar`
 
 ## Add the API to a plugin
 
@@ -53,9 +55,10 @@ The build produces:
 </dependency>
 ```
 
-The API is published in Maven Central as `io.github.kekaop:uicore-api:1.0.0`.
-The server must also run the matching UIcore plugin; `provided` keeps its API
-classes out of your plugin JAR. See the [publishing guide](docs/MAVEN_CENTRAL_PUBLISHING.md).
+Maven Central hosts `io.github.kekaop:uicore-api:1.0.0`. For the new 1.1.0 API, run
+`mvn -pl uicore-api -am install` from the 1.1.0 source checkout and use version
+`1.1.0` in your dependency. Install UIcore on the server and use `provided` in
+extension builds. See the [API guide](docs/API_USAGE.md).
 Declare the Paper API dependency and Paper repository in your plugin build when
 compiling against UIcore's Paper types.
 
@@ -63,7 +66,7 @@ compiling against UIcore's Paper types.
 
 - Minecraft 1.21.1 and newer on Paper, Folia, Purpur, or a compatible fork.
 - Java 17 bytecode. Use the Java runtime required by the selected server build.
-- PacketEvents 2.14.0 is required.
+- [PacketEvents 2.14.0 Spigot](https://modrinth.com/plugin/packetevents/version/m78nFxYg) is required.
 - PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault, and LuckPerms are optional.
 
 **Client compatibility:** NoChatReports may cause chat input to fail, including after a menu closes. See the [symptoms, cause, and workaround](docs/COMPATIBILITY.md#nochatreports-can-break-chat-input).
@@ -75,21 +78,26 @@ English is the primary documentation language. Each translated page links to its
 - [GitHub Wiki](https://github.com/kekaop/UIcore/wiki) · [Русская главная страница](https://github.com/kekaop/UIcore/wiki/Home-RU)
 - [Documentation index](docs/README.md)
 - [Menu authoring guide](docs/MENU_AUTHORING_GUIDE.md) · [Русская версия](docs/MENU_AUTHORING_GUIDE_RU.md)
+- [Camera cutscenes](docs/CUTSCENES.md) · [Русская версия](docs/CUTSCENES_RU.md)
+- [Groups, drag and drop, and zoom](docs/INTERACTIONS_1_1.md) · [Русская версия](docs/INTERACTIONS_1_1_RU.md)
 - [Extension API](docs/EXTENSION_API.md) · [Русская версия](docs/EXTENSION_API_RU.md)
 - [Built-in integrations](docs/BUILTIN_INTEGRATIONS.md) · [Русская версия](docs/BUILTIN_INTEGRATIONS_RU.md)
 - [Compatibility matrix](docs/COMPATIBILITY.md) · [Русская версия](docs/COMPATIBILITY_RU.md)
 - [Installation guide](release/INSTALL.md) · [Русская версия](release/INSTALL_RU.md)
-- [Runtime contracts](docs/RUNTIME_CONTRACTS.md) · [Smoke checklist](docs/SMOKE_CHECKLIST.md)
+- [Runtime contracts](docs/RUNTIME_CONTRACTS.md) · [Interaction checks](docs/interaction-verification/README.md)
 
 ## Try the demo menus
 
-Open `/uicore run demo_main` to explore the three bundled examples. They use vanilla Minecraft items and work without a resource pack or optional plugins.
+Open `/uicore run demo_main` to explore the three introductory examples. They use vanilla Minecraft items and work without a resource pack or optional plugins.
 
 | Menu                                                                   | Features                                                                       |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [demo_main](uicore-plugin/src/main/resources/menu/demo_main.yml)       | Hover effects, cursor changes, chat input, toggles, and click cooldowns        |
 | [demo_gallery](uicore-plugin/src/main/resources/menu/demo_gallery.yml) | Item displays, your avatar, and a template slot with three selectable previews |
 | [demo_states](uicore-plugin/src/main/resources/menu/demo_states.yml)   | Text, material, visibility, permission styles, and click requirements          |
+| [demo_cutscene](uicore-plugin/src/main/resources/menu/demo_cutscene.yml) | Camera motion and branching choices                                           |
+| [demo_drag](uicore-plugin/src/main/resources/menu/demo_drag.yml)       | Parent groups, a slider, a receiving slot, and experimental hold-to-drag      |
+| [demo_zoom](uicore-plugin/src/main/resources/menu/demo_zoom.yml)       | Mouse-wheel zoom, click-to-pick-up dragging, and actions after a drop         |
 
 The gallery selectors require `uicore.slot` (granted to OP players by default). See the [demo walkthrough](showcase/README.md) · [Русская версия](showcase/README_RU.md).
 

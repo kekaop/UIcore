@@ -13,9 +13,11 @@ UIcore is built with Java 17 bytecode against the Paper 1.21.1 API. Its manifest
 | Purpur | 26.2      | 2633             | 25          | startup, reload, shutdown                                              |
 | Leaf   | 26.2      | 123 experimental | 25          | startup, reload, shutdown                                              |
 
-The matrix records local checks with one UIcore 1.0.0 build and PacketEvents 2.14.0. The final JAR was not retested on every listed combination. Earlier checks completed `/uicore reload` and a clean server shutdown without UIcore errors, `NoSuchMethodError`, or `NoClassDefFoundError` in the log. Visual behavior, all interactions, and optional integrations still require the [smoke checklist](SMOKE_CHECKLIST.md).
+The matrix records local checks with one UIcore 1.0.0 build and PacketEvents 2.14.0. The final JAR was not retested on every listed combination. Earlier checks completed `/uicore reload` and a clean server shutdown without UIcore errors, `NoSuchMethodError`, or `NoClassDefFoundError` in the log. See the [interaction verification](interaction-verification/README.md) for what the 1.1 checks cover.
 
-Java 17 is the plugin's bytecode baseline, not a universal server runtime. Run each Minecraft version on the Java version required by its server build. On Folia, keep the camera and scene elements inside the same region; see the [Folia port status](PORT_26_2.md).
+Java 17 is the plugin's bytecode baseline, not a universal server runtime. Run each Minecraft version on the Java version required by its server build. On Folia, keep the camera and scene elements inside the same region; see the [runtime contracts](RUNTIME_CONTRACTS.md).
+
+UIcore **1.1.0** passed interaction and cutscene protocol checks on Paper and Folia **26.1.2** with PacketEvents **2.14.0** and JDK 25. See the [release verification](../release/VALIDATION.md) for the artifact hash and coverage.
 
 ## NoChatReports can break chat input
 

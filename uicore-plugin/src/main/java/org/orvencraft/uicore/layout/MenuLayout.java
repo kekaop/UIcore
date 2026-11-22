@@ -146,6 +146,9 @@ public class MenuLayout {
    private boolean refreshMenuEnabled = false;
    private long refreshMenuDelay = 2L;
    private String ownerMenuKey = "";
+   private ElementInteraction interaction = ElementInteraction.from(new YamlConfiguration());
+   public ElementInteraction interaction() { return interaction; }
+
    private UiElementModel sourceModel = UiElementModel.empty();
    private String inputFieldName = "";
    private String inputFieldPrompt = "";
@@ -415,6 +418,8 @@ public class MenuLayout {
    }
 
    public UiElementModel sourceModel() { return this.sourceModel; }
+
+   public boolean isWorldAnchored() { return "world".equals(this.sourceModel.get("position-space")); }
 
    public String getToggleContentOff() {
       return this.toggleContentOff;
@@ -702,6 +707,7 @@ public class MenuLayout {
 
    public void loadConfig(ConfigurationSection var1) {
       this.sourceModel = ConfigurationCopy.model(var1);
+      this.interaction = ElementInteraction.from(var1);
       this.dynamicPositionSpec = DynamicPositionSpec.from(var1, this.x, this.y, this.z);
       for (String error : this.dynamicPositionSpec.configurationErrors()) {
          String location = (this.ownerMenuKey == null || this.ownerMenuKey.isBlank() ? "<unknown>" : this.ownerMenuKey) + ":" + this.key;
@@ -1338,7 +1344,7 @@ public class MenuLayout {
       return !this.cooldownEnabled || this.cooldownMillis <= 0L || UIcorePlugin.plugin.getLayoutCooldownLeftMillis(player, this.resolveCooldownKey(player)) <= 0L;
    }
 
-   private void startCooldown(Player player) {
+   public void startCooldown(Player player) {
       if (this.cooldownEnabled && this.cooldownMillis > 0L) {
          UIcorePlugin.plugin.startLayoutCooldown(player, this.resolveCooldownKey(player), this.cooldownMillis);
       }
@@ -1566,7 +1572,7 @@ public class MenuLayout {
    }
 
    private void dispatchCommand(Player var1, String var2) {
-      CommandUtils.executeCommand(var1, var2, this.useCommandDelay ? this.commandDelay : 0L);
+      CommandUtils.executeCommand(var1, var2, this.useCommandDelay ? this.commandDelay : 0L, this.key, Map.of());
    }
 
    private void connectToServer(Player var1, String var2) {

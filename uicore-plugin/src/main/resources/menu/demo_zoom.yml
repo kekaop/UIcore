@@ -1,0 +1,56 @@
+demo_zoom:
+  camera-position: {type: player, distance: 1.5}
+  npc: {enabled: false}
+  zoom:
+    enabled: true
+    group: board
+    min: 0.6
+    max: 1.8
+    step: 0.2
+    smoothing: 0.45
+  layout:
+    board: {type: group, y: 0.4, z: 3.5}
+    title:
+      parent: board
+      name: '<aqua>Scroll to zoom'
+      y: 0.35
+      text-size: 0.55
+      pointer-events: false
+    gem:
+      parent: board
+      type: item
+      material: DIAMOND
+      transform: gui
+      x: -0.55
+      scale: 0.35
+      hitbox: {width: 0.42, height: 0.42, depth: 0.25}
+      drag: {enabled: true, drop-targets: [socket], bounds: {x: [-0.8, 0.8]}}
+    socket_label:
+      parent: board
+      name: '<gray>Drop here'
+      x: 0.55
+      y: -0.4
+      text-size: 0.25
+      pointer-events: false
+    back:
+      name: '<gray>Back'
+      x: -0.6
+      y: -1.1
+      z: 3.5
+      text-size: 0.35
+      hitbox: {width: 0.7, height: 0.3, depth: 0.25}
+      next-menu: {enabled: true, menu: demo_main}
+    close:
+      name: '<red>Close'
+      x: 0.6
+      y: -1.1
+      z: 3.5
+      text-size: 0.35
+      hitbox: {width: 0.7, height: 0.3, depth: 0.25}
+      stop-menu: {enabled: true, teleport: {back-original: true}}
+  slots:
+    socket:
+      parent: board
+      x: 0.55
+      drop-accepts: [gem]
+      hitbox: {width: 0.5, height: 0.5, depth: 0.25}

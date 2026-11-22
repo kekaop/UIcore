@@ -1,0 +1,1212 @@
+showcase_lab:
+  hide-menu-for-other-player: true
+  hide-player-for-other-player: true
+  hide-other-players: true
+  can-damaged: false
+  camera-position:
+    type: fixed
+    world: world
+    x: 0.5
+    y: 110
+    z: 0.5
+    yaw: 0
+    pitch: 0
+  npc:
+    enabled: false
+  schematics:
+  - file: uicore_lab.schem
+    anchor: world
+    x: -18
+    y: 102
+    z: 2
+  layout:
+    brand:
+      name: <#7DE8FF>UICORE  /  LAB
+      x: -1.25
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    chapter:
+      name: <#7DE8FF>EXHIBITION
+      x: 1.24
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    title:
+      name: <gradient:#EDF9FF:#7DE8FF><bold>UIcore Lab</bold></gradient>
+      x: 0
+      y: 1.56
+      z: 3.5
+      text-size: 1.08
+      pointer-events: false
+      entrance-animation:
+        enabled: true
+        from: top
+        duration: 12
+        distance: 0.22
+        easing: ease-out-cubic
+    intro:
+      name: <#A4B9CF>Interactive Minecraft UI
+      x: 0
+      y: 1.29
+      z: 3.5
+      text-size: 0.43
+      pointer-events: false
+    rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: 1.12
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    foot_rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: -0.19
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    close:
+      name: <#BFCDE0><bold>Close</bold>
+      x: 1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.63
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      stop-menu:
+        enabled: true
+        teleport:
+          back-original: true
+    build:
+      name: <#A4B9CF>1.1  •  LIVE DEMO
+      x: 0
+      y: -0.41
+      z: 3.5
+      text-size: 0.36
+      pointer-events: false
+    gallery_icon:
+      type: item
+      material: AMETHYST_SHARD
+      transform: gui
+      billboard: center
+      x: -1.6
+      y: 0.8
+      z: 3.5
+      scale: 0.55
+      pointer-events: false
+    gallery:
+      name: <#AFAAFF><bold>Gallery</bold>
+      x: -1.6
+      y: 0.4
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.8
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      next-menu:
+        enabled: true
+        menu: showcase_gallery
+    gallery_desc:
+      name: <#A4B9CF>Items & slots
+      x: -1.6
+      y: 0.09
+      z: 3.5
+      text-size: 0.325
+      pointer-events: false
+    controls_icon:
+      type: item
+      material: DIAMOND
+      transform: gui
+      billboard: center
+      x: -0.5330000000000001
+      y: 0.8
+      z: 3.5
+      scale: 0.55
+      pointer-events: false
+    controls:
+      name: <#7DE8FF><bold>Controls</bold>
+      x: -0.5330000000000001
+      y: 0.4
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.8
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      next-menu:
+        enabled: true
+        menu: showcase_controls
+    controls_desc:
+      name: <#A4B9CF>Drag, slider & zoom
+      x: -0.5330000000000001
+      y: 0.09
+      z: 3.5
+      text-size: 0.325
+      pointer-events: false
+    terminal_icon:
+      type: item
+      material: REDSTONE_TORCH
+      transform: gui
+      billboard: center
+      x: 0.5339999999999998
+      y: 0.8
+      z: 3.5
+      scale: 0.55
+      pointer-events: false
+    terminal:
+      name: <#FFD78D><bold>Terminal</bold>
+      x: 0.5339999999999998
+      y: 0.4
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.8
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      next-menu:
+        enabled: true
+        menu: showcase_terminal
+    terminal_desc:
+      name: <#A4B9CF>States & input
+      x: 0.5339999999999998
+      y: 0.09
+      z: 3.5
+      text-size: 0.325
+      pointer-events: false
+    tour_icon:
+      type: item
+      material: SPYGLASS
+      transform: gui
+      billboard: center
+      x: 1.6009999999999995
+      y: 0.8
+      z: 3.5
+      scale: 0.55
+      pointer-events: false
+    tour:
+      name: <#9FF4AA><bold>Camera Tour</bold>
+      x: 1.6009999999999995
+      y: 0.4
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.8
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      next-menu:
+        enabled: true
+        menu: showcase_tour
+    tour_desc:
+      name: <#A4B9CF>Motion & choices
+      x: 1.6009999999999995
+      y: 0.09
+      z: 3.5
+      text-size: 0.325
+      pointer-events: false
+showcase_gallery:
+  hide-menu-for-other-player: true
+  hide-player-for-other-player: true
+  hide-other-players: true
+  can-damaged: false
+  camera-position:
+    type: fixed
+    world: world
+    x: 0.5
+    y: 110
+    z: 0.5
+    yaw: 0
+    pitch: 0
+  npc:
+    enabled: false
+  schematics:
+  - file: uicore_lab.schem
+    anchor: world
+    x: -18
+    y: 102
+    z: 2
+  layout:
+    brand:
+      name: <#7DE8FF>UICORE  /  LAB
+      x: -1.25
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    chapter:
+      name: <#AFAAFF>01 / GALLERY
+      x: 1.24
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    title:
+      name: <gradient:#EDF9FF:#AFAAFF><bold>Specimen Gallery</bold></gradient>
+      x: 0
+      y: 1.56
+      z: 3.5
+      text-size: 1.08
+      pointer-events: false
+    intro:
+      name: <#A4B9CF>Swap and inspect the specimen
+      x: 0
+      y: 1.29
+      z: 3.5
+      text-size: 0.43
+      pointer-events: false
+    rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: 1.12
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    foot_rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: -0.19
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    close:
+      name: <#BFCDE0><bold>Close</bold>
+      x: 1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.63
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      stop-menu:
+        enabled: true
+        teleport:
+          back-original: true
+    build:
+      name: <#A4B9CF>1.1  •  LIVE DEMO
+      x: 0
+      y: -0.41
+      z: 3.5
+      text-size: 0.36
+      pointer-events: false
+    back:
+      name: <#BFCDE0><bold>←  Lab</bold>
+      x: -1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.67
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      next-menu:
+        enabled: true
+        menu: showcase_lab
+    archive:
+      type: item
+      material: ENCHANTED_BOOK
+      transform: gui
+      billboard: center
+      x: -1.11
+      y: 0.78
+      z: 3.5
+      scale: 0.65
+      pointer-events: false
+      rotate: false
+    avatar:
+      type: player-avatar
+      player: self
+      face-only: true
+      billboard: center
+      scale: 0.62
+      x: 1.11
+      y: 0.78
+      z: 3.5
+      pointer-events: false
+    archive_label:
+      name: <#AFAAFF>ARCHIVE
+      x: -1.11
+      y: 0.38
+      z: 3.5
+      text-size: 0.28
+      pointer-events: false
+    slot_label:
+      name: <#7DE8FF>LIVE SLOT
+      x: 0
+      y: 0.38
+      z: 3.5
+      text-size: 0.28
+      pointer-events: false
+    avatar_label:
+      name: <#9FF4AA>YOUR AVATAR
+      x: 1.11
+      y: 0.38
+      z: 3.5
+      text-size: 0.28
+      pointer-events: false
+    pick_compass:
+      name: <#7DE8FF><bold>Compass</bold>
+      x: -0.88
+      y: 0.1
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.77
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      command:
+      - '[state] specimen compass'
+    pick_geode:
+      name: <#AFAAFF><bold>Geode</bold>
+      x: 0
+      y: 0.1
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.77
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      command:
+      - '[state] specimen geode'
+    pick_relay:
+      name: <#9FF4AA><bold>Relay</bold>
+      x: 0.88
+      y: 0.1
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.77
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      command:
+      - '[state] specimen relay'
+  templates:
+    compass:
+      type: item
+      material: COMPASS
+      transform: gui
+      scale: 0.7
+      billboard: center
+      hitbox:
+        width: 0.66
+        height: 0.66
+        depth: 0.26
+      hover-tooltip:
+        type: actionbar
+        text: <#7DE8FF>Compass · Navigation specimen
+    geode:
+      type: item
+      material: AMETHYST_CLUSTER
+      transform: gui
+      scale: 0.7
+      billboard: center
+      hitbox:
+        width: 0.66
+        height: 0.66
+        depth: 0.26
+      hover-tooltip:
+        type: actionbar
+        text: <#AFAAFF>Geode · Crystal specimen
+    relay:
+      type: item
+      material: RECOVERY_COMPASS
+      transform: gui
+      scale: 0.7
+      billboard: center
+      hitbox:
+        width: 0.66
+        height: 0.66
+        depth: 0.26
+      hover-tooltip:
+        type: actionbar
+        text: <#9FF4AA>Relay · Recovery specimen
+  slots:
+    specimen:
+      x: 0
+      y: 0.78
+      z: 3.5
+      content: '{state.specimen}'
+      fallback: compass
+showcase_controls:
+  hide-menu-for-other-player: true
+  hide-player-for-other-player: true
+  hide-other-players: true
+  can-damaged: false
+  camera-position:
+    type: fixed
+    world: world
+    x: 0.5
+    y: 110
+    z: 0.5
+    yaw: 0
+    pitch: 0
+  npc:
+    enabled: false
+  schematics:
+  - file: uicore_lab.schem
+    anchor: world
+    x: -18
+    y: 102
+    z: 2
+  layout:
+    brand:
+      name: <#7DE8FF>UICORE  /  LAB
+      x: -1.25
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    chapter:
+      name: <#7DE8FF>02 / CONTROLS
+      x: 1.24
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    title:
+      name: <gradient:#EDF9FF:#7DE8FF><bold>Interaction Deck</bold></gradient>
+      x: 0
+      y: 1.56
+      z: 3.5
+      text-size: 1.08
+      pointer-events: false
+    intro:
+      name: <#A4B9CF>Scroll to zoom  •  Click to grab or drop
+      x: 0
+      y: 1.29
+      z: 3.5
+      text-size: 0.43
+      pointer-events: false
+    rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: 1.12
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    foot_rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: -0.19
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    close:
+      name: <#BFCDE0><bold>Close</bold>
+      x: 1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.63
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      stop-menu:
+        enabled: true
+        teleport:
+          back-original: true
+    build:
+      name: <#A4B9CF>1.1  •  LIVE DEMO
+      x: 0
+      y: -0.41
+      z: 3.5
+      text-size: 0.36
+      pointer-events: false
+    back:
+      name: <#BFCDE0><bold>←  Lab</bold>
+      x: -1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.67
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      next-menu:
+        enabled: true
+        menu: showcase_lab
+    board:
+      type: group
+      x: 0
+      y: 0.72
+      z: 3.5
+    handle:
+      name: <#AFAAFF><bold>‹ MOVE BOARD ›</bold>
+      x: 0
+      y: 0.21
+      z: 0
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 1.4
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      drag:
+        enabled: true
+        target: board
+        bounds:
+          x:
+          - -0.38
+          - 0.38
+          y:
+          - 0.57
+          - 0.98
+      parent: board
+    gem:
+      type: item
+      material: DIAMOND
+      transform: gui
+      billboard: center
+      x: -0.64
+      y: -0.07
+      z: 0
+      scale: 0.38
+      pointer-events: true
+      hitbox:
+        width: 0.4
+        height: 0.36
+        depth: 0.24
+      drag:
+        enabled: true
+        drop-targets:
+        - socket
+        bounds:
+          x:
+          - -0.92
+          - 0.92
+          y:
+          - -0.22
+          - 0.08
+      parent: board
+    socket_ring:
+      name: <#AFAAFF>◇
+      x: 0.64
+      y: -0.145
+      z: 0
+      text-size: 0.72
+      pointer-events: false
+      parent: board
+    socket_hint:
+      name: <#A4B9CF>SOCKET
+      x: 0.64
+      y: -0.31
+      z: 0
+      text-size: 0.265
+      pointer-events: false
+      parent: board
+    track:
+      name: <#46647C>━━━━━━━
+      x: 0
+      y: -0.54
+      z: 0
+      text-size: 0.4
+      pointer-events: false
+      parent: board
+    slider:
+      type: item
+      material: PRISMARINE_CRYSTALS
+      transform: gui
+      billboard: center
+      x: 0
+      y: -0.44
+      z: 0
+      scale: 0.27
+      pointer-events: true
+      hitbox:
+        width: 0.23
+        height: 0.22
+        depth: 0.23
+      drag:
+        axis: x
+        bounds:
+          x:
+          - -0.48
+          - 0.48
+      slider:
+        state: signal
+        min: 0
+        max: 100
+        step: 5
+      parent: board
+    signal:
+      name: <#7DE8FF>SIGNAL   <white>{state.signal}
+      x: 1.38
+      y: 0.08
+      z: 3.5
+      text-size: 0.27
+      pointer-events: false
+    drop_status:
+      name: <#A4B9CF>SOCKET OPEN
+      x: -1.35
+      y: 0.08
+      z: 3.5
+      text-size: 0.27
+      pointer-events: false
+      initial-state: open
+      states:
+        open:
+          text: <#A4B9CF>SOCKET OPEN
+        locked:
+          text: <#9FF4AA>CORE DOCKED
+  zoom:
+    enabled: true
+    group: board
+    min: 0.65
+    max: 1.5
+    step: 0.15
+    smoothing: 0.55
+    pivot:
+      x: 0
+      y: 0
+  auto-commands:
+    enabled: true
+    commands:
+    - '[state] signal 50'
+    delays:
+    - 0
+  slots:
+    socket:
+      parent: board
+      x: 0.64
+      y: -0.07
+      drop-accepts:
+      - gem
+      hitbox:
+        width: 0.42
+        height: 0.36
+        depth: 0.24
+      on-drop:
+      - '[element-state] drop_status locked'
+showcase_terminal:
+  hide-menu-for-other-player: true
+  hide-player-for-other-player: true
+  hide-other-players: true
+  can-damaged: false
+  camera-position:
+    type: fixed
+    world: world
+    x: 0.5
+    y: 110
+    z: 0.5
+    yaw: 0
+    pitch: 0
+  npc:
+    enabled: false
+  schematics:
+  - file: uicore_lab.schem
+    anchor: world
+    x: -18
+    y: 102
+    z: 2
+  layout:
+    brand:
+      name: <#7DE8FF>UICORE  /  LAB
+      x: -1.25
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    chapter:
+      name: <#FFD78D>03 / TERMINAL
+      x: 1.24
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    title:
+      name: <gradient:#EDF9FF:#FFD78D><bold>State Terminal</bold></gradient>
+      x: 0
+      y: 1.56
+      z: 3.5
+      text-size: 1.08
+      pointer-events: false
+    intro:
+      name: <#A4B9CF>Activate the relay or set a callsign
+      x: 0
+      y: 1.29
+      z: 3.5
+      text-size: 0.43
+      pointer-events: false
+    rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: 1.12
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    foot_rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: -0.19
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    close:
+      name: <#BFCDE0><bold>Close</bold>
+      x: 1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.63
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      stop-menu:
+        enabled: true
+        teleport:
+          back-original: true
+    build:
+      name: <#A4B9CF>1.1  •  LIVE DEMO
+      x: 0
+      y: -0.41
+      z: 3.5
+      text-size: 0.36
+      pointer-events: false
+    back:
+      name: <#BFCDE0><bold>←  Lab</bold>
+      x: -1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.67
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      next-menu:
+        enabled: true
+        menu: showcase_lab
+    relay:
+      type: item
+      material: REDSTONE_TORCH
+      transform: gui
+      billboard: center
+      x: -1.05
+      y: 0.79
+      z: 3.5
+      scale: 0.52
+      pointer-events: false
+      initial-state: 'off'
+      states:
+        'off':
+          material: REDSTONE_TORCH
+        'on':
+          material: GLOWSTONE_DUST
+    relay_state:
+      name: <#A4B9CF>RELAY STANDBY
+      x: 0.23
+      y: 0.93
+      z: 3.5
+      text-size: 0.47
+      pointer-events: false
+      initial-state: 'off'
+      states:
+        'off':
+          text: <#A4B9CF>RELAY STANDBY
+        'on':
+          text: <#9FF4AA><bold>RELAY ONLINE</bold>
+    transmission:
+      name: <#AFAAFF>Encrypted channel open
+      x: 0.23
+      y: 0.7
+      z: 3.5
+      text-size: 0.33
+      pointer-events: false
+      initial-state: hidden
+      states:
+        hidden:
+          visible: false
+        shown:
+          visible: true
+          text: <#AFAAFF>Encrypted channel open
+    enable:
+      name: <#9FF4AA><bold>Activate</bold>
+      x: -0.8
+      y: 0.38
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.75
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      set-states:
+        relay: 'on'
+        relay_state: 'on'
+        transmission: shown
+    disable:
+      name: <#A4B9CF><bold>Reset</bold>
+      x: 0.03
+      y: 0.38
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.65
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      set-states:
+        relay: 'off'
+        relay_state: 'off'
+        transmission: hidden
+    callsign:
+      name: <#FFD78D><bold>Set callsign</bold>
+      x: 1.0
+      y: 0.38
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.98
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      type: input-field
+      field: lab_callsign
+      input-field:
+        prompt: <#FFD78D>Press T and type your callsign.
+    input_display:
+      name: <#FFD78D>CALLSIGN   <white>{input.lab_callsign}
+      x: 0
+      y: 0.06
+      z: 3.5
+      text-size: 0.32
+      pointer-events: false
+showcase_tour:
+  hide-menu-for-other-player: true
+  hide-player-for-other-player: true
+  hide-other-players: true
+  can-damaged: false
+  camera-position:
+    type: fixed
+    world: world
+    x: 0.5
+    y: 110
+    z: 0.5
+    yaw: 0
+    pitch: 0
+  npc:
+    enabled: false
+  schematics:
+  - file: uicore_lab.schem
+    anchor: world
+    x: -18
+    y: 102
+    z: 2
+  layout:
+    brand:
+      name: <#7DE8FF>UICORE  /  LAB
+      x: -1.25
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    chapter:
+      name: <#9FF4AA>04 / CAMERA TOUR
+      x: 1.24
+      y: 2.03
+      z: 3.5
+      text-size: 0.37
+      pointer-events: false
+    title:
+      name: <gradient:#EDF9FF:#9FF4AA><bold>Camera Tour</bold></gradient>
+      x: 0
+      y: 1.56
+      z: 3.5
+      text-size: 1.08
+      pointer-events: false
+    intro:
+      name: <#A4B9CF>Watch the approach and pick a route
+      x: 0
+      y: 1.29
+      z: 3.5
+      text-size: 0.43
+      pointer-events: false
+    rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: 1.12
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    foot_rule:
+      name: <#7494B1>━━━━━━━━━━━━━━━━━━━━━━━━
+      x: 0
+      y: -0.19
+      z: 3.5
+      text-size: 0.39
+      pointer-events: false
+    close:
+      name: <#BFCDE0><bold>Close</bold>
+      x: 1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.63
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      stop-menu:
+        enabled: true
+        teleport:
+          back-original: true
+    build:
+      name: <#A4B9CF>1.1  •  LIVE DEMO
+      x: 0
+      y: -0.41
+      z: 3.5
+      text-size: 0.36
+      pointer-events: false
+    back:
+      name: <#BFCDE0><bold>←  Lab</bold>
+      x: -1.2
+      y: -0.43
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 0.67
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      next-menu:
+        enabled: true
+        menu: showcase_lab
+    tour_icon:
+      type: item
+      material: SPYGLASS
+      transform: gui
+      billboard: center
+      x: 0
+      y: 0.8
+      z: 3.5
+      scale: 0.4
+      pointer-events: false
+    launch:
+      name: <#9FF4AA><bold>Start tour</bold>
+      x: 0
+      y: 0.25
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 1.04
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      command:
+      - '[cutscene] start lab_tour'
+      initial-state: ready
+      states:
+        ready:
+          visible: true
+        busy:
+          visible: false
+    route_a:
+      name: <#7DE8FF><bold>Observation</bold>
+      x: -0.75
+      y: 0.3
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 1.1
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      initial-state: hidden
+      states:
+        hidden:
+          visible: false
+        shown:
+          visible: true
+    route_b:
+      name: <#AFAAFF><bold>Systems</bold>
+      x: 0.75
+      y: 0.3
+      z: 3.5
+      text-size: 0.51
+      pointer-events: true
+      hitbox:
+        width: 1.1
+        height: 0.28
+        depth: 0.3
+      hover-style:
+        color: '#FFFFFF'
+        underlined: true
+      hover-enlarge:
+        enabled: true
+        scale: 1.05
+      initial-state: hidden
+      states:
+        hidden:
+          visible: false
+        shown:
+          visible: true
+    route_status:
+      name: <#A4B9CF>STANDING BY
+      x: 0
+      y: -0.01
+      z: 3.5
+      text-size: 0.29
+      pointer-events: false
+      initial-state: ready
+      states:
+        ready:
+          text: <#A4B9CF>STANDING BY
+        moving:
+          text: <#9FF4AA>CAMERA IN MOTION
+        choosing:
+          text: <#FFD78D>PICK A ROUTE
+        done:
+          text: <#9FF4AA>TOUR COMPLETE
+  cutscene:
+    id: lab_tour
+    auto-start: false

@@ -1,4 +1,4 @@
-# Install UIcore 1.0.0
+# Install UIcore 1.1.0
 
 > **Language:** English | [Русская версия](INSTALL_RU.md)
 
@@ -7,9 +7,10 @@ UIcore creates menus from world-space elements: text, items, buttons, element st
 ## Install the plugin
 
 1. Stop the server and back up the world and `plugins/UIcore/` if this is an update.
-2. Put `UIcore-1.0.0.jar` and PacketEvents **2.14.0** in `plugins/`.
+2. Put `UIcore-1.1.0.jar` and [PacketEvents 2.14.0 Spigot](https://modrinth.com/plugin/packetevents/version/m78nFxYg) in `plugins/`.
 3. Start the server. UIcore creates its configuration and example menus in `plugins/UIcore/menu/`.
 4. Stand in an open area and run `/uicore run demo_main`. Close the menu with `/uicore stop`.
+5. Try `demo_cutscene`, `demo_drag`, and `demo_zoom` with `/uicore run <menu>`.
 
 UIcore supports Minecraft 1.21.1 and newer. It uses Java 17 bytecode; run the server with the Java runtime required by its build. See the [compatibility matrix](../docs/COMPATIBILITY.md) for tested server combinations. PacketEvents is required; PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault, and LuckPerms are optional.
 

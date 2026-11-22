@@ -34,12 +34,16 @@ public class TextDisplayManager {
    private FileConfiguration config;
    /** Each configured text entry owns its displays and timeout independently. */
    private final Map<UUID, List<TextDisplayManager.ActiveTextGroup>> activeGroups = new ConcurrentHashMap<>();
+   private final Map<UUID, Player> displayOwners = new ConcurrentHashMap<>();
    private final TypewriterEffect typewriterEffect;
 
    public TextDisplayManager(JavaPlugin plugin) {
       this.plugin = plugin;
       this.configFile = new File(plugin.getDataFolder(), "text.yml");
-      this.typewriterEffect = new TypewriterEffect(UIcorePlugin.plugin);
+      this.typewriterEffect = new TypewriterEffect(UIcorePlugin.plugin, display -> {
+         Player owner = this.displayOwners.get(display.getUniqueId());
+         return owner != null && UIcorePlugin.plugin.isCutsceneUiFrozen(owner);
+      });
       this.loadConfig();
    }
 
@@ -151,10 +155,14 @@ public class TextDisplayManager {
                animEnabled, animType, animSpeed, animAmplitude, animPhaseOffset, i
             );
          }
+         long[] elapsed = {0};
          ScheduledTask durationTask = UIcorePlugin.foliaLib
             .scheduling()
             .entitySpecificScheduler(player)
-            .runDelayed(() -> this.clearTextGroup(playerId, group), () -> this.clearTextGroup(playerId, group), Math.max(1, duration));
+            .runAtFixedRate(() -> {
+               if (UIcorePlugin.plugin.isCutsceneUiFrozen(player)) return;
+               if (++elapsed[0] >= Math.max(1, duration)) this.clearTextGroup(playerId, group);
+            }, () -> this.clearTextGroup(playerId, group), 1L, 1L);
          group.addTask(durationTask);
       } catch (RuntimeException exception) {
          this.clearTextGroup(playerId, group);
@@ -214,6 +222,12 @@ public class TextDisplayManager {
             display.remove();
             return;
          }
+         this.displayOwners.put(display.getUniqueId(), player);
+         if (!group.isActive()) {
+            this.displayOwners.remove(display.getUniqueId());
+            display.remove();
+            return;
+         }
          try {
             UIcorePlugin.plugin.tagMenuEntity(display);
             display.setPersistent(false);
@@ -238,7 +252,7 @@ public class TextDisplayManager {
                oldTransformation.getLeftRotation().rotationYXZ((float) Math.toRadians(tiltX), (float) Math.toRadians(tiltY), (float) Math.toRadians(tiltZ)),
                new Vector3f((float) scale, (float) scale, (float) scale), oldTransformation.getRightRotation()
             ));
-            this.applyAnimation(display, animationEnabled, animationType, animationSpeed, animationAmplitude, animationPhaseOffset, index, group);
+            this.applyAnimation(player, display, animationEnabled, animationType, animationSpeed, animationAmplitude, animationPhaseOffset, index, group);
             ScheduledTask showTask = UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(
                () -> { if (group.isActive() && player.isOnline()) player.showEntity(UIcorePlugin.plugin, display); },
                () -> { }
@@ -259,6 +273,7 @@ public class TextDisplayManager {
    }
 
    private void applyAnimation(
+      final Player owner,
       final TextDisplay display,
       boolean enabled,
       String animType,
@@ -275,9 +290,9 @@ public class TextDisplayManager {
       double safeAmplitude = Math.max(0.0, amplitude);
       double step = safeSpeed * 0.05;
       ScheduledTask scheduled = switch (animType.toLowerCase()) {
-         case "rotate" -> scheduleRotation(display, step);
-         case "__old-float-y", "__old-up-down", "float-y", "up-down" -> scheduleFloat(display, step, safeAmplitude, phaseOffset * index, true);
-         case "__old-left-right", "float-x", "left-right" -> scheduleFloat(display, step, safeAmplitude, phaseOffset * index, false);
+         case "rotate" -> scheduleRotation(owner, display, step);
+         case "__old-float-y", "__old-up-down", "float-y", "up-down" -> scheduleFloat(owner, display, step, safeAmplitude, phaseOffset * index, true);
+         case "__old-left-right", "float-x", "left-right" -> scheduleFloat(owner, display, step, safeAmplitude, phaseOffset * index, false);
          default -> null;
       };
       if (scheduled != null) {
@@ -285,7 +300,7 @@ public class TextDisplayManager {
       }
    }
 
-   private ScheduledTask scheduleRotation(TextDisplay display, double step) {
+   private ScheduledTask scheduleRotation(Player owner, TextDisplay display, double step) {
       float[] angle = {0.0F};
       ScheduledTask[] taskReference = new ScheduledTask[1];
       ScheduledTask scheduled = UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(display).runAtFixedRate(() -> {
@@ -293,6 +308,7 @@ public class TextDisplayManager {
             if (taskReference[0] != null) taskReference[0].cancel();
             return;
          }
+         if (UIcorePlugin.plugin.isCutsceneUiFrozen(owner)) return;
          angle[0] += (float) step;
          Transformation oldTransformation = display.getTransformation();
          display.setTransformation(new Transformation(
@@ -304,7 +320,7 @@ public class TextDisplayManager {
       return scheduled;
    }
 
-   private ScheduledTask scheduleFloat(TextDisplay display, double step, double amplitude, double phase, boolean vertical) {
+   private ScheduledTask scheduleFloat(Player owner, TextDisplay display, double step, double amplitude, double phase, boolean vertical) {
       Vector3f[] baseTranslation = {null};
       long[] tick = {0L};
       ScheduledTask[] taskReference = new ScheduledTask[1];
@@ -313,6 +329,7 @@ public class TextDisplayManager {
             if (taskReference[0] != null) taskReference[0].cancel();
             return;
          }
+         if (UIcorePlugin.plugin.isCutsceneUiFrozen(owner)) return;
          Transformation oldTransformation = display.getTransformation();
          if (baseTranslation[0] == null) {
             baseTranslation[0] = new Vector3f(oldTransformation.getTranslation());
@@ -364,6 +381,7 @@ public class TextDisplayManager {
          catch (RuntimeException exception) { this.plugin.getLogger().warning("Text task cleanup failed: " + exception.getMessage()); }
       }
       for (ActiveTextDisplay entry : group.displays) {
+         this.displayOwners.remove(entry.display.getUniqueId());
          try { this.typewriterEffect.cancelEffect(entry.display.getUniqueId()); }
          catch (RuntimeException exception) { this.plugin.getLogger().warning("Typewriter cleanup failed: " + exception.getMessage()); }
          org.orvencraft.uicore.scheduler.CleanupTasks.entity(this.plugin, entry.display,

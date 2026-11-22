@@ -1,4 +1,4 @@
-version: "1.0.0" # Do not edit manually.
+version: "${project.version}" # Do not edit manually.
 Debug: false
 
 # Use the player's current position and facing as the menu camera.

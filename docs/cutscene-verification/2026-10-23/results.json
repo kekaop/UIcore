@@ -1,0 +1,84 @@
+[
+  {
+    "family": "Folia",
+    "version": "26.1.2",
+    "port": 25587,
+    "started": "2026-10-23T01:52:05.077Z",
+    "jarSha256": "4f347134da938b8f2ab2ab5ffaf0091fc6e8ba9486f13287b0cc3249ab47c5ff",
+    "checks": [
+      {
+        "name": "pause-resume",
+        "result": "pass",
+        "status": "demo, PAUSED, step=fly, ticks=30, progress=0.250",
+        "holdMilliseconds": 1300
+      },
+      {
+        "name": "left-branch-double-choice",
+        "result": "pass",
+        "report": "Probe report ping=0 ms eye=2.00000000,101.00000000,12.00000000 yaw=315.00000000 pitch=0.00000000 cursor=0.00000000,0.00000000,2.50000000"
+      },
+      {
+        "name": "left-close",
+        "result": "pass"
+      },
+      {
+        "name": "right-branch-double-choice",
+        "result": "pass",
+        "report": "Probe report ping=0 ms eye=10.00000000,101.00000000,12.00000000 yaw=225.00000000 pitch=0.00000000 cursor=0.00000000,0.00000000,2.50000000"
+      },
+      {
+        "name": "right-close",
+        "result": "pass"
+      },
+      {
+        "name": "cross-chunks",
+        "result": "pass",
+        "report": "Probe report ping=0 ms eye=40.00000000,100.00000000,40.00000000 yaw=90.00000000 pitch=0.00000000 cursor=0.00000000,0.00000000,2.50000000",
+        "genuineFoliaRegionBoundary": "not established"
+      }
+    ],
+    "result": "pass",
+    "finished": "2026-10-23T01:53:02.685Z"
+  },
+  {
+    "family": "Paper",
+    "version": "1.21.11",
+    "port": 25586,
+    "started": "2026-10-23T01:52:05.056Z",
+    "jarSha256": "4f347134da938b8f2ab2ab5ffaf0091fc6e8ba9486f13287b0cc3249ab47c5ff",
+    "checks": [
+      {
+        "name": "pause-resume",
+        "result": "pass",
+        "status": "demo, PAUSED, step=fly, ticks=29, progress=0.242",
+        "holdMilliseconds": 1300
+      },
+      {
+        "name": "left-branch-double-choice",
+        "result": "pass",
+        "report": "Probe report ping=0 ms eye=2.00000000,101.00000000,12.00000000 yaw=315.00000000 pitch=0.00000000 cursor=0.00000000,0.00000000,2.50000000"
+      },
+      {
+        "name": "left-close",
+        "result": "pass"
+      },
+      {
+        "name": "right-branch-double-choice",
+        "result": "pass",
+        "report": "Probe report ping=0 ms eye=10.00000000,101.00000000,12.00000000 yaw=225.00000000 pitch=0.00000000 cursor=0.00000000,0.00000000,2.50000000"
+      },
+      {
+        "name": "right-close",
+        "result": "pass"
+      },
+      {
+        "name": "cross-chunks",
+        "result": "pass",
+        "report": "Probe report ping=2 ms eye=40.00000000,100.00000000,40.00000000 yaw=90.00000000 pitch=0.00000000 cursor=0.00000000,0.00000000,2.50000000",
+        "genuineFoliaRegionBoundary": "not established"
+      }
+    ],
+    "result": "pass",
+    "finished": "2026-10-23T01:53:04.233Z"
+  }
+]

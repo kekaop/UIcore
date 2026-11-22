@@ -12,6 +12,10 @@ import org.orvencraft.uicore.api.state.MenuState;
 import org.bukkit.entity.Player;
 
 public interface UIcoreApi {
+   default org.orvencraft.uicore.api.cutscene.CutsceneService cutscenes() {
+      throw new UnsupportedOperationException("Cutscenes are unavailable");
+   }
+
    default MenuService menus() { throw new UnsupportedOperationException("Menu service is unavailable"); }
 
    default ElementService elements() { throw new UnsupportedOperationException("Element service is unavailable"); }

@@ -1,5 +1,7 @@
 # UIcore menu authoring guide
 
+See [groups, drag and drop, and zoom](INTERACTIONS_1_1.md) for parent elements, sliders, receiving slots, and interaction debugging.
+
 > **Language:** English | [Русская версия](MENU_AUTHORING_GUIDE_RU.md)
 
 Use this guide to create a YAML menu, position it around the camera, add interactive elements, and verify the finished scene. UIcore installs `demo_main`, `demo_gallery`, and `demo_states` in `plugins/UIcore/menu/`; copy an example before changing it. See the [demo walkthrough](../showcase/README.md).
@@ -297,6 +299,6 @@ Before publishing a menu:
 - Check material, transform, billboard, tilt, scale, and resource-pack appearance for every item.
 - Check permissions, `visible-if`, click requirements, states, and cooldowns independently.
 - Confirm schematic files exist and close the menu to verify block restoration.
-- Run `/uicore reload`, read the server log, and complete the [smoke checklist](SMOKE_CHECKLIST.md).
+- Run `/uicore reload`, read the server log, and check the interaction scenarios that apply to your menu. See the [interaction checks](interaction-verification/README.md).
 
 Useful commands include `/uicore run <menu>`, `/uicore stop`, `/uicore reload`, `/uicore slot ...`, `/uicore items <id>`, and `/uicore text open <id>`.

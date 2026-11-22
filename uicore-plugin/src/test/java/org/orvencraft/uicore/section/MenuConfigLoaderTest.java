@@ -33,6 +33,15 @@ class MenuConfigLoaderTest {
    }
 
    @Test
+   void rejectsAQuotedCameraCoordinateInsteadOfTeleportingToTheDefault() throws Exception {
+      Files.writeString(temporaryDirectory.resolve("camera.yml"),
+         "example:\n  camera-position: {type: fixed, x: '240'}\n");
+      var exception = assertThrows(IllegalArgumentException.class,
+         () -> MenuConfigLoader.loadMenuSections(temporaryDirectory.toFile()));
+      assertTrue(exception.getMessage().contains("example.camera-position.x"));
+   }
+
+   @Test
    void rejectsUnknownSchemaVersionWithMenuContext() throws Exception {
       Files.writeString(temporaryDirectory.resolve("version.yml"),
          "example:\n  schema-version: 3\n  camera-position:\n    type: player\n");

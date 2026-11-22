@@ -20,6 +20,12 @@ public class TeleportListener implements Listener {
          && this.plugin.consumeInternalMenuTeleport(player, event.getTo())) {
          return;
       }
+      if (event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN && plugin.isCutsceneCarrierTeleport(player, event.getTo())) return;
+      if (plugin.getCutsceneManager() != null && plugin.getCutsceneManager().active(player)) {
+         plugin.getCutsceneManager().abort(player, org.orvencraft.uicore.api.cutscene.CutsceneAbortReason.EXTERNAL_TELEPORT);
+         plugin.stopCursor(player, false);
+         return;
+      }
 
       if (this.plugin.isCurrentMenuCameraLocation(player, event.getTo())) {
          return;

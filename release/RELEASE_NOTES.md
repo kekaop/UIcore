@@ -1,26 +1,29 @@
-# UIcore 1.0.0
+# UIcore 1.1.0
 
 > **Language:** English | [Русская версия](RELEASE_NOTES_RU.md)
 
-This is the first UIcore release, based on CustomScreenMenu 1.4.8. It targets Minecraft 1.21.1 and newer. Available Paper, Folia, Purpur, and Leaf builds have startup, reload, and shutdown checks; the [compatibility matrix](../docs/COMPATIBILITY.md) lists what was tested.
+Build interactive tours, movable panels, and zoomable menus around the player's camera. UIcore 1.1.0 works with a vanilla Minecraft client.
 
-This release includes element states (`initial-state`, `states`, `set-state`, and `set-states`) and player-specific Sponge `.schem` v2/v3 previews. It keeps permission conditions and improves player restoration after a menu closes, entity and task lifecycle handling, configuration validation, click and input processing, and Folia scheduler support. The JAR is built against the Paper 1.21.1 API with Java 17 bytecode.
+## Camera cutscenes
 
-Known limits: schematic previews do not show block-entity contents, entities, or biomes. Optional plugin integrations must be checked on the target server build.
+- Define routes, turns, pauses, and branching choices in YAML. Configure movement and rotation curves, and keep each player's camera and choices independent.
+- Attach a cutscene to a menu, start it through a menu action or the Java API, and save viewpoints in game.
+- Try `/uicore run demo_cutscene`. [Cutscene guide](../docs/CUTSCENES.md)
 
-## Included fixes
+## Drag and drop, groups, and sliders
 
-- Legacy blockcache recovery runs each block operation on its Folia region, then persists the journal after all results arrive. Failed or conflicting entries remain available for retry.
-- Global API element mutations are serialized per menu; renderers use immutable definition snapshots.
-- CraftEngine image/shift tags use the Adventure tag resolver builder alongside standard tags.
-- The subprocess test chooses `java` on Linux and `java.exe` on Windows.
-- Each menu has independent settings for public displays, player visibility in both directions, and incoming player damage. See the [menu privacy settings](../docs/MENU_AUTHORING_GUIDE.md#set-menu-privacy-and-player-damage).
+- Set `parent` to move child elements with their group. Configure drag bounds, handles, and allowed drop targets.
+- Use YAML `on-drop` or Java `MenuDropEvent` to run logic after a successful drop has been applied. Use sliders to write stepped values to menu state.
+- Drag uses two clicks by default. `demo_drag` shows the experimental hold-to-drag mode for stationary menus. Minecraft can still draw its first-person crosshair in that mode. [Interaction guide](../docs/INTERACTIONS_1_1.md)
 
-- Removed the remaining experimental drag capture, group movement, and interactive rotation code and its obsolete configuration examples.
-- Internal teleport markers match the requested destination and cannot be cleared by completion of an older request.
-- Commands queued across entity/global schedulers recheck their originating menu session before execution.
-- Configuration rejects non-string permissions and non-map click requirements.
-- Empty or failed extension data results respect the provider refresh interval.
-- Build instructions specify JDK 21 or newer; example extension build outputs are excluded from source control.
+## Mouse-wheel zoom
 
-Automated tests cover these paths. Multiplayer rendering and optional integrations still need checks on the target server. The subprocess test ran on Windows; an actual Linux run remains pending.
+- Zoom camera-relative elements or one group with a configurable pivot, scale range, and smoothing. Click and drop targets scale with the elements.
+- Try `/uicore run demo_zoom`. Zoom uses the two-click drag mode. [Zoom configuration](../docs/INTERACTIONS_1_1.md#mouse-wheel-zoom)
+
+## Fixes and upgrading
+
+- Improved hit testing on transformed elements and kept render and input calculations on the same menu frame.
+- Fixed action context for immediate and delayed actions, and kept the active configuration when a reload fails.
+- Improved recovery of a player's original state when a menu session ends unexpectedly.
+- Install `UIcore-1.1.0.jar` and [PacketEvents 2.14.0 Spigot](https://modrinth.com/plugin/packetevents/version/m78nFxYg) in `plugins/`. Restart the server after replacing the JAR. [Installation guide](INSTALL.md) · [Release verification](VALIDATION.md)

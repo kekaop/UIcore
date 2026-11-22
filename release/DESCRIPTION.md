@@ -6,6 +6,8 @@ Create menus in YAML, then extend them with the public Java API. Use UIcore for 
 
 ## What you can build
 
+- **Interactive tours and panels:** camera cutscenes with branching choices, parent groups, sliders, drag and drop, and zoom with the mouse wheel.
+
 - **Interactive screens:** text labels and buttons with hover feedback, cursor styles, tooltips, click animations, and cooldowns.
 - **Inputs and state:** chat input fields, toggles, permission checks, click requirements, and per-player element states that can change text, material, or visibility.
 - **Item galleries:** item displays, player avatars, reusable templates, and slots with selectable contents.
@@ -23,7 +25,7 @@ Create menus in YAML, then extend them with the public Java API. Use UIcore for 
 
 ## Get started
 
-Install UIcore and PacketEvents in the server's `plugins/` directory and start the server. UIcore creates its configuration and three example menus. Run `/uicore run demo_main` to open the main example; `/uicore stop` closes the menu. Edit or add YAML files in `plugins/UIcore/menu/`, then run `/uicore reload` to load your changes.
+Install UIcore and PacketEvents in the server's `plugins/` directory and start the server. UIcore creates its configuration and six example menus. Start with `/uicore run demo_main` or try `demo_cutscene`, `demo_drag`, and `demo_zoom`. Use `/uicore stop` to close a menu. Edit YAML in `plugins/UIcore/menu/`, then run `/uicore reload`.
 
 Read the [installation guide](https://github.com/kekaop/UIcore/blob/orven/normal-source-build/release/INSTALL.md) to set up the server, then follow the [menu authoring guide](https://github.com/kekaop/UIcore/blob/orven/normal-source-build/docs/MENU_AUTHORING_GUIDE.md) to build your first screen. The [compatibility matrix](https://github.com/kekaop/UIcore/blob/orven/normal-source-build/docs/COMPATIBILITY.md) lists tested server builds. Watch the [bundled menu walkthrough](https://github.com/user-attachments/assets/60c09f38-9699-4fa7-9ec8-5ccf51af7e2b) or see a [custom server menu](https://github.com/user-attachments/assets/50bd8035-eb6a-4ecd-9941-b3f17b2cd196).
 

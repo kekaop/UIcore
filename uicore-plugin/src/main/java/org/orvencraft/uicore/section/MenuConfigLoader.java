@@ -67,6 +67,11 @@ public class MenuConfigLoader {
          throw new IllegalArgumentException("Menu '" + menuKey + "' is missing camera-position");
       } else {
          validateValues(menuKey, menuSection);
+         for (String key : List.of("distance", "x", "y", "z", "yaw", "pitch", "yaw-offset", "pitch-offset",
+            "offset.right", "offset.up", "offset.forward", "offset.x", "offset.y", "offset.z")) {
+            if (cameraSection.contains(key) && !(cameraSection.get(key) instanceof Number))
+               throw new IllegalArgumentException(menuKey + ".camera-position." + key + " must be numeric");
+         }
          String world = cameraSection.getString("world", "world");
          double distance = cameraSection.getDouble("distance", 1.5);
          double x = cameraSection.getDouble("x", 0.0);
@@ -88,6 +93,14 @@ public class MenuConfigLoader {
 
          Section section = new Section(distance, world, x, y, z, yaw, pitch, permission, autoCommands, autoCommandDelays, autoCommandsEnabled);
          section.privacy = MenuPrivacySettings.from(menuSection);
+         section.dragInput = menuSection.getString("drag-input", "click");
+         section.zoom = org.orvencraft.uicore.layout.MenuZoom.from(menuSection);
+         if (!List.of("click", "block-digging").contains(section.dragInput)) throw new IllegalArgumentException("drag-input must be click or block-digging");
+         if (section.zoom != null && section.dragInput.equals("block-digging"))
+            throw new IllegalArgumentException("Zoom requires drag-input: click to preserve spectator mode");
+         if (section.dragInput.equals("block-digging") && menuSection.contains("cutscene")) throw new IllegalArgumentException("Experimental block-digging requires a stationary menu without cutscene");
+         section.cutsceneId = menuSection.getString("cutscene.id", "");
+         section.cutsceneAutoStart = menuSection.getBoolean("cutscene.auto-start", true) && !section.cutsceneId.isBlank();
          section.positionType = positionType;
          ConfigurationSection playerOffset = cameraSection.getConfigurationSection("offset");
          if (playerOffset != null) {
@@ -127,11 +140,22 @@ public class MenuConfigLoader {
                ConfigurationSection layoutConfig = layoutSection.getConfigurationSection(layoutKey);
                if (layoutConfig != null) {
                   MenuLayout layout = loadLayout(menuKey, layoutKey, layoutConfig, world);
-                  section.add(layoutKey, layout);
+                  section.addLoaded(layoutKey, layout);
                }
             }
          }
 
+         var hierarchy = new LinkedHashMap<>(section.definition().layouts());
+         for (MenuSlot slot : section.definition().slots().values()) {
+            if (hierarchy.containsKey(slot.id())) throw new IllegalArgumentException("Duplicate layout/slot ID: " + slot.id());
+            hierarchy.put(slot.id(), loadLayout(menuKey, slot.id(), slot.positionConfig(), world));
+         }
+         org.orvencraft.uicore.layout.ElementHierarchy.validate(hierarchy);
+         if (section.zoom != null && !section.zoom.group().isEmpty()) {
+            MenuLayout group = section.definition().layouts().get(section.zoom.group());
+            if (group == null || !group.interaction().group() || group.isWorldAnchored())
+               throw new IllegalArgumentException("zoom.group must name a camera-relative layout group");
+         }
          section.key = menuKey;
          return section;
       }
@@ -186,6 +210,8 @@ public class MenuConfigLoader {
    public static MenuLayout loadLayout(String menuKey, String layoutKey, UiElementModel model, String defaultWorld) {
       YamlConfiguration layoutConfig = ConfigurationCopy.configuration(model.properties());
       validateValues(menuKey + ":" + layoutKey, layoutConfig);
+      if (layoutConfig.contains("position-space") && !java.util.Set.of("camera", "world").contains(layoutConfig.getString("position-space", "")))
+         throw new IllegalArgumentException("Menu '" + menuKey + "' element '" + layoutKey + "' position-space: expected camera or world");
       String name = ChatColor.translateAlternateColorCodes(
          '&',
          TextContentUtils.normalizeLineBreaks(Objects.requireNonNull(layoutConfig.getString("name", layoutKey)))

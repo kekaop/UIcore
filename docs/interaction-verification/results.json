@@ -1,0 +1,34 @@
+[
+  {
+    "family": "Paper",
+    "hash": "d63acc638871c6bccc8d98913dfe07b00549a93b68f3626247190b3e342f9d35",
+    "checks": [
+      "digging START/MOVE and committed free drop; group and child world positions",
+      "cancelled DROP rolls back group and hitbox positions",
+      "close cancels active gesture and restores client block, camera and player flags",
+      "populated slot slider: axis lock, clamp, quantization, rollback of absent state",
+      "empty receiving slot: snap then Java event and YAML state/Java action; rejected and vetoed drops publish no result",
+      "START and MOVE listener mutations cannot leave a stale capture",
+      "permission revocation and same-camera menu switch cancel capture and restore player flags",
+      "removing a parent hides descendants without blocking unrelated API additions",
+      "zoom via held-item packets: wrap, group pivot, scaled item and hitbox, drag/drop, ignored jump, spectator HUD mode and slot restore"
+    ],
+    "status": "pass"
+  },
+  {
+    "family": "Folia",
+    "hash": "d63acc638871c6bccc8d98913dfe07b00549a93b68f3626247190b3e342f9d35",
+    "checks": [
+      "digging START/MOVE and committed free drop; group and child world positions",
+      "cancelled DROP rolls back group and hitbox positions",
+      "close cancels active gesture and restores client block, camera and player flags",
+      "populated slot slider: axis lock, clamp, quantization, rollback of absent state",
+      "empty receiving slot: snap then Java event and YAML state/Java action; rejected and vetoed drops publish no result",
+      "START and MOVE listener mutations cannot leave a stale capture",
+      "permission revocation and same-camera menu switch cancel capture and restore player flags",
+      "removing a parent hides descendants without blocking unrelated API additions",
+      "zoom via held-item packets: wrap, group pivot, scaled item and hitbox, drag/drop, ignored jump, spectator HUD mode and slot restore"
+    ],
+    "status": "pass"
+  }
+]

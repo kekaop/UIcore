@@ -24,6 +24,7 @@ public class ChunkLoaderManager {
    private final UIcorePlugin plugin;
    private final Map<UUID, Set<ChunkReference>> viewerTickets = new ConcurrentHashMap<>();
    private final Map<ChunkReference, Set<UUID>> viewersByChunk = new ConcurrentHashMap<>();
+   private final Map<UUID, Set<ChunkReference>> routeTickets = new ConcurrentHashMap<>();
    private volatile ScheduledTask reconcileTask;
    private volatile boolean isTaskRunning;
 
@@ -48,6 +49,7 @@ public class ChunkLoaderManager {
 
       Set<ChunkReference> ticketed = Set.copyOf(this.viewersByChunk.keySet());
       this.viewerTickets.clear();
+      this.routeTickets.clear();
       this.viewersByChunk.clear();
       // Paper's plugin manager removes all of this plugin's tickets after onDisable.
       // Scheduling here is only needed when stopping/reloading an enabled plugin.
@@ -106,21 +108,61 @@ public class ChunkLoaderManager {
    }
 
    private void acquire(ChunkReference reference, UUID playerId) {
-      Set<UUID> viewers = viewersByChunk.computeIfAbsent(reference, ignored -> ConcurrentHashMap.newKeySet());
-      boolean wasEmpty = viewers.isEmpty();
-      viewers.add(playerId);
-      if (wasEmpty) this.scheduleTicketAddition(reference);
+      if (register(reference, playerId)) this.scheduleTicketAddition(reference);
+   }
+
+   private boolean register(ChunkReference reference, UUID playerId) {
+      boolean[] first = {false};
+      viewersByChunk.compute(reference, (key, viewers) -> {
+         if (viewers == null) { viewers = ConcurrentHashMap.newKeySet(); first[0] = true; }
+         viewers.add(playerId);
+         return viewers;
+      });
+      return first[0];
    }
 
    private void release(ChunkReference reference, UUID playerId) {
-      Set<UUID> viewers = viewersByChunk.get(reference);
-      if (viewers == null || !viewers.remove(playerId) || !viewers.isEmpty()) return;
-      if (viewersByChunk.remove(reference, viewers)) this.scheduleTicketRemoval(reference);
+      boolean[] last = {false};
+      viewersByChunk.computeIfPresent(reference, (key, viewers) -> {
+         viewers.remove(playerId);
+         if (!viewers.isEmpty()) return viewers;
+         last[0] = true;
+         return null;
+      });
+      if (last[0]) this.scheduleTicketRemoval(reference);
    }
 
    private void releaseViewer(UUID playerId) {
       Set<ChunkReference> references = this.viewerTickets.remove(playerId);
       if (references != null) references.forEach(reference -> this.release(reference, playerId));
+   }
+
+   /** Route leases share reference counts with ordinary menu tickets. No file or chunk I/O blocks a tick. */
+   public java.util.concurrent.CompletableFuture<Boolean> prepareRoute(UUID lease, World world, Set<Long> chunks) {
+      Set<ChunkReference> references = new HashSet<>();
+      for (long key : chunks) references.add(new ChunkReference(world.getName(), (int)(key >> 32), (int)key));
+      routeTickets.put(lease, Set.copyOf(references));
+      var pending = new java.util.ArrayList<java.util.concurrent.CompletableFuture<Boolean>>();
+      for (ChunkReference reference : references) {
+         register(reference, lease);
+         var ready = new java.util.concurrent.CompletableFuture<Boolean>();
+         pending.add(ready);
+         world.getChunkAtAsync(reference.chunkX(), reference.chunkZ(), true).whenComplete((chunk, error) -> {
+            if (error != null || chunk == null || !plugin.isEnabled() || !routeTickets.containsKey(lease)) { ready.complete(false); return; }
+            CleanupTasks.region(plugin, new Location(world, reference.chunkX() * 16.0, 0, reference.chunkZ() * 16.0), () -> {
+               if (!routeTickets.containsKey(lease)) { ready.complete(false); return; }
+               try { chunk.addPluginChunkTicket(plugin); ready.complete(true); }
+               catch (RuntimeException exception) { ready.completeExceptionally(exception); }
+            });
+         });
+      }
+      return java.util.concurrent.CompletableFuture.allOf(pending.toArray(java.util.concurrent.CompletableFuture[]::new))
+         .thenApply(ignored -> pending.stream().allMatch(future -> Boolean.TRUE.equals(future.getNow(false))));
+   }
+
+   public void releaseRoute(UUID lease) {
+      Set<ChunkReference> references = routeTickets.remove(lease);
+      if (references != null) references.forEach(reference -> release(reference, lease));
    }
 
    private void scheduleTicketAddition(ChunkReference reference) {

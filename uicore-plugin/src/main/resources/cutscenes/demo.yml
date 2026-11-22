@@ -1,0 +1,101 @@
+# Camera coordinates are EYE positions. Change world/points to match your test area.
+# Open /uicore run demo_cutscene after /uicore cutscene validate and reload.
+id: demo
+start: fly
+policy:
+  start-mode: initial
+  completion: keep-open
+  restart: replace
+  allow-skip: false
+  cursor: true
+  clicks: true
+  edge-pan: false
+  freeze-ui: false
+  chunk-timeout-ticks: 200
+points:
+  start: { world: world, x: 0.0, y: 100.0, z: 0.0, yaw: 179.0, pitch: 0.0 }
+  bend: { world: world, x: 3.0, y: 101.0, z: 4.0, yaw: 180.0, pitch: -5.0 }
+  junction: { world: world, x: 6.0, y: 100.0, z: 8.0, yaw: -179.0, pitch: 0.0 }
+  turned: { world: world, x: 6.0, y: 100.0, z: 8.0, yaw: -89.0, pitch: 0.0 }
+  left_end: { world: world, x: 2.0, y: 101.0, z: 12.0, yaw: -45.0, pitch: 0.0 }
+  right_end: { world: world, x: 10.0, y: 101.0, z: 12.0, yaw: -135.0, pitch: 0.0 }
+curves:
+  cruise:
+    interpolation: smooth
+    points:
+      - { time: 0.0, speed: 0.0 }
+      - { time: 0.25, speed: 1.0 }
+      - { time: 0.75, speed: 1.0 }
+      - { time: 1.0, speed: 0.0 }
+steps:
+  fly:
+    type: move
+    from: start
+    to: [bend, junction]
+    duration: 120
+    path: smooth
+    speed: cruise
+    rotation: { mode: interpolate, curve: uniform, direction: shortest }
+    enter:
+      - "[element-state] status flying"
+      - "[actionbar] <#93C5FD>Flying: keep your mouse still to check cursor stability."
+    next: turn
+  turn:
+    type: move
+    from: current
+    to: turned
+    duration: 60
+    path: linear
+    speed: uniform
+    rotation: { mode: interpolate, curve: ease-in-out }
+    enter: ["[element-state] status turning"]
+    next: pause
+  pause:
+    type: wait
+    duration: 40
+    enter:
+      - "[element-state] status waiting"
+      - "[actionbar] <#C4B5FD>A two-second pause at 20 TPS."
+    next: route
+  route:
+    type: choice
+    options:
+      left: { element: left, next: left_route }
+      right: { element: right, next: right_route }
+    timeout: 300
+    timeout-next: done
+    fallback-next: done
+    enter:
+      - "[element-state] status choosing"
+      - "[message] <#5EEAD4>Choose Left or Right. The choice closes after 300 server ticks."
+  left_route:
+    type: move
+    from: current
+    to: left_end
+    duration: 80
+    path: linear
+    speed: ease-in-out
+    rotation: { mode: interpolate, curve: decelerate }
+    enter:
+      - "[state] route left"
+      - "[element-state] status left"
+      - "[actionbar] <#5EEAD4>Left route selected."
+    next: done
+  right_route:
+    type: move
+    from: current
+    to: right_end
+    duration: 80
+    path: linear
+    speed: ease-in-out
+    rotation: { mode: interpolate, curve: decelerate }
+    enter:
+      - "[state] route right"
+      - "[element-state] status right"
+      - "[actionbar] <#C4B5FD>Right route selected."
+    next: done
+  done:
+    type: end
+    enter:
+      - "[element-state] status done"
+      - "[message] <#93C5FD>Cutscene finished. The menu stays open at the final camera position."

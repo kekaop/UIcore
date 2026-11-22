@@ -28,6 +28,8 @@ public final class UIcoreApiImpl implements UIcoreApi {
       this.plugin = plugin;
    }
 
+   @Override public org.orvencraft.uicore.api.cutscene.CutsceneService cutscenes() { return plugin.getCutsceneManager(); }
+
    @Override public MenuService menus() {
       return new MenuService() {
          public boolean open(Player player, String menuId) { return UIcoreApiImpl.this.openMenu(player, menuId); }
@@ -102,12 +104,12 @@ public final class UIcoreApiImpl implements UIcoreApi {
       };
    }
 
-   @Override public String apiVersion() { return "1.2"; }
+   @Override public String apiVersion() { return "1.3"; }
 
    @Override public Set<String> capabilities() {
       Set<String> capabilities = new LinkedHashSet<>(UIcoreApi.super.capabilities());
       capabilities.addAll(Set.of("extension-actions", "extension-data", "extension-conditions",
-         "extension-components", "typed-state", "service-groups"));
+         "extension-components", "typed-state", "service-groups", "cutscenes", "element-parent", "element-drag", "sliders", "drop-targets", "drop-actions"));
       return Set.copyOf(capabilities);
    }
 

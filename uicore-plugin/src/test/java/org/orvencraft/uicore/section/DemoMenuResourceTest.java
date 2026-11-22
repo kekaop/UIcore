@@ -14,14 +14,16 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.orvencraft.uicore.layout.MenuLayout;
+import org.orvencraft.uicore.cutscene.config.CutsceneConfigLoader;
+import org.orvencraft.uicore.cutscene.model.CutsceneDefinition;
 
 class DemoMenuResourceTest {
    @TempDir Path installed;
 
    @Test
-   void freshInstallationHasThreeMenusWithWorkingNavigationAndExit() throws Exception {
+   void freshInstallationHasSixMenusWithWorkingNavigationAndExit() throws Exception {
       Map<String, ConfigurationSection> menus = installMenus();
-      assertEquals(Set.of("demo_main", "demo_gallery", "demo_states"), menus.keySet());
+      assertEquals(Set.of("demo_main", "demo_gallery", "demo_states", "demo_cutscene", "demo_drag", "demo_zoom"), menus.keySet());
       for (var entry : menus.entrySet()) {
          String id = entry.getKey();
          ConfigurationSection menu = entry.getValue();
@@ -37,11 +39,38 @@ class DemoMenuResourceTest {
                destinations.add(element.getString("next-menu.menu"));
             }
          }
-         Set<String> otherMenus = new java.util.HashSet<>(menus.keySet());
+         Set<String> otherMenus = new java.util.HashSet<>((id.equals("demo_cutscene") || id.equals("demo_drag") || id.equals("demo_zoom"))
+            ? Set.of("demo_main") : Set.of("demo_main", "demo_gallery", "demo_states"));
          otherMenus.remove(id);
          assertEquals(otherMenus, destinations, id + " navigation");
          assertTrue(layout.getBoolean("close.stop-menu.enabled"), id);
          assertTrue(layout.getBoolean("close.stop-menu.teleport.back-original"), id);
+      }
+   }
+
+   @Test
+   void cutsceneDemoChoicesReferenceItsInteractiveElements() throws Exception {
+      ConfigurationSection menu = installMenus().get("demo_cutscene");
+      assertEquals("demo", menu.getString("cutscene.id"));
+      assertTrue(menu.getBoolean("cutscene.auto-start"));
+      YamlConfiguration scene = new YamlConfiguration();
+      try (var stream = getClass().getResourceAsStream("/cutscenes/demo.yml")) {
+         assertNotNull(stream);
+         scene.loadFromString(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
+      }
+      assertEquals("demo", scene.getString("id"));
+      CutsceneDefinition definition = CutsceneConfigLoader.load("demo", scene);
+      assertEquals(CutsceneDefinition.StartMode.INITIAL, definition.policy().startMode());
+      assertEquals(Set.of("left", "right"),
+         ((CutsceneDefinition.Choice)definition.steps().get("route")).options().keySet());
+      assertEquals("choice", scene.getString("steps.route.type"));
+      for (String option : List.of("left", "right")) {
+         String element = scene.getString("steps.route.options." + option + ".element");
+         ConfigurationSection button = menu.getConfigurationSection("layout." + element);
+         assertNotNull(button, option);
+         assertTrue(parse("demo_cutscene", element, button).hasCustomHitbox(), option);
+         String next = scene.getString("steps.route.options." + option + ".next");
+         assertEquals("move", scene.getString("steps." + next + ".type"));
       }
    }
 
@@ -57,7 +86,7 @@ class DemoMenuResourceTest {
                ConfigurationSection source = elements.getConfigurationSection(key);
                MenuLayout parsed = parse(id, key, source);
                assertFalse(parsed.isItemRotate(), id + "." + key);
-               assertFalse(source.contains("drag"), id + "." + key);
+               if (source.contains("drag")) assertTrue(parsed.interaction().draggable(), id + "." + key);
                assertFalse(source.contains("drag-group"), id + "." + key);
                for (var change : parsed.getClickElementStates().entrySet()) {
                   ConfigurationSection target = menu.getConfigurationSection("layout." + change.getKey());

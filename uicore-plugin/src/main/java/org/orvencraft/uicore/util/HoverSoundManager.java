@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
@@ -19,18 +20,30 @@ public class HoverSoundManager {
    }
 
    public void tryPlayHoverSound(Player player, TextDisplay display, String soundName, float volume, float pitch, long cooldownTicks) {
-      if (player != null && player.isOnline() && display != null && display.isValid()) {
+      if (player == null || display == null) return;
+      Location location = this.plugin.getMenuDisplayLocation(player, display);
+      if (location != null) tryPlayHoverSound(player, display.getUniqueId(), location, soundName, volume, pitch, cooldownTicks);
+   }
+
+   /** The location comes from the same committed frame as hover detection. */
+   public void tryPlayHoverSound(Player player, UUID displayId, Location location, String soundName, float volume, float pitch, long cooldownTicks) {
+      if (player == null || displayId == null || location == null) return;
+      if (!Bukkit.isOwnedByCurrentRegion(player)) {
+         if (plugin.isEnabled()) UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player).run(
+            () -> tryPlayHoverSound(player, displayId, location, soundName, volume, pitch, cooldownTicks), null);
+         return;
+      }
+      if (player.isOnline()) {
          if (soundName != null && !soundName.isEmpty()) {
             UUID playerId = player.getUniqueId();
-            UUID displayId = display.getUniqueId();
             Map<UUID, Long> playerTimes = this.lastPlayTimes.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
             long lastPlayTime = playerTimes.getOrDefault(displayId, 0L);
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastPlayTime >= cooldownTicks * 50L) {
-               boolean success = this.playSound(player, display.getLocation(), soundName, volume, pitch);
+               boolean success = this.playSound(player, location, soundName, volume, pitch);
                if (!success) {
                   for (String fallback : FALLBACK_SOUNDS) {
-                     success = this.playSound(player, display.getLocation(), fallback, volume, pitch);
+                     success = this.playSound(player, location, fallback, volume, pitch);
                      if (success) {
                         break;
                      }

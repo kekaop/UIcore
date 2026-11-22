@@ -1,0 +1,87 @@
+# Experimental hold-to-drag input. Use an empty main hand. No world blocks are changed.
+demo_drag:
+  drag-input: block-digging
+  camera-position: {type: player, distance: 1.5}
+  npc: {enabled: false}
+  layout:
+    window:
+      type: group
+      x: 0
+      y: 0
+      z: 3.5
+    title:
+      parent: window
+      name: '<gold>Drag this window'
+      x: 0
+      y: 0.6
+      z: 0
+      text-size: 0.7
+      hitbox: {width: 2.5, height: 0.45, depth: 0.25}
+      interaction-priority: 10
+      drag: {enabled: true, target: window, bounds: {x: [-1.5, 1.5], y: [-0.7, 0.7]}}
+    subtitle:
+      parent: window
+      name: '<gray>Hold LMB to move. Release to place.'
+      y: 0.3
+      text-size: 0.35
+      pointer-events: false
+    gem:
+      parent: window
+      type: item
+      material: DIAMOND
+      transform: gui
+      x: -0.7
+      y: -0.15
+      scale: 0.35
+      hitbox: {width: 0.45, height: 0.45, depth: 0.25}
+      drag: {enabled: true, drop-targets: [socket], bounds: {x: [-1.5, 1.5], y: [-0.7, 0.7]}}
+    socket_label:
+      parent: window
+      name: '<aqua>Drop diamond here'
+      x: 0.7
+      y: -0.15
+      text-size: 0.3
+      pointer-events: false
+    volume:
+      parent: window
+      type: item
+      material: LIME_DYE
+      transform: gui
+      x: 0
+      y: -0.6
+      scale: 0.2
+      hitbox: {width: 0.3, height: 0.3, depth: 0.25}
+      slider: {state: volume, min: 0, max: 100, step: 5}
+      drag: {axis: x, bounds: {x: [-0.8, 0.8]}}
+    value:
+      parent: window
+      name: '<green>Value: {state.volume}'
+      y: -0.9
+      text-size: 0.35
+      pointer-events: false
+    back:
+      name: "<gray>Back"
+      x: -1
+      y: -1.35
+      z: 3.5
+      text-size: 0.4
+      hitbox: {width: 1.2, height: 0.4, depth: 0.25}
+      next-menu: {enabled: true, menu: demo_main}
+    close:
+      name: '<red>Close'
+      x: 0
+      y: -1.35
+      z: 3.5
+      text-size: 0.4
+      hitbox: {width: 1.2, height: 0.4, depth: 0.25}
+      stop-menu: {enabled: true, teleport: {back-original: true}}
+  slots:
+    socket:
+      parent: window
+      x: 0.7
+      y: -0.15
+      z: 0
+      drop-accepts: [gem]
+      hitbox: {width: 0.65, height: 0.65, depth: 0.25}
+      on-drop:
+        - '[actionbar] <green>Diamond placed'

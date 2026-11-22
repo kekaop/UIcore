@@ -1,0 +1,321 @@
+{
+  "recordedAtUtc": "2026-10-23T01:54:14.1490708Z",
+  "command": "mvn -q package",
+  "java": "Oracle JDK 25.0.2",
+  "bytecodeRelease": 17,
+  "jar": "uicore-plugin/target/UIcore-1.0.0.jar",
+  "sha256": "4F347134DA938B8F2AB2AB5FFAF0091FC6E8BA9486F13287B0CC3249AB47C5FF",
+  "tests": 187.0,
+  "failures": 0.0,
+  "errors": 0.0,
+  "suites": [
+    {
+      "name": "org.orvencraft.uicore.animation.AnimationEasingTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.api.MenuElementCopyTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.api.StateKeyTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.api.UiElementModelTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.avatar.AvatarDisplayTransformTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.camera.CameraEdgePanTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.camera.CursorRotationTrackerTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.camera.MenuCameraFrameTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.camera.MenuCameraGeometryTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.ColorParserTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.compat.CraftEngineCompatTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.config.ConfigFilesTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.cutscene.config.CutsceneConfigLoaderTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.cutscene.CutsceneCommandsTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.cutscene.CutsceneManagerTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.cutscene.CutscenePlaybackTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.cutscene.model.CutsceneGeometryTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.expression.NumericExpressionTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.extension.builtin.VaultIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.extension.ComponentLayoutCacheTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.extension.ExtensionManagerTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.extension.ExtensionReferenceValidatorTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.layout.MenuLayoutParsingTest",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.MenuDamageAttributionTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.npc.NPCMenuSettingsTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.position.DynamicPositionSpecTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.scheduler.ChunkLoaderManagerTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.scheduler.CleanupTasksTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.schematic.SchematicPlacementTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.schematic.SpongeSchematicReaderTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.section.DemoMenuResourceTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.section.MenuConfigLoaderTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.section.MenuPositionTypeTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.section.MenuPrivacySettingsTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.section.MenuSlotTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.section.SectionRuntimeDefinitionTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.session.LegacyBlockCacheRecoveryTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.session.MenuSessionTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.session.MenuTeleportTrackerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.session.MenuVisibilityManagerTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.TextDisplayHitBoxTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.util.CommandUtilsTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.util.TextContentUtilsTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.orvencraft.uicore.util.TypewriterEffectTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ]
+}

@@ -109,6 +109,15 @@ class TextDisplayHitBoxTest {
       assertFalse(TextDisplayHitBox.isInsideMenuPlane(display, location(corrected), right, up, forward));
    }
 
+   @Test
+   void rayTracksTranslatedAndRotatedTextInsteadOfItsOldAnchor() {
+      var transform = new Transformation(new Vector3f(.7F, 0, .3F), new Quaternionf().rotateZ((float)Math.PI / 2),
+         new Vector3f(.42F), new Quaternionf());
+      var snapshot = TextDisplayHitBox.snapshot(textDisplay(new Location(null, 0, 0, 0), transform));
+      assertTrue(snapshot.intersectsRay(new Vector(0, 0, -3.5), new Vector(.64, .1, .3)));
+      assertFalse(snapshot.intersectsRay(new Vector(0, 0, -3.5), new Vector(0, .1, .3)));
+   }
+
    private static Vector pointOnRay(Location origin, Vector target, double fraction) {
       return target.clone().subtract(origin.toVector()).multiply(fraction).add(origin.toVector());
    }
@@ -127,11 +136,15 @@ class TextDisplayHitBoxTest {
    }
 
    private static TextDisplay textDisplay(Location anchor) {
+      return textDisplay(anchor, new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(0.42F), new Quaternionf()));
+   }
+
+   private static TextDisplay textDisplay(Location anchor, Transformation transform) {
       return (TextDisplay)java.lang.reflect.Proxy.newProxyInstance(TextDisplay.class.getClassLoader(), new Class<?>[]{TextDisplay.class},
          (proxy, method, args) -> switch (method.getName()) {
             case "isValid" -> true;
             case "getLocation" -> anchor.clone();
-            case "getTransformation" -> new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(0.42F), new Quaternionf());
+            case "getTransformation" -> transform;
             case "getScoreboardTags" -> java.util.Set.of("uicore_hitbox:1.35:0.25:0.25");
             case "getText" -> "[ Save name ]";
             default -> throw new UnsupportedOperationException(method.getName());

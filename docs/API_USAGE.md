@@ -356,6 +356,7 @@ The plugin fires Bukkit events for menu lifecycle and interaction:
 - `MenuHoverEvent`
 - `MenuClickEvent`
 - `MenuInputEvent`
+- `MenuDragEvent` and `MenuDropEvent`
 
 ```java
 @EventHandler
@@ -376,6 +377,12 @@ public void onMenuInput(MenuInputEvent event) {
 `MenuClickEvent` and `MenuInputEvent` are cancellable. Cancelling click prevents
 the element command from running. Cancelling input prevents the chat value from
 being stored.
+
+Cancel `MenuDragEvent` in phase `DROP` to veto a proposed drop. Listen to
+`MenuDropEvent` for the stored final position, before YAML `on-drop` actions.
+`getElementId()` is the drag handle, `getTargetId()` is what moved, and
+`getDropTargetId()` is the receiver or `null` for a free drop. The event is
+non-cancellable and runs on the player's owning scheduler.
 
 ## Notes
 

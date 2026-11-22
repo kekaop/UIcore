@@ -13,6 +13,10 @@
 /ORVENCRAFT_TZ_TEST_MENU_NOTES.md
 /UPSTREAM_HANDOFF.md
 
+# Local audit reports and QA materials.
+/qa/
+/docs/RELEASE_AUDIT_2026-10-10_RU.md
+
 # Java/build outputs.
 /target/
 /build/

@@ -1,0 +1,89 @@
+# Configure cutscenes/demo.yml for your world before opening this menu.
+demo_cutscene:
+  hide-menu-for-other-player: true
+  hide-player-for-other-player: true
+  hide-other-players: false
+  can-damaged: false
+  permission: ""
+  camera-position: { type: player, distance: 1.5 }
+  cutscene: { id: demo, auto-start: true }
+  npc: { enabled: false }
+  layout:
+    title:
+      name: "<gradient:#5EEAD4:#93C5FD><bold>A moving point of view</bold></gradient>"
+      x: 0
+      y: 0.85
+      z: 3.5
+      text-size: 0.6
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    hint:
+      name: "<#CBD5E1>Flight, turn, pause, then choose a route."
+      x: 0
+      y: 0.45
+      z: 3.5
+      text-size: 0.32
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+    status:
+      name: "Preparing camera..."
+      x: 0
+      y: -0.76
+      z: 3.5
+      text-size: 0.3
+      hitbox: { width: 0.02, height: 0.02, depth: 0.02 }
+      initial-state: preparing
+      states:
+        preparing: { text: "<#94A3B8>Preparing camera..." }
+        flying: { text: "<#93C5FD>Flying along the smooth route" }
+        turning: { text: "<#93C5FD>Turning in place" }
+        waiting: { text: "<#C4B5FD>Waiting for 40 ticks" }
+        choosing: { text: "<#5EEAD4>Choose Left or Right above" }
+        left: { text: "<#5EEAD4>Taking the left route" }
+        right: { text: "<#C4B5FD>Taking the right route" }
+        done: { text: "<#94A3B8>Finished. Close or go Home." }
+    left:
+      name: "<#5EEAD4>[ Left route ]"
+      x: -0.7
+      y: 0
+      z: 3.5
+      text-size: 0.42
+      hitbox: { width: 1.15, height: 0.3, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      pressed-style: { text: "<#5EEAD4>Left", duration: 8 }
+    right:
+      name: "<#C4B5FD>[ Right route ]"
+      x: 0.7
+      y: 0
+      z: 3.5
+      text-size: 0.42
+      hitbox: { width: 1.15, height: 0.3, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      pressed-style: { text: "<#C4B5FD>Right", duration: 8 }
+    signal:
+      name: "<#93C5FD>[ Test moving click ]"
+      x: 0
+      y: -0.45
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 1.9, height: 0.28, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      command: ["[actionbar] <#5EEAD4>The visible button received your click."]
+    home:
+      name: "<#93C5FD>[ Home ]"
+      x: -0.65
+      y: -1.05
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.9, height: 0.28, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      next-menu: { enabled: true, menu: demo_main }
+    close:
+      name: "<#FCA5A5>[ Close ]"
+      x: 0.65
+      y: -1.05
+      z: 3.5
+      text-size: 0.38
+      hitbox: { width: 0.9, height: 0.28, depth: 0.25 }
+      hover-style: { color: "#FFFFFF", underlined: true }
+      stop-menu:
+        enabled: true
+        teleport: { enabled: true, back-original: true }

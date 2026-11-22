@@ -14,6 +14,23 @@ import org.junit.jupiter.api.Test;
 import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 class TypewriterEffectTest {
+   @Test void frozenCutsceneDoesNotAdvanceTextOrCursorPhase() {
+      FakeScheduler scheduler = new FakeScheduler();
+      java.util.concurrent.atomic.AtomicBoolean frozen = new java.util.concurrent.atomic.AtomicBoolean();
+      TypewriterEffect effect = new TypewriterEffect(scheduler, ignored -> frozen.get());
+      FakeDisplay display = new FakeDisplay();
+      effect.applyEffect(display.proxy, "go", 1, 0, "|");
+      scheduler.tick();
+      String pausedText = display.text;
+      frozen.set(true);
+      for (int i = 0; i < 40; i++) scheduler.tick();
+      assertEquals(pausedText, display.text);
+      assertTrue(effect.isRunning(display.proxy));
+      frozen.set(false);
+      scheduler.tick(); scheduler.tick();
+      assertEquals("go", display.text);
+      assertFalse(effect.isRunning(display.proxy));
+   }
    @Test void naturalCompletionReleasesTask() {
       FakeScheduler scheduler = new FakeScheduler();
       TypewriterEffect effect = new TypewriterEffect(scheduler);

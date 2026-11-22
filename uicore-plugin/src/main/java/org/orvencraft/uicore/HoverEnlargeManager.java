@@ -16,6 +16,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
@@ -49,6 +50,8 @@ public class HoverEnlargeManager {
 
    /** Called on the viewer entity scheduler every two ticks. */
    public void tickPlayer(Player player) {
+               if (this.plugin.isCutsceneUiFrozen(player)) return;
+               long generation = this.plugin.getMenuSessionGeneration(player);
                if (UIcorePlugin.playerCursors.containsKey(player)) {
                   Location cursorLoc = UIcorePlugin.cursorExactLocations.get(player);
                   if (cursorLoc != null) {
@@ -56,29 +59,9 @@ public class HoverEnlargeManager {
                      if (menuKey != null) {
                         Section section = HoverEnlargeManager.this.plugin.getRuntimeSection(player, menuKey);
                         if (section != null) {
-                           TextDisplay closestDisplay = null;
-                           MenuLayout closestLayout = null;
-                           double minDistance = Double.MAX_VALUE;
-
-                           for (MenuLayout layout : HoverEnlargeManager.this.plugin.getLayoutsForPlayer(player, menuKey, section).values()) {
-                              if (layout.isHoverEnlargeEnabled()
-                                 || layout.getHoverSound() != null
-                                 || layout.hasHoverCommands()
-                                 || layout.hasLeaveCommands()
-                                 || layout.hasHoverVisualEffect()) {
-                                 TextDisplay display = HoverEnlargeManager.this.plugin.getTextDisplayByKeys(player, menuKey, layout.key);
-                                 if (display != null
-                                    && display.isValid()
-                                    && HoverEnlargeManager.this.plugin.isCursorInsideMenuDisplay(player, section, display, cursorLoc)) {
-                                    double distance = display.getLocation().distanceSquared(cursorLoc);
-                                    if (distance < minDistance) {
-                                       minDistance = distance;
-                                       closestDisplay = display;
-                                       closestLayout = layout;
-                                    }
-                                 }
-                              }
-                           }
+                           TextDisplay closestDisplay = this.plugin.pickMenuDisplay(player);
+                           MenuLayout closestLayout = closestDisplay == null ? null : this.plugin.getLayoutForPlayer(player,
+                              this.plugin.trackedMenuEntityName(player, closestDisplay));
 
                            UUID playerId = player.getUniqueId();
                            TextDisplay currentlyEnlarged = HoverEnlargeManager.this.enlargedTextDisplays.get(playerId);
@@ -93,20 +76,24 @@ public class HoverEnlargeManager {
                               HoverEnlargeManager.this.resetHoverCursor(player);
                               if (previousLayout != null && previousLayout.hasLeaveCommands()) {
                                  HoverEnlargeManager.this.executeCommands(player, previousLayout.getLeaveCommands());
+                                 if (this.plugin.getMenuSessionGeneration(player) != generation) return;
                               }
 
                               if (previousLayout != null) {
                                  Bukkit.getPluginManager()
                                     .callEvent(new MenuHoverEvent(player, menuKey, previousLayout.key, UIcoreApiImpl.snapshot(menuKey, previousLayout), false));
+                                 if (this.plugin.getMenuSessionGeneration(player) != generation) return;
                               }
 
                               if (closestLayout != null && closestLayout.hasHoverCommands()) {
                                  HoverEnlargeManager.this.executeCommands(player, closestLayout.getHoverCommands());
+                                 if (this.plugin.getMenuSessionGeneration(player) != generation) return;
                               }
 
                               if (closestLayout != null) {
                                  Bukkit.getPluginManager()
                                     .callEvent(new MenuHoverEvent(player, menuKey, closestLayout.key, UIcoreApiImpl.snapshot(menuKey, closestLayout), true));
+                                 if (this.plugin.getMenuSessionGeneration(player) != generation) return;
                                  HoverEnlargeManager.this.currentHoveredLayout.put(playerId, closestLayout);
                                  if (closestDisplay != null) {
                                     HoverEnlargeManager.this.applyTextStyle(player, closestDisplay, closestLayout, true);
@@ -125,7 +112,8 @@ public class HoverEnlargeManager {
                                  HoverEnlargeManager.this.hoverSoundManager
                                     .tryPlayHoverSound(
                                        player,
-                                       closestDisplay,
+                                       closestDisplay.getUniqueId(),
+                                       this.plugin.getMenuDisplayLocation(player, closestDisplay),
                                        soundName,
                                        closestLayout.getHoverSoundVolume(),
                                        closestLayout.getHoverSoundPitch(),
@@ -165,6 +153,10 @@ public class HoverEnlargeManager {
    }
 
    private void enlargeTextDisplay(TextDisplay textDisplay, MenuLayout layout) {
+      onEntity(textDisplay, () -> enlargeTextDisplayOwned(textDisplay, layout));
+   }
+
+   private void enlargeTextDisplayOwned(TextDisplay textDisplay, MenuLayout layout) {
       this.resetTextDisplaySize(textDisplay);
       Transformation oldTrans = textDisplay.getTransformation();
       Vector3f currentScale = oldTrans.getScale();
@@ -186,19 +178,25 @@ public class HoverEnlargeManager {
    }
 
    private void resetTextDisplaySize(TextDisplay textDisplay) {
-      if (textDisplay != null && textDisplay.isValid()) {
-         UUID displayId = textDisplay.getUniqueId();
-         Vector3f originalScale = this.originalScales.remove(displayId);
+      if (textDisplay != null) {
+         Vector3f originalScale = this.originalScales.remove(textDisplay.getUniqueId());
          if (originalScale != null) {
+            onEntity(textDisplay, () -> {
             Transformation oldTrans = textDisplay.getTransformation();
             Transformation newTrans = new Transformation(oldTrans.getTranslation(), oldTrans.getLeftRotation(), originalScale, oldTrans.getRightRotation());
             textDisplay.setTransformation(newTrans);
+            });
          }
       }
    }
 
+   void scaleHoverBaseline(UUID displayId, float ratio) {
+      this.originalScales.computeIfPresent(displayId, (id, scale) -> new Vector3f(scale).mul(ratio));
+   }
+
    private void applyTextStyle(Player player, TextDisplay display, MenuLayout layout, boolean hovered) {
-      if (player != null && display != null && display.isValid() && layout != null && layout.hasAnyTextStyle()) {
+      if (player != null && display != null && layout != null && layout.hasAnyTextStyle()) {
+         long generation = this.plugin.getMenuSessionGeneration(player);
          ScheduledTask previousTask = this.textStyleTasks.remove(display.getUniqueId());
          if (previousTask != null) {
             previousTask.cancel();
@@ -222,17 +220,20 @@ public class HoverEnlargeManager {
             int[] tick = {0};
             ScheduledTask[] taskReference = new ScheduledTask[1];
             ScheduledTask task = UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(display).runAtFixedRate(() -> {
-               if (!display.isValid()) {
+               if (!display.isValid() || plugin.getMenuSessionGeneration(player) != generation) {
                   if (taskReference[0] != null) taskReference[0].cancel();
-                  HoverEnlargeManager.this.textStyleTasks.remove(displayId);
+                  if (taskReference[0] != null) HoverEnlargeManager.this.textStyleTasks.remove(displayId, taskReference[0]);
                   return;
                }
+               if (plugin.isCutsceneUiFrozen(player)) return;
                display.text(frames.get(tick[0]));
                if (tick[0]++ >= duration) {
                   if (taskReference[0] != null) taskReference[0].cancel();
-                  HoverEnlargeManager.this.textStyleTasks.remove(displayId);
+                  if (taskReference[0] != null) HoverEnlargeManager.this.textStyleTasks.remove(displayId, taskReference[0]);
                }
-            }, () -> HoverEnlargeManager.this.textStyleTasks.remove(displayId), 1L, 1L);
+            }, () -> {
+               if (taskReference[0] != null) HoverEnlargeManager.this.textStyleTasks.remove(displayId, taskReference[0]);
+            }, 1L, 1L);
             if (task != null) {
                taskReference[0] = task;
                this.textStyleTasks.put(displayId, task);
@@ -240,7 +241,7 @@ public class HoverEnlargeManager {
          } else {
             Component styled = layout.renderStyledComponent(player, hovered, false);
             UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(display).run(
-               () -> { if (display.isValid()) display.text(styled); },
+               () -> { if (display.isValid() && plugin.getMenuSessionGeneration(player) == generation) display.text(styled); },
                () -> { }
             );
          }
@@ -261,14 +262,28 @@ public class HoverEnlargeManager {
             }
 
             UUID displayId = display.getUniqueId();
+            long generation = this.plugin.getMenuSessionGeneration(player);
             Component releasedStyle = layout.renderStyledComponent(player, this.isCurrentHovered(player, layout), false);
-            ScheduledTask task = UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(display).runDelayed(() -> {
-               if (display.isValid()) {
-                  display.text(releasedStyle);
+            int[] elapsed = {0};
+            ScheduledTask[] reference = new ScheduledTask[1];
+            int duration = Math.max(1, layout.getPressedStyleDuration());
+            ScheduledTask task = UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(display).runAtFixedRate(() -> {
+               if (plugin.getMenuSessionGeneration(player) != generation) {
+                  if (reference[0] != null) { reference[0].cancel(); HoverEnlargeManager.this.textStyleTasks.remove(displayId, reference[0]); }
+                  return;
                }
-               HoverEnlargeManager.this.textStyleTasks.remove(displayId);
-            }, () -> HoverEnlargeManager.this.textStyleTasks.remove(displayId), Math.max(1, layout.getPressedStyleDuration()));
+               if (display.isValid() && plugin.isCutsceneUiFrozen(player)) return;
+               if (display.isValid() && ++elapsed[0] < duration) return;
+               if (display.isValid()) display.text(releasedStyle);
+               if (reference[0] != null) {
+                  reference[0].cancel();
+                  HoverEnlargeManager.this.textStyleTasks.remove(displayId, reference[0]);
+               }
+            }, () -> {
+               if (reference[0] != null) HoverEnlargeManager.this.textStyleTasks.remove(displayId, reference[0]);
+            }, 1L, 1L);
             if (task != null) {
+               reference[0] = task;
                this.textStyleTasks.put(displayId, task);
             }
          }
@@ -308,10 +323,11 @@ public class HoverEnlargeManager {
    private void applyHoverCursor(Player player, MenuLayout layout) {
       if (player != null && layout != null && layout.hasHoverCursor()) {
          ItemDisplay cursor = this.plugin.getCursorItemDisplay(player);
-         if (cursor != null && cursor.isValid()) {
+         if (cursor != null) {
             Material material = Material.matchMaterial(layout.getHoverCursorMaterial());
             if (material != null) {
                UUID playerId = player.getUniqueId();
+               onEntity(cursor, () -> {
                ItemStack currentItem = cursor.getItemStack();
                if (currentItem != null) {
                   this.originalCursorItems.putIfAbsent(playerId, currentItem.clone());
@@ -334,6 +350,7 @@ public class HoverEnlargeManager {
                   Vector3f scaled = new Vector3f(originalScale == null ? oldTrans.getScale() : originalScale).mul((float)layout.getHoverCursorScale());
                   cursor.setTransformation(new Transformation(oldTrans.getTranslation(), oldTrans.getLeftRotation(), scaled, oldTrans.getRightRotation()));
                }
+               });
             }
          }
       }
@@ -343,9 +360,14 @@ public class HoverEnlargeManager {
       if (player != null) {
          UUID playerId = player.getUniqueId();
          ItemDisplay cursor = this.plugin.getCursorItemDisplay(player);
+         if (cursor == null) {
+            this.originalCursorItems.remove(playerId);
+            this.originalCursorScales.remove(playerId);
+            return;
+         }
+         onEntity(cursor, () -> {
          ItemStack originalItem = this.originalCursorItems.remove(playerId);
          Vector3f originalScale = this.originalCursorScales.remove(playerId);
-         if (cursor != null && cursor.isValid()) {
             if (originalItem != null) {
                cursor.setItemStack(originalItem);
             }
@@ -354,7 +376,7 @@ public class HoverEnlargeManager {
                Transformation oldTrans = cursor.getTransformation();
                cursor.setTransformation(new Transformation(oldTrans.getTranslation(), oldTrans.getLeftRotation(), originalScale, oldTrans.getRightRotation()));
             }
-         }
+         });
       }
    }
 
@@ -401,8 +423,17 @@ public class HoverEnlargeManager {
    }
 
    private void executeCommands(Player player, List<String> commands) {
+      long generation = this.plugin.getMenuSessionGeneration(player);
       for (String cmd : commands) {
          CommandUtils.executeCommand(player, cmd);
+         if (this.plugin.getMenuSessionGeneration(player) != generation) return;
       }
+   }
+
+   private void onEntity(Entity entity, Runnable operation) {
+      if (entity == null) return;
+      Runnable guarded = () -> { if (entity.isValid()) operation.run(); };
+      if (Bukkit.isOwnedByCurrentRegion(entity)) guarded.run();
+      else if (this.plugin.isEnabled()) UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(entity).run(guarded, null);
    }
 }

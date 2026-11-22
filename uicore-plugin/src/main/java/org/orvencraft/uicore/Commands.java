@@ -40,6 +40,12 @@ public class Commands implements TabExecutor {
          case "run" -> runMenu(sender, args);
          case "stop", "close" -> closeMenu(sender);
          case "reload" -> reload(sender);
+         case "debug" -> {
+            if (!sender.hasPermission("uicore.debug")) noPermission(sender);
+            else if (sender instanceof Player player) UIcorePlugin.plugin.toggleMenuDebug(player);
+            else sender.sendMessage("This command requires a player.");
+            yield true;
+         }
          case "items" -> showItem(sender, args);
          case "itemsstop" -> hideItem(sender);
          case "text" -> showText(sender, args);
@@ -47,6 +53,7 @@ public class Commands implements TabExecutor {
          case "input" -> setInputValue(sender, args);
          case "npc" -> handleNpcCommand(sender, args);
          case "slot" -> handleSlotCommand(sender, args);
+         case "cutscene" -> new org.orvencraft.uicore.cutscene.CutsceneCommands(UIcorePlugin.plugin).execute(sender, args);
          default -> {
             sendUsage(sender);
             yield true;
@@ -113,8 +120,14 @@ public class Commands implements TabExecutor {
          noPermission(sender);
          return true;
       }
-      UIcorePlugin.plugin.reloadPluginConfig();
-      sender.sendMessage(UIcorePlugin.plugin.getLangMessage("command.reload", "&a[UIcore] Configuration reloaded."));
+      UIcorePlugin.plugin.reloadPluginConfig().thenAccept(failure -> {
+         Runnable reply = () -> sender.sendMessage(failure == null
+            ? UIcorePlugin.plugin.getLangMessage("command.reload", "&a[UIcore] Configuration reloaded.")
+            : ChatColor.RED + "[UIcore] Reload rejected: " + failure);
+         if (sender instanceof Player player && !Bukkit.isOwnedByCurrentRegion(player))
+            player.getScheduler().execute(UIcorePlugin.plugin, reply, null, 0L);
+         else reply.run();
+      });
       return true;
    }
 
@@ -458,9 +471,10 @@ public class Commands implements TabExecutor {
    @Override
    @Nullable
    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+      if (args.length > 1 && "cutscene".equalsIgnoreCase(args[0])) return new org.orvencraft.uicore.cutscene.CutsceneCommands(UIcorePlugin.plugin).tabComplete(sender, args);
       List<String> choices = new ArrayList<>();
       if (args.length == 1) {
-         Collections.addAll(choices, "run", "stop", "close", "reload", "items", "itemsstop", "text", "set_input_field", "input", "npc", "slot");
+         Collections.addAll(choices, "run", "stop", "close", "reload", "items", "itemsstop", "text", "set_input_field", "input", "npc", "slot", "cutscene", "debug");
          return StringUtil.copyPartialMatches(args[0], choices, new ArrayList<>());
       }
       if (args.length == 2) {

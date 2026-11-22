@@ -21,6 +21,7 @@ public final class ExtensionContext {
 
    public Player player() { return this.player; }
    public String menuId() { return this.menuId; }
+   /** The owning element, or an empty string for a menu-level action such as a cutscene step. */
    public String elementId() { return this.elementId; }
    public Map<String, Object> arguments() { return this.arguments; }
    public String argument(String key) {

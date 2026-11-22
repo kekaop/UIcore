@@ -1,3 +1,6 @@
 menu/demo_main.yml
 menu/demo_gallery.yml
 menu/demo_states.yml
+menu/demo_cutscene.yml
+menu/demo_drag.yml
+menu/demo_zoom.yml

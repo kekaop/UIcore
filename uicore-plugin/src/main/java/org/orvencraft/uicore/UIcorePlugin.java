@@ -9,6 +9,14 @@ import org.bukkit.persistence.PersistentDataType;
 import org.orvencraft.uicore.camera.CameraEdgePan;
 import org.orvencraft.uicore.camera.CursorRotationTracker;
 import org.orvencraft.uicore.camera.MenuCameraGeometry;
+import org.orvencraft.uicore.camera.MenuCameraFrame;
+import org.orvencraft.uicore.camera.MenuCursorInput;
+import org.orvencraft.uicore.camera.MenuClientView;
+import org.orvencraft.uicore.cutscene.CutsceneManager;
+import org.orvencraft.uicore.cutscene.config.CutsceneConfigLoader;
+import org.orvencraft.uicore.cutscene.model.CameraPose;
+import org.orvencraft.uicore.cutscene.model.CutsceneDefinition;
+import org.orvencraft.uicore.api.cutscene.CutsceneAbortReason;
 import org.orvencraft.uicore.compat.CraftEngineCompat;
 import org.orvencraft.uicore.api.UIcoreApi;
 import org.orvencraft.uicore.api.UIcoreApiImpl;
@@ -18,14 +26,18 @@ import org.orvencraft.uicore.api.model.UiElementModel;
 import org.orvencraft.uicore.api.extension.ComponentContext;
 import org.orvencraft.uicore.api.event.MenuClickEvent;
 import org.orvencraft.uicore.api.event.MenuCloseEvent;
+import org.orvencraft.uicore.api.event.MenuDragEvent;
+import org.orvencraft.uicore.api.event.MenuDropEvent;
 import org.orvencraft.uicore.api.event.MenuOpenEvent;
 import org.orvencraft.uicore.api.event.MenuSwitchEvent;
 import org.orvencraft.uicore.extension.ExtensionManager;
 import org.orvencraft.uicore.extension.ComponentLayoutCache;
 import org.orvencraft.uicore.extension.builtin.BuiltInIntegrations;
 import org.orvencraft.uicore.layout.MenuLayout;
+import org.orvencraft.uicore.layout.MenuZoom;
 import org.orvencraft.uicore.npc.NPCModule;
 import org.orvencraft.uicore.position.DynamicPositionSpec;
+import org.orvencraft.uicore.layout.ElementHierarchy;
 import org.orvencraft.uicore.scheduler.ChunkLoaderManager;
 import org.orvencraft.uicore.schematic.SchematicPreviewManager;
 import org.orvencraft.uicore.section.Section;
@@ -37,10 +49,18 @@ import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
+import com.github.retrooper.packetevents.event.PacketSendEvent;
+import com.github.retrooper.packetevents.netty.channel.ChannelHelper;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType.Play.Client;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType.Play.Server;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientHeldItemChange;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerHeldItemChange;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerPositionAndRotation;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerRotation;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientSpectate;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientSpectateEntity;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerCamera;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBundle;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityTeleport;
 import com.github.retrooper.packetevents.util.Vector3d;
 import java.io.File;
@@ -224,6 +244,400 @@ public class UIcorePlugin extends JavaPlugin {
    private final Map<UUID, Location> respawnOrigins = new ConcurrentHashMap<>();
    private final Map<UUID, Set<Location>> clientHiddenBlocks = new ConcurrentHashMap<>();
    private PacketListenerAbstract menuPacketListener;
+   private CutsceneManager cutsceneManager;
+   private final Map<UUID, CutsceneView> cutsceneViews = new ConcurrentHashMap<>();
+   private final Map<UUID, MenuClientView> menuClientViews = new ConcurrentHashMap<>();
+
+   private static final class CutsceneView {
+      final UUID lease = UUID.randomUUID();
+      final Object menuToken;
+      final CutsceneDefinition definition;
+      final MenuCursorInput input;
+      final double eyeHeight;
+      final Vector menuOriginOffset;
+      final double cursorDepth;
+      volatile MenuCameraFrame frame;
+      volatile CameraPose basePose;
+      volatile boolean moving, dirty;
+      volatile java.util.concurrent.CompletableFuture<Boolean> inFlight;
+      Location carrierDestination;
+      Runnable afterMove;
+      long requestVersion;
+      final Map<Entity, String> names = new ConcurrentHashMap<>();
+      final Map<TextDisplay, TextDisplayHitBox.Snapshot> hitboxes = new ConcurrentHashMap<>();
+      final Map<Entity, Location> locations = new ConcurrentHashMap<>();
+      final Map<Entity, Vector> animationPositions = new ConcurrentHashMap<>();
+      CutsceneView(Object token, CutsceneDefinition definition, MenuCameraFrame frame, MenuCursorInput input, double eyeHeight, Vector menuOriginOffset, double cursorDepth) {
+         this.menuToken = token; this.definition = definition; this.frame = frame; this.input = input; this.eyeHeight = eyeHeight;
+         this.basePose = frame.pose();
+         this.menuOriginOffset = menuOriginOffset.clone(); this.cursorDepth = cursorDepth;
+      }
+   }
+
+   public CutsceneManager getCutsceneManager() { return cutsceneManager; }
+
+   public Map<String, CutsceneDefinition> validateCutscenes() {
+      var definitions = CutsceneConfigLoader.loadDirectory(new File(getDataFolder(), "cutscenes"));
+      validateCutsceneBindings(definitions, sectionManager.validateMenuConfigs().values());
+      return definitions;
+   }
+
+   private void validateCutsceneBindings(Map<String, CutsceneDefinition> definitions, Iterable<Section> menus) {
+      for (Section menu : menus) {
+         if (!menu.cutsceneId.isBlank() && !definitions.containsKey(menu.cutsceneId))
+            throw new IllegalArgumentException("Menu '" + menu.key + "' cutscene.id: unknown scenario '" + menu.cutsceneId + "'");
+         CutsceneDefinition scene = definitions.get(menu.cutsceneId);
+         if (scene != null) for (var step : scene.steps().values()) if (step instanceof CutsceneDefinition.Choice choice)
+            for (var option : choice.options().values()) if (!menu.contains(option.element()) && !menu.hasSlot(option.element()))
+               throw new IllegalArgumentException("Scenario '" + scene.id() + "' step '" + step.id() + "' options.element: menu '" + menu.key + "' has no '" + option.element() + "'");
+      }
+   }
+
+   public boolean reloadCutscenes() {
+      try {
+         var definitions = validateCutscenes();
+         cutsceneManager.replaceDefinitions(definitions);
+         return true;
+      } catch (RuntimeException exception) {
+         getLogger().warning("Cutscene configuration rejected; current snapshots retained: " + exception.getMessage());
+         return false;
+      }
+   }
+
+   private final class CutsceneHost implements CutsceneManager.Host {
+      public Object menuToken(Player player) {
+         if (isBlockDiggingMenu(player)) return null;
+         MenuSession session = menuSessions.get(player.getUniqueId());
+         return session != null && session.stage() == MenuSession.Stage.ACTIVE ? menuSessionTokens.get(player.getUniqueId()) : null;
+      }
+      public CameraPose camera(Player player) {
+         CutsceneView view = cutsceneViews.get(player.getUniqueId());
+         if (view != null) return view.frame.pose();
+         Pig camera = playerSit.get(player);
+         Location eye = camera != null && Bukkit.isOwnedByCurrentRegion(camera) ? camera.getEyeLocation() : player.getEyeLocation();
+         return new CameraPose(eye.getWorld().getName(), eye.getX(), eye.getY(), eye.getZ(), eye.getYaw(), eye.getPitch());
+      }
+      public void execute(Player player, Runnable work) {
+         if (Bukkit.isOwnedByCurrentRegion(player)) work.run();
+         else if (isEnabled()) foliaLib.scheduling().entitySpecificScheduler(player).run(work, null);
+      }
+      public java.util.concurrent.CompletionStage<Boolean> prepare(Player player, CutsceneDefinition definition, CameraPose initialPose) {
+         CutsceneView previous = cutsceneViews.get(player.getUniqueId());
+         if (previous != null && previous.moving && previous.inFlight != null) {
+            var waiting = new java.util.concurrent.CompletableFuture<Boolean>();
+            UUID request = cutsceneManager.state(player).map(state -> state.sessionId()).orElse(null);
+            previous.inFlight.whenComplete((ok, failure) -> execute(player, () -> {
+               if (failure != null || menuToken(player) == null || !cutsceneManager.active(player)
+                  || !java.util.Objects.equals(request, cutsceneManager.state(player).map(state -> state.sessionId()).orElse(null))) { waiting.complete(false); return; }
+               prepare(player, definition, initialPose).whenComplete((ready, error) -> {
+                  if (error != null) waiting.completeExceptionally(error); else waiting.complete(ready);
+               });
+            }));
+            return waiting;
+         }
+         CameraPose currentPose = camera(player);
+         cutsceneViews.remove(player.getUniqueId());
+         if (previous != null && chunkLoaderManager != null) chunkLoaderManager.releaseRoute(previous.lease);
+         Pig camera = playerSit.get(player);
+         if (camera == null || previous == null && !Bukkit.isOwnedByCurrentRegion(camera)) return java.util.concurrent.CompletableFuture.completedFuture(false);
+         World world = Bukkit.getWorld(initialPose.world());
+         if (world == null || world != player.getWorld()) return java.util.concurrent.CompletableFuture.completedFuture(false);
+         MenuCameraFrame frame = new MenuCameraFrame(currentPose);
+         Section section = getRuntimeSection(player, getCurrentPlayerMenu(player));
+         Vector menuOriginOffset = frame.worldToLocal(new Location(world, section.cameraX, section.cameraY, section.cameraZ));
+         Location cursor = cursorExactLocations.get(player);
+         Vector local = cursor == null ? new Vector(cursorX, -cursorY, section.distance + cursorZOffset) : frame.worldToLocal(cursor).subtract(menuOriginOffset);
+         RotationInput rotation = pendingRotations.getOrDefault(player.getUniqueId(), lastMenuRotations.get(player.getUniqueId()));
+         var input = new MenuCursorInput(previous != null ? previous.input.rawYaw() : rotation == null ? player.getLocation().getYaw() : rotation.yaw(),
+            previous != null ? previous.input.rawPitch() : rotation == null ? player.getLocation().getPitch() : rotation.pitch(), local.getX(), -local.getY());
+         var view = new CutsceneView(menuToken(player), definition, frame, input,
+            previous == null ? camera.getEyeHeight() : previous.eyeHeight, menuOriginOffset, local.getZ());
+         if (previous != null) {
+            view.names.putAll(previous.names); view.locations.putAll(previous.locations); view.hitboxes.putAll(previous.hitboxes);
+            view.animationPositions.putAll(previous.animationPositions);
+         }
+         cutsceneViews.put(player.getUniqueId(), view);
+         MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+         if (clientView != null) {
+            var ids = new ArrayList<Integer>();
+            playerDisplays.getOrDefault(player, List.of()).forEach(display -> ids.add(display.getEntityId()));
+            playerMenuItemDisplays.getOrDefault(player, List.of()).forEach(display -> ids.add(display.getEntityId()));
+            ItemDisplay cursorItem = playerItemDisplays.get(player);
+            if (cursorItem != null) ids.add(cursorItem.getEntityId());
+            clientView.beginFrames(ids);
+         }
+         for (TextDisplay display : playerDisplays.getOrDefault(player, List.of())) if (Bukkit.isOwnedByCurrentRegion(display)) {
+            if (display.getCustomName() != null) view.names.put(display, display.getCustomName());
+            view.hitboxes.put(display, TextDisplayHitBox.snapshot(display));
+            view.locations.put(display, display.getLocation());
+         }
+         resetCameraEdgePan(player);
+         // A route lease is bounded, shared with ordinary menu tickets, and never edits blocks.
+         Set<Long> chunks = new java.util.HashSet<>();
+         var points = new ArrayList<>(definition.points().values());
+         points.add(initialPose);
+         double radius = Math.max(4, getRuntimeSection(player, getCurrentPlayerMenu(player)).distance + 4);
+         for (CameraPose point : points) addRouteChunks(chunks, point.x(), point.z(), radius);
+         long preparedSegments = 0;
+         for (var step : definition.steps().values()) if (step instanceof CutsceneDefinition.Move move) {
+            var route = new ArrayList<CameraPose>();
+            // A current-origin move can be entered from any branch endpoint.
+            var origins = move.from() == null ? points : List.of(definition.points().get(move.from()));
+            for (CameraPose origin : origins) {
+               preparedSegments += move.to().size();
+               if (preparedSegments > 100000) throw new IllegalArgumentException("Scenario '" + definition.id() + "' steps: route preparation exceeds 100000 segments");
+               route.clear(); route.add(origin);
+               for (String id : move.to()) route.add(definition.points().get(id));
+               var path = org.orvencraft.uicore.cutscene.model.MoveMotion.preparePath(definition, move, origin);
+               int samples = Math.min(65536, Math.max(1, (int)Math.ceil(path.length() / 4)));
+               for (int sample = 0; sample <= samples; sample++) {
+                  CameraPose point = path.sample((double)sample / samples);
+                  addRouteChunks(chunks, point.x(), point.z(), radius);
+               }
+            }
+         }
+         return chunkLoaderManager.prepareRoute(view.lease, world, chunks).thenApply(ready ->
+            ready && cutsceneViews.get(player.getUniqueId()) == view && view.menuToken == menuToken(player));
+      }
+      public java.util.concurrent.CompletionStage<Boolean> apply(Player player, CameraPose pose) { return applyCutsceneFrame(player, pose); }
+      public boolean eligible(Player player, String elementId) {
+         MenuLayout layout = getLayoutForPlayer(player, getCurrentPlayerMenu(player), elementId);
+         return layout != null && layout.isVisible(player) && layout.isInteractionStillAllowed(player);
+      }
+      public void actions(Player player, List<String> actions) {
+         Object token = menuToken(player);
+         for (String action : actions) {
+            if (token == null || token != menuToken(player)) break;
+            executeMenuAction(player, action);
+         }
+      }
+      public void event(org.bukkit.event.Event event) {
+         if (event instanceof org.orvencraft.uicore.api.event.CutsceneAbortEvent abort && !abort.getDiagnostic().isBlank())
+            getLogger().warning("Cutscene '" + abort.getSnapshot().id() + "' step '" + abort.getSnapshot().stepId() + "': " + abort.getReason() + ": " + abort.getDiagnostic());
+         Bukkit.getPluginManager().callEvent(event);
+      }
+      public void finished(Player player, boolean closeMenu) {
+         CutsceneView view = cutsceneViews.get(player.getUniqueId());
+         if (view != null) {
+            view.requestVersion++;
+            view.basePose = view.frame.pose();
+            resetCameraEdgePan(player);
+         }
+         if (view != null && chunkLoaderManager != null) chunkLoaderManager.releaseRoute(view.lease);
+         if (closeMenu) stopCursor(player, true);
+      }
+   }
+
+   private static void addRouteChunks(Set<Long> chunks, double x, double z, double radius) {
+      for (int cx = (int)Math.floor((x-radius)/16); cx <= (int)Math.floor((x+radius)/16); cx++)
+         for (int cz = (int)Math.floor((z-radius)/16); cz <= (int)Math.floor((z+radius)/16); cz++) {
+            chunks.add(((long)cx << 32) | (cz & 0xffffffffL));
+            if (chunks.size() > 4096) throw new IllegalArgumentException("Route preparation exceeds 4096 chunks; split the scenario");
+         }
+   }
+
+   private void releaseCutsceneView(Player player) {
+      CutsceneView view = cutsceneViews.remove(player.getUniqueId());
+      if (view != null && chunkLoaderManager != null) chunkLoaderManager.releaseRoute(view.lease);
+      MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+      if (clientView != null) clientView.endFrames();
+   }
+
+   public boolean isCutsceneUiFrozen(Player player) {
+      return cutsceneManager != null && cutsceneManager.policy(player).map(policy -> policy.freezeUi()).orElse(false)
+         && cutsceneManager.state(player).map(state -> state.state() == org.orvencraft.uicore.api.cutscene.CutsceneState.PAUSED
+            || state.state() == org.orvencraft.uicore.api.cutscene.CutsceneState.WAITING_CHOICE).orElse(false);
+   }
+   public boolean isCutsceneCameraMoving(Player player) {
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      return view != null && view.moving;
+   }
+   public boolean isMenuDisplayUiFrozen(TextDisplay display) {
+      for (var entry : playerDisplays.entrySet()) if (entry.getValue().contains(display)) return isCutsceneUiFrozen(entry.getKey());
+      return false;
+   }
+
+   public boolean isCutsceneCarrierTeleport(Player player, Location destination) {
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      if (view == null || !view.moving || view.carrierDestination == null || destination == null) return false;
+      Location carrier = view.carrierDestination;
+      // Passenger positioning adds the carrier's riding height to the requested entity position.
+      return carrier.getWorld().equals(destination.getWorld()) && Math.abs(carrier.getX()-destination.getX()) < .01
+         && Math.abs(carrier.getZ()-destination.getZ()) < .01 && Math.abs(carrier.getY()-destination.getY()) < 2;
+   }
+
+   private java.util.concurrent.CompletableFuture<Boolean> applyCutsceneFrame(Player player, CameraPose pose) {
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      if (view == null || view.menuToken != menuSessionTokens.get(player.getUniqueId()))
+         return java.util.concurrent.CompletableFuture.completedFuture(false);
+      if (view.moving && view.inFlight != null) {
+         long version = view.requestVersion;
+         var queued = new java.util.concurrent.CompletableFuture<Boolean>();
+         view.inFlight.whenComplete((ok, failure) -> new CutsceneHost().execute(player, () -> {
+            if (failure != null || !Boolean.TRUE.equals(ok) || cutsceneViews.get(player.getUniqueId()) != view || view.requestVersion != version) {
+               queued.complete(false); return;
+            }
+            applyCutsceneFrame(player, pose).whenComplete((ready, error) -> {
+               if (error == null) queued.complete(ready); else queued.completeExceptionally(error);
+            });
+         }));
+         return queued;
+      }
+      World world = Bukkit.getWorld(pose.world());
+      if (world == null) return java.util.concurrent.CompletableFuture.completedFuture(false);
+      view.moving = true; view.dirty = false;
+      var result = new java.util.concurrent.CompletableFuture<Boolean>();
+      view.inFlight = result;
+      CameraEdgePan.Offset pan = CameraEdgePan.Offset.ZERO;
+      if (cutsceneManager.active(player) && view.definition.policy().edgePan()) {
+         updateCameraEdgePanTarget(player, view.input.x(), view.input.y());
+         pan = CameraEdgePan.interpolate(cameraEdgePanOffsets.get(player.getUniqueId()), cameraEdgePanTargets.get(player.getUniqueId()), cameraEdgePanSmoothing);
+      }
+      cameraEdgePanOffsets.put(player.getUniqueId(), pan);
+      MenuCameraFrame base = new MenuCameraFrame(pose);
+      Location origin = base.localToWorld(world, pan.right(), pan.up(), 0);
+      MenuCameraFrame frame = new MenuCameraFrame(new CameraPose(pose.world(), origin.getX(), origin.getY(), origin.getZ(), pose.yaw(), pose.pitch()));
+      Section section = getRuntimeSection(player, getCurrentPlayerMenu(player));
+      Map<String, MenuLayout> layouts = getLayoutsForPlayer(player, getCurrentPlayerMenu(player), section);
+      Map<String, Location> positions = new HashMap<>();
+      for (MenuLayout layout : layouts.values()) {
+         var position = getCurrentLayoutPosition(player, getCurrentPlayerMenu(player), layout);
+         positions.put(layout.key, layout.isWorldAnchored() ? new Location(world, position.x(), position.y(), position.z())
+            : frame.localToWorld(world, position.x() + view.menuOriginOffset.getX(), position.y() + view.menuOriginOffset.getY(), position.z() + view.menuOriginOffset.getZ()));
+      }
+      Location cursor = frame.localToWorld(world, view.input.x() + view.menuOriginOffset.getX(), -view.input.y() + view.menuOriginOffset.getY(), view.cursorDepth + view.menuOriginOffset.getZ());
+      var operations = new ArrayList<java.util.concurrent.CompletableFuture<Boolean>>();
+      var entities = new ArrayList<Entity>();
+      entities.addAll(playerDisplays.getOrDefault(player, List.of()));
+      entities.addAll(playerMenuItemDisplays.getOrDefault(player, List.of()));
+      Entity camera = playerSit.get(player), seat = playerMenuSeats.get(player);
+      view.carrierDestination = MenuCameraGeometry.seatLocation(frame.origin(world).subtract(0, view.eyeHeight, 0));
+      if (camera != null) entities.add(camera);
+      if (seat != null) entities.add(seat);
+      Entity cursorStand = playerCursors.get(player), cursorDisplay = playerItemDisplays.get(player);
+      if (cursorStand != null) entities.add(cursorStand);
+      if (cursorDisplay != null) entities.add(cursorDisplay);
+      Map<Entity, Location> committed = new ConcurrentHashMap<>();
+      Map<Long, List<Runnable>> regionalBatches = new HashMap<>();
+      for (Entity entity : entities) {
+         MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+         if (clientView != null && entity instanceof Display) clientView.track(entity.getEntityId());
+         var operation = new java.util.concurrent.CompletableFuture<Boolean>(); operations.add(operation);
+         Runnable move = () -> {
+            if (cutsceneViews.get(player.getUniqueId()) != view || !entity.isValid()) { operation.complete(false); return; }
+            Location target;
+            if (entity == camera) target = frame.origin(world).subtract(0, view.eyeHeight, 0);
+            else if (entity == seat) target = MenuCameraGeometry.seatLocation(frame.origin(world).subtract(0, view.eyeHeight, 0));
+            else if (entity == cursorStand || entity == cursorDisplay) target = cursor.clone();
+            else {
+               String name = entity.getCustomName();
+               if (name == null) { operation.complete(true); return; }
+               view.names.put(entity, name);
+               String key = name.substring(name.indexOf(':') + 1);
+               if (key.endsWith(":item")) key = key.substring(0, key.length()-5);
+               target = positions.get(key);
+               if (target == null) { operation.complete(true); return; }
+               Vector animated = view.animationPositions.get(entity);
+               MenuLayout layout = layouts.get(key);
+               if (animated != null) target = layout != null && layout.isWorldAnchored()
+                  ? new Location(world, animated.getX(), animated.getY(), animated.getZ())
+                  : frame.localToWorld(world, animated.getX() + view.menuOriginOffset.getX(), animated.getY() + view.menuOriginOffset.getY(), animated.getZ() + view.menuOriginOffset.getZ());
+               if (entity instanceof TextDisplay text) view.hitboxes.put(text, TextDisplayHitBox.snapshot(text));
+            }
+            if (entity instanceof org.bukkit.entity.Display display) display.setTeleportDuration(1);
+            Location destination = target;
+            try {
+               Location current = entity.getLocation();
+               if (current.getWorld().equals(destination.getWorld()) && current.distanceSquared(destination) < 1e-14
+                  && current.getYaw() == destination.getYaw() && current.getPitch() == destination.getPitch()) {
+                  committed.put(entity, destination); operation.complete(true); return;
+               }
+               java.util.concurrent.CompletableFuture<Boolean> moved;
+               if (entity == seat) moved = entity.teleportAsync(destination,
+                  org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+               else moved = entity.teleportAsync(destination);
+               moved.whenComplete((success, error) -> {
+                  if (Boolean.TRUE.equals(success)) committed.put(entity, destination);
+                  if (error == null) operation.complete(Boolean.TRUE.equals(success)); else operation.completeExceptionally(error);
+               });
+            } catch (RuntimeException exception) { operation.completeExceptionally(exception); }
+         };
+         if (Bukkit.isOwnedByCurrentRegion(entity)) move.run();
+         else {
+            Location source = view.locations.get(entity);
+            if (source == null) foliaLib.scheduling().entitySpecificScheduler(entity).run(move, () -> operation.complete(false));
+            else {
+               long chunk = ((long)(source.getBlockX() >> 4) << 32) | ((source.getBlockZ() >> 4) & 0xffffffffL);
+               regionalBatches.computeIfAbsent(chunk, ignored -> new ArrayList<>()).add(() -> {
+                  if (Bukkit.isOwnedByCurrentRegion(entity)) move.run();
+                  else foliaLib.scheduling().entitySpecificScheduler(entity).run(move, () -> operation.complete(false));
+               });
+            }
+         }
+      }
+      for (var batch : regionalBatches.entrySet()) {
+         long key = batch.getKey();
+         Location source = new Location(world, (int)(key >> 32) * 16.0, 0, (int)key * 16.0);
+         foliaLib.scheduling().regionSpecificScheduler(source).run(() -> batch.getValue().forEach(Runnable::run));
+      }
+      java.util.concurrent.CompletableFuture.allOf(operations.toArray(java.util.concurrent.CompletableFuture[]::new)).whenComplete((ignored, error) ->
+         new CutsceneHost().execute(player, () -> {
+            view.moving = false;
+            if (cutsceneViews.get(player.getUniqueId()) != view || view.menuToken != menuSessionTokens.get(player.getUniqueId())) { result.complete(false); return; }
+            if (error != null || operations.stream().anyMatch(future -> !Boolean.TRUE.equals(future.getNow(false)))) {
+               result.complete(false); return;
+            }
+            view.frame = frame; view.basePose = pose; view.locations.putAll(committed);
+            cursorExactLocations.put(player, cursor.clone());
+            MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+            if (clientView != null) {
+               Map<Integer, CameraPose> visualPositions = new HashMap<>();
+               committed.forEach((entity, location) -> {
+                  if (entity instanceof Display) visualPositions.put(entity.getEntityId(), cameraPose(location));
+               });
+               clientView.render(frame.pose(), visualPositions);
+            }
+            // Runtime sections are private per viewer; canonical configuration is never mutated.
+            Section runtime = getRuntimeSection(player, getCurrentPlayerMenu(player));
+            Location anchor = frame.localToWorld(world, view.menuOriginOffset.getX(), view.menuOriginOffset.getY(), view.menuOriginOffset.getZ());
+            playerRuntimeSections.put(player, runtime.copyWithCamera(pose.world(), anchor.getX(), anchor.getY(), anchor.getZ(), (float)pose.yaw(), (float)pose.pitch()));
+            Runnable after = view.afterMove; view.afterMove = null;
+            result.complete(true);
+            if (after != null && cutsceneViews.get(player.getUniqueId()) == view
+               && view.menuToken == menuSessionTokens.get(player.getUniqueId()) && !closingSessions.containsKey(player.getUniqueId())) after.run();
+         }));
+      return result;
+   }
+
+   public void executeMenuAction(Player player, String action) {
+      executeMenuAction(player, action, "", Map.of());
+   }
+
+   public void executeMenuAction(Player player, String action, String elementId, Map<String, Object> arguments) {
+      String menu = getCurrentPlayerMenu(player);
+      if (menu == null) return;
+      if (action.startsWith("[state] ")) {
+         String[] parts = action.substring(8).trim().split("\\s+", 2);
+         if (parts.length == 2) { setPlayerMenuState(player, menu, parts[0], parts[1]); refreshCurrentMenu(player); }
+      } else if (action.startsWith("[element-state] ")) {
+         String[] parts = action.substring(16).trim().split("\\s+", 2);
+         if (parts.length == 2) applyElementStateChanges(player, menu, Map.of(parts[0], parts[1]));
+      } else if (action.startsWith("[action] ")) {
+         String id = action.substring(9).trim();
+         if (!extensionManager.executeAction(id, player, menu, elementId, arguments)) throw new IllegalArgumentException("Unknown or failed action: " + id);
+      } else if (action.startsWith("[cutscene] ")) {
+         String[] parts = action.substring(11).trim().split("\\s+", 2);
+         switch (parts[0]) {
+            case "start" -> { if (parts.length == 2) cutsceneManager.start(player, parts[1]); }
+            case "pause" -> cutsceneManager.pause(player);
+            case "resume" -> cutsceneManager.resume(player);
+            case "skip" -> cutsceneManager.skip(player);
+            case "stop" -> cutsceneManager.stop(player);
+            case "choose" -> { if (parts.length == 2) cutsceneManager.choose(player, parts[1]); }
+            default -> throw new IllegalArgumentException("Unknown cutscene action: " + parts[0]);
+         }
+      } else CommandUtils.executeCommand(player, action);
+   }
    public Map<Player, MenuLayout> selectedLayouts = new ConcurrentHashMap<>();
    private Map<UUID, String> currentPlayerInputFields = new ConcurrentHashMap<>();
    private Map<UUID, Map<String, String>> userInputData = new ConcurrentHashMap<>();
@@ -286,25 +700,39 @@ public class UIcorePlugin extends JavaPlugin {
       }
 
       String displayName = menuKey + ":" + layoutKey;
-      LinkedHashMap<UUID, TextDisplay> matches = new LinkedHashMap<>();
+      Set<TextDisplay> matches = new LinkedHashSet<>();
       List<TextDisplay> displays = this.playerDisplays.get(player);
       if (displays != null) {
          for (TextDisplay display : displays) {
-            if (display != null && display.isValid() && displayName.equals(display.getCustomName())) {
-               matches.put(display.getUniqueId(), display);
+            if (display != null && (cutsceneViews.containsKey(player.getUniqueId()) || !Bukkit.isOwnedByCurrentRegion(display) || display.isValid())
+               && displayName.equals(this.trackedMenuEntityName(player, display))) {
+               matches.add(display);
             }
          }
       }
 
-      return new ArrayList<>(matches.values());
+      return new ArrayList<>(matches);
+   }
+
+   String trackedMenuEntityName(Player player, Entity entity) {
+      if (entity == null) return null;
+      CutsceneView view = this.cutsceneViews.get(player.getUniqueId());
+      String name = view == null ? null : view.names.get(entity);
+      return name != null ? name : Bukkit.isOwnedByCurrentRegion(entity) ? entity.getCustomName() : null;
    }
 
    public List<Player> getActiveMenuPlayers() { return new ArrayList<>(this.currentPlayerMenus.keySet()); }
 
    public List<Location> getMenuDisplayLocations(Player player) {
       List<Location> locations = new ArrayList<>();
-      for (TextDisplay display : this.playerDisplays.getOrDefault(player, List.of())) if (display != null && display.isValid()) locations.add(display.getLocation());
-      for (ItemDisplay display : this.playerMenuItemDisplays.getOrDefault(player, List.of())) if (display != null && display.isValid()) locations.add(display.getLocation());
+      for (TextDisplay display : this.playerDisplays.getOrDefault(player, List.of())) {
+         Location location = display == null ? null : this.getMenuDisplayLocation(player, display);
+         if (location != null) locations.add(location);
+      }
+      for (ItemDisplay display : this.playerMenuItemDisplays.getOrDefault(player, List.of())) {
+         Location location = display == null ? null : this.getMenuDisplayLocation(player, display);
+         if (location != null) locations.add(location);
+      }
       return locations;
    }
 
@@ -446,7 +874,7 @@ public class UIcorePlugin extends JavaPlugin {
          return 0L;
       }
 
-      long now = System.currentTimeMillis();
+      long now = this.playerMenuTicks.getOrDefault(player.getUniqueId(), 0L);
       Long until = playerCooldowns.get(cooldownKey);
       if (until == null || until <= now) {
          playerCooldowns.remove(cooldownKey);
@@ -465,20 +893,32 @@ public class UIcorePlugin extends JavaPlugin {
 
    private void refreshToggleDisplayText(Player player, String menuKey, MenuLayout layout) {
       if (player != null && menuKey != null && layout != null && !layout.isItemLayout()) {
-         String rendered = layout.renderStyledName(player, false, false);
+         if (!menuKey.equals(this.getCurrentPlayerMenu(player))) return;
+         var rendered = layout.renderStyledComponent(player, false, false);
+         long generation = this.getMenuSessionGeneration(player);
          for (TextDisplay display : this.getTextDisplaysByKeys(player, menuKey, layout.key)) {
-            if (display != null && display.isValid()) {
-               display.text(layout.renderStyledComponent(player, false, false));
-            }
+            org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, display, () -> {
+               if (!display.isValid() || this.getMenuSessionGeneration(player) != generation
+                  || !menuKey.equals(this.getCurrentPlayerMenu(player))) return;
+               display.text(rendered);
+               CutsceneView view = this.cutsceneViews.get(player.getUniqueId());
+               if (view != null && view.menuToken == this.menuSessionTokens.get(player.getUniqueId())) {
+                  view.hitboxes.put(display, TextDisplayHitBox.snapshot(display));
+                  view.dirty = true;
+               }
+            });
          }
       }
    }
 
    public void updateLayoutDisplayText(Player player, String menuKey, MenuLayout layout, boolean hovered, boolean pressed) {
       if (player != null && menuKey != null && layout != null && !layout.isItemLayout()) {
-         String rendered = layout.renderStyledName(player, hovered, pressed);
+         var rendered = layout.renderStyledComponent(player, hovered, pressed);
+         long generation = getMenuSessionGeneration(player);
          for (TextDisplay display : this.getTextDisplaysByKeys(player, menuKey, layout.key)) {
-            display.text(layout.renderStyledComponent(player, hovered, pressed));
+            org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, display, () -> {
+               if (isMenuSessionCurrent(player, generation) && display.isValid()) display.text(rendered);
+            });
          }
       }
    }
@@ -492,7 +932,7 @@ public class UIcorePlugin extends JavaPlugin {
       String key = menuKey + ":" + layoutKey;
       Map<String, Long> times = this.playerLayoutClickTimes.computeIfAbsent(player.getUniqueId(), var0 -> new ConcurrentHashMap<>());
       Long previous = times.get(key);
-      if (previous != null && now - previous < 1200L) {
+      if (previous != null && now == previous) {
          return false;
       }
 
@@ -524,13 +964,19 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    public Map<String, MenuLayout> getLayoutsForPlayer(Player player, String menuKey, Section section) {
+      return getLayoutsForPlayer(player, menuKey, section, true);
+   }
+
+   private Map<String, MenuLayout> getLayoutsForPlayer(Player player, String menuKey, Section section, boolean visibleOnly) {
       LinkedHashMap<String, MenuLayout> layouts = new LinkedHashMap<>();
       if (section != null) {
          Section.Definition definition = section.definition();
          layouts.putAll(definition.layouts());
          for (MenuSlot slot : definition.slots().values()) {
             String templateId = this.resolveMenuSlotTemplate(player, menuKey, definition, slot);
-            if (!templateId.isEmpty()) {
+            if (templateId.isEmpty()) {
+               layouts.put(slot.id(), slot.materializeEmpty(menuKey, section.world));
+            } else {
                MenuLayout materialized = section.materializeSlot(menuKey, slot.id(), templateId, definition);
                if (materialized != null) {
                   layouts.put(slot.id(), materialized);
@@ -543,7 +989,7 @@ public class UIcorePlugin extends JavaPlugin {
          UUID playerId = player.getUniqueId();
          Map<String, Set<String>> hiddenByMenu = this.playerMenuHiddenLayouts.get(playerId);
          Set<String> hidden = hiddenByMenu == null ? null : hiddenByMenu.get(menuKey);
-         if (hidden != null) {
+         if (visibleOnly && hidden != null) {
             for (String elementId : hidden) {
                layouts.remove(elementId);
             }
@@ -555,6 +1001,7 @@ public class UIcorePlugin extends JavaPlugin {
             layouts.putAll(overrides);
          }
 
+         if (!visibleOnly) return Collections.unmodifiableMap(layouts);
          layouts.entrySet().removeIf(var0 -> !var0.getValue().isVisible(player));
          LinkedHashMap<String, MenuLayout> expanded = new LinkedHashMap<>();
          int[] componentCalls = {0};
@@ -565,6 +1012,8 @@ public class UIcorePlugin extends JavaPlugin {
          }
          this.componentLayoutCache.retain(playerId, menuKey, activeComponentChildren);
          layouts = expanded;
+         Map<String, MenuLayout> hierarchySnapshot = new LinkedHashMap<>(layouts);
+         layouts.entrySet().removeIf(entry -> !ElementHierarchy.hasAncestors(entry.getKey(), hierarchySnapshot));
       }
 
       return Collections.unmodifiableMap(layouts);
@@ -761,6 +1210,10 @@ public class UIcorePlugin extends JavaPlugin {
          return false;
       }
 
+      Map<String, MenuLayout> previous = getLayoutsForPlayer(player, menuKey, getRuntimeSection(player, menuKey), false);
+      Map<String, MenuLayout> candidate = new LinkedHashMap<>(previous);
+      candidate.put(elementId, layout);
+      ElementHierarchy.validateMutation(previous, candidate);
       layout.setOwnerMenuKey(menuKey);
       UUID playerId = player.getUniqueId();
       this.playerMenuLayoutOverrides
@@ -1055,6 +1508,7 @@ public class UIcorePlugin extends JavaPlugin {
 
    private void removeMenuEntity(Entity entity) {
       if (entity == null) return;
+      menuClientViews.values().forEach(view -> view.forget(entity.getEntityId()));
       if (!Bukkit.isOwnedByCurrentRegion(entity)) {
          org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, entity, () -> this.removeMenuEntity(entity));
          return;
@@ -1164,6 +1618,8 @@ public class UIcorePlugin extends JavaPlugin {
       if (player == null || display == null || layout == null) {
          return;
       }
+      MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+      if (clientView != null) clientView.track(display.getEntityId());
       if (display instanceof ItemDisplay || !layout.isItemLayout()) {
       }
       if (!layout.isEntranceAnimationEnabled()) {
@@ -1238,9 +1694,20 @@ public class UIcorePlugin extends JavaPlugin {
       this.setTeleportDurationSafe(display, 1);
       this.showDisplayToPlayer(player, display);
       Vector delta = target.toVector().subtract(start.toVector());
+      Section animationSection = getRuntimeSection(player, getCurrentPlayerMenu(player));
+      MenuCameraFrame animationFrame = animationSection == null ? null : new MenuCameraFrame(new CameraPose(animationSection.world,
+         animationSection.cameraX, animationSection.cameraY, animationSection.cameraZ, animationSection.yaw, animationSection.pitch));
+      Vector localStart = animationFrame == null ? start.toVector() : animationFrame.worldToLocal(start);
+      Vector localTarget = animationFrame == null ? target.toVector() : animationFrame.worldToLocal(target);
+      CutsceneView startingView = cutsceneViews.get(player.getUniqueId());
+      String animationName = startingView == null ? (Bukkit.isOwnedByCurrentRegion(display) ? display.getCustomName() : null) : startingView.names.get(display);
+      if (animationName != null && animationName.endsWith(":item")) animationName = animationName.substring(0, animationName.length()-5);
+      MenuLayout animationLayout = animationName == null ? null : getLayoutForPlayer(player, animationName);
+      boolean worldAnimation = animationLayout != null && animationLayout.isWorldAnchored();
       final int[] elapsed = {0};
       final ScheduledTask[] animation = {null};
       animation[0] = foliaLib.scheduling().entitySpecificScheduler(display).runAtFixedRate(() -> {
+            if (isCutsceneUiFrozen(player)) return;
             if (!player.isOnline() || !display.isValid()) {
                if (animation[0] != null) animation[0].cancel();
                if (completion != null) foliaLib.scheduling().entitySpecificScheduler(player).run(completion, null);
@@ -1250,9 +1717,14 @@ public class UIcorePlugin extends JavaPlugin {
             elapsed[0]++;
             double progress = Math.min(1.0, (double)elapsed[0] / Math.max(1, duration));
             double eased = AnimationEasing.apply(easing, progress);
-            moveMenuEntity(display, start.clone().add(delta.clone().multiply(eased)));
+            CutsceneView view = cutsceneViews.get(player.getUniqueId());
+            if (view != null) {
+               Vector animated = worldAnimation ? start.toVector().add(delta.clone().multiply(eased))
+                  : localStart.clone().add(localTarget.clone().subtract(localStart).multiply(eased));
+               view.animationPositions.put(display, animated); view.dirty = true;
+            } else moveMenuEntity(display, start.clone().add(delta.clone().multiply(eased)));
             if (elapsed[0] >= duration) {
-               moveMenuEntity(display, target);
+               if (view == null) moveMenuEntity(display, target);
                if (animation[0] != null) animation[0].cancel();
                if (completion != null) foliaLib.scheduling().entitySpecificScheduler(player).run(completion, null);
             }
@@ -1373,13 +1845,15 @@ public class UIcorePlugin extends JavaPlugin {
                final float var16 = (float)Math.toRadians(var3.tiltY);
                final float var17 = (float)Math.toRadians(var3.tiltX);
                final float var18 = (float)Math.toRadians(var3.tiltZ);
-               final Vector3f var19 = new Vector3f(var2.getTransformation().getTranslation());
-               final Vector3f var20 = new Vector3f(var2.getTransformation().getScale());
+               final float initialZoom = appliedDisplayZoom(var2);
+               final Vector3f var19 = new Vector3f(var2.getTransformation().getTranslation()).div(initialZoom);
+               final Vector3f var20 = new Vector3f(var2.getTransformation().getScale()).div(initialZoom);
                final byte var21 = var2.getTextOpacity();
                final long[] tick = {0L};
                final float[] angle = {0.0F};
                final ScheduledTask[] floating = {null};
                floating[0] = foliaLib.scheduling().entitySpecificScheduler(var2).runAtFixedRate(() -> {
+                        if (isCutsceneUiFrozen(var1)) return;
                         if (var1.isOnline()
                            && var2.isValid()
                            && UIcorePlugin.this.playerDisplays.getOrDefault(var1, Collections.emptyList()).contains(var2)) {
@@ -1401,6 +1875,9 @@ public class UIcorePlugin extends JavaPlugin {
                               float factor = (float)Math.max(0.05, 1.0 + wave * var7);
                               scale.mul(factor);
                            }
+                           float zoom = appliedDisplayZoom(var2);
+                           translation.mul(zoom);
+                           scale.mul(zoom);
 
                            if (var12) {
                                angle[0] = (float)(angle[0] + var5 * 0.05);
@@ -1639,6 +2116,9 @@ public class UIcorePlugin extends JavaPlugin {
 
       this.reloadLangConfig();
       this.loadConfig();
+      if (!new File(getDataFolder(), "cutscenes/demo.yml").exists()) saveResource("cutscenes/demo.yml", false);
+      this.cutsceneManager = new CutsceneManager(new CutsceneHost());
+      if (!this.reloadCutscenes()) throw new IllegalStateException("Invalid cutscene configuration");
       this.menuVisibility = new org.orvencraft.uicore.session.MenuVisibilityManager(this, Bukkit::getOnlinePlayers,
          (viewer, work) -> org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, viewer, work));
       org.orvencraft.uicore.session.LegacyBlockCacheRecovery.recoverAll(this).whenComplete((result, failure) -> {
@@ -1705,6 +2185,7 @@ public class UIcorePlugin extends JavaPlugin {
       if (!player.isOnline()) { this.stopMenuTick(player); return; }
       UUID playerId = player.getUniqueId();
       long tick = this.playerMenuTicks.merge(playerId, 1L, Long::sum);
+      if (isCutsceneUiFrozen(player)) menuOpenedAtTicks.computeIfPresent(playerId, (id, openedAt) -> openedAt + 1);
             MenuSession activeSession = this.menuSessions.get(player.getUniqueId());
             if (activeSession != null && activeSession.stage() == MenuSession.Stage.PREPARING && this.getMenuElapsedTicks(player) > 100L) {
                this.stopCursor(player, true); return;
@@ -1713,8 +2194,10 @@ public class UIcorePlugin extends JavaPlugin {
                Pig mount = this.playerMenuSeats.get(player);
                Pig camera = playerSit.get(player);
                ArmorStand cursor = playerCursors.get(player);
-               if (player.isDead() || mount == null || !mount.isValid() || !mount.getPassengers().contains(player)
-                  || camera == null || !camera.isValid() || cursor == null || !cursor.isValid()) {
+               CutsceneView view = cutsceneViews.get(playerId);
+               if (player.isDead() || mount == null || camera == null || cursor == null || (view == null || !view.moving)
+                  && ((Bukkit.isOwnedByCurrentRegion(mount) && (!mount.isValid() || !mount.getPassengers().contains(player)))
+                  || (Bukkit.isOwnedByCurrentRegion(camera) && !camera.isValid()) || (Bukkit.isOwnedByCurrentRegion(cursor) && !cursor.isValid()))) {
                   this.stopCursor(player, !player.isDead());
                   return;
                }
@@ -1725,12 +2208,22 @@ public class UIcorePlugin extends JavaPlugin {
                    this.lastMenuRotations.put(playerId, input);
                    this.updateCursorPosition(player, input.yaw(), input.pitch());
                 }
+                if ((tick % 5) == 0 && hasHierarchy(player))
+                   reconcileMenuContent(player, getCurrentPlayerMenu(player));
+                tickMenuZoom(player);
+                tickDiggingInput(player);
+                tickDrag(player);
+                if ((tick % 10) == 0) tickMenuDebug(player);
+                if (!isCutsceneUiFrozen(player)) this.tickDynamicMenuPositions(player);
                 Long clickGeneration = this.pendingClicks.remove(player.getUniqueId());
                 if (clickGeneration != null && this.isMenuSessionCurrent(player, clickGeneration)) this.handleCursorClick(player);
-                this.tickCameraEdgePan(player);
-               this.tickDynamicMenuPositions(player);
+                if (cutsceneManager != null) cutsceneManager.tick(player);
+                CutsceneView view = cutsceneViews.get(playerId);
+                if (view == null) this.tickCameraEdgePan(player);
+                else if (view.dirty && !view.moving && !cutsceneManager.isPending(player))
+                   this.applyCutsceneFrame(player, view.basePose).thenAccept(ok -> { if (!ok) new CutsceneHost().execute(player, () -> stopCursor(player, true)); });
             }
-      if ((tick & 1L) == 0L && this.hoverEnlargeManager != null) this.hoverEnlargeManager.tickPlayer(player);
+      if ((tick & 1L) == 0L && this.hoverEnlargeManager != null && !isCutsceneUiFrozen(player)) this.hoverEnlargeManager.tickPlayer(player);
    }
 
    private void stopMenuTick(Player player) {
@@ -1741,6 +2234,9 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    public void onDisable() {
+      pendingMenuOpens.values().forEach(pending -> pending.cancelled = true);
+      sessionJournalWriter.shutdown();
+      if (cutsceneManager != null) cutsceneManager.shutdown();
       boolean folia = foliaLib != null && foliaLib.scheduling().isUsingFolia();
       List<java.util.concurrent.CompletableFuture<Boolean>> closures = new ArrayList<>();
       for (Player player : new ArrayList<>(this.currentPlayerMenus.keySet())) {
@@ -1784,6 +2280,7 @@ public class UIcorePlugin extends JavaPlugin {
          if (this.hoverEnlargeManager != null) this.closeSessionStep(this.hoverEnlargeManager::cleanup);
       }
       this.cursorRotationTrackers.clear();
+      this.cutsceneViews.clear();
       this.avatarProfileCache.clear();
       this.avatarProfileLoads.clear();
       this.menuTickTasks.values().forEach(space.arim.morepaperlib.scheduling.ScheduledTask::cancel);
@@ -1814,26 +2311,53 @@ public class UIcorePlugin extends JavaPlugin {
       this.langConfig = org.orvencraft.uicore.config.ConfigFiles.loadStrict(var1);
    }
 
-   public void reloadPluginConfig() {
+   private final java.util.concurrent.atomic.AtomicBoolean reloadingConfiguration = new java.util.concurrent.atomic.AtomicBoolean();
+
+   /** Completes with a diagnostic on failure or null after the configuration is applied. */
+   public java.util.concurrent.CompletableFuture<String> reloadPluginConfig() {
+      if (!reloadingConfiguration.compareAndSet(false, true))
+         return java.util.concurrent.CompletableFuture.completedFuture("Another reload is already in progress.");
+      var result = new java.util.concurrent.CompletableFuture<String>();
+      result.whenComplete((ignored, failure) -> reloadingConfiguration.set(false));
       try {
          this.validateCoreConfiguration();
          sectionManager.validateMenuConfigs();
+         validateCutscenes();
          for (File file : this.getDataFolder().listFiles() == null ? new File[0] : this.getDataFolder().listFiles()) {
             if (file.getName().endsWith(".yml")) { org.orvencraft.uicore.config.ConfigFiles.loadStrict(file); }
          }
       } catch (Exception exception) {
          this.getLogger().warning("Reload rejected; current configuration remains active: " + exception.getMessage());
-         return;
+         result.complete("Invalid configuration: " + exception.getMessage());
+         return result;
       }
       Map<Player, String> openMenus = new HashMap<>(this.currentPlayerMenus);
-      java.util.concurrent.CompletableFuture<?>[] closes = openMenus.keySet().stream()
-         .map(player -> this.stopCursorAsync(player, true)).toArray(java.util.concurrent.CompletableFuture[]::new);
-      java.util.concurrent.CompletableFuture.allOf(closes).whenComplete((ignored, failure) ->
-         foliaLib.scheduling().globalRegionalScheduler().run(() -> this.finishPluginConfigReload(openMenus)));
+      openMenus.keySet().removeIf(player -> cutsceneManager != null && cutsceneManager.active(player));
+      var closes = openMenus.keySet().stream().map(player -> this.stopCursorAsync(player, true)).toList();
+      java.util.concurrent.CompletableFuture.allOf(closes.toArray(java.util.concurrent.CompletableFuture<?>[]::new))
+         .whenComplete((ignored, failure) -> {
+            try {
+               foliaLib.scheduling().globalRegionalScheduler().run(() -> {
+                  try {
+                     if (failure != null || closes.stream().anyMatch(close -> !Boolean.TRUE.equals(close.getNow(false)))) {
+                        result.complete("Could not close all active menu sessions safely.");
+                        return;
+                     }
+                     this.finishPluginConfigReload(openMenus);
+                     result.complete(null);
+                  } catch (RuntimeException exception) {
+                     this.getLogger().warning("Reload failed: " + exception.getMessage());
+                     result.complete("Could not apply configuration: " + exception.getMessage());
+                  }
+               });
+            } catch (RuntimeException exception) { result.complete("Could not schedule configuration reload: " + exception.getMessage()); }
+         });
+      return result;
    }
 
    private void finishPluginConfigReload(Map<Player, String> openMenus) {
       this.loadConfig();
+      this.reloadCutscenes();
       this.reloadLangConfig();
       if (textDisplayManager != null) textDisplayManager.reloadConfig();
       if (this.hoverEnlargeManager != null) this.hoverEnlargeManager.cleanup();
@@ -1935,11 +2459,16 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    public void setupCursor(Player var1, String var2) {
+      setupCursor(var1, var2, null);
+   }
+
+   private void setupCursor(Player var1, String var2, MenuSession preparedSession) {
        if (var1 == null) return;
        if (!Bukkit.isOwnedByCurrentRegion(var1)) {
-          foliaLib.scheduling().entitySpecificScheduler(var1).run(() -> this.setupCursor(var1, var2), null);
+          foliaLib.scheduling().entitySpecificScheduler(var1).run(() -> this.setupCursor(var1, var2, preparedSession), null);
           return;
        }
+      if (this.closingSessions.containsKey(var1.getUniqueId())) return;
            Section var3 = sectionManager.get(var2);
       if (var3 == null) {
          this.getLogger().warning("Menu '" + var2 + "' not found! Please check your menu configuration.");
@@ -1948,31 +2477,53 @@ public class UIcorePlugin extends JavaPlugin {
          );
        } else {
           if (var1 == null || !var1.isOnline()) return;
+          CutsceneView pendingView = cutsceneViews.get(var1.getUniqueId());
+          if (pendingView != null && pendingView.moving) {
+             if (cutsceneManager != null) cutsceneManager.abort(var1, CutsceneAbortReason.MENU_CHANGED);
+             pendingView.afterMove = () -> setupCursor(var1, var2);
+             return;
+          }
           if (var3.permission != null && !var3.permission.isBlank() && !var1.hasPermission(var3.permission)) return;
           Location relativeAnchor = playerLocations.getOrDefault(var1, var1.getLocation());
           Section var4 = org.orvencraft.uicore.section.PlayerLocationOverride.apply(var1, var3, relativeAnchor);
+          if (cutsceneManager != null) {
+             cutsceneManager.abort(var1, CutsceneAbortReason.MENU_CHANGED);
+             releaseCutsceneView(var1);
+             CutsceneDefinition scene = cutsceneManager.definition(var3.cutsceneId).orElse(null);
+             if (scene != null && var3.cutsceneAutoStart && scene.policy().startMode() == CutsceneDefinition.StartMode.INITIAL) {
+                CameraPose fallback = new CameraPose(var4.world, var4.cameraX, var4.cameraY, var4.cameraZ, var4.yaw, var4.pitch);
+                CameraPose initial = org.orvencraft.uicore.cutscene.CutscenePlayback.initialPose(scene, fallback);
+                var4 = var4.copyWithCamera(initial.world(), initial.x(), initial.y(), initial.z(), (float)initial.yaw(), (float)initial.pitch());
+                var4.cameraViewpointCoordinates = true;
+             }
+          }
           if (Bukkit.getWorld(var4.world) == null) {
              this.getLogger().warning("Unknown menu world: " + var4.world);
              return;
           }
           if (!this.menuSessions.containsKey(var1.getUniqueId())) {
-             this.recoverSavedSession(var1);
-             if (java.nio.file.Files.exists(this.sessionJournal(var1))) {
-                this.getLogger().warning("Cannot open menu while original session recovery is unresolved for " + var1.getName());
+             if (preparedSession == null) {
+                if (pendingMenuOpens.containsKey(var1.getUniqueId())) return;
+                this.recoverSavedSession(var1);
+                if (java.nio.file.Files.exists(this.sessionJournal(var1))) {
+                   this.getLogger().warning("Cannot open menu while original session recovery is unresolved for " + var1.getName());
+                   return;
+                }
+                this.prepareMenuOpen(var1, var2);
                 return;
              }
-             MenuSession initial = new MenuSession(var1);
-             try { initial.save(this.sessionJournal(var1)); }
-             catch (IOException exception) { this.getLogger().warning("Menu opening rejected: cannot save recovery snapshot: " + exception.getMessage()); return; }
-             this.menuSessions.put(var1.getUniqueId(), initial);
+             this.menuSessions.put(var1.getUniqueId(), preparedSession);
           }
+          long beforeDragCancel = getMenuSessionGeneration(var1);
+          finishDrag(var1, true);
+          if (getMenuSessionGeneration(var1) != beforeDragCancel) return;
           this.startMenuTick(var1);
           this.sessionGenerations.put(var1.getUniqueId(), this.generationCounter.incrementAndGet());
           this.restoreBlocks(var1);
           if (this.schematicPreviewManager != null) this.schematicPreviewManager.clear(var1);
           NPCModule.onMenuClose(var1);
           if (textDisplayManager != null) textDisplayManager.clearPlayerDisplays(var1.getUniqueId());
-          this.beginDynamicMenuSession(var1);
+          this.beginDynamicMenuSession(var1, var4.zoom);
           final UUID menuSessionToken = UUID.randomUUID();
           this.menuSessionTokens.put(var1.getUniqueId(), menuSessionToken);
           String previousMenuForEvent = this.currentPlayerMenus.get(var1);
@@ -1993,8 +2544,10 @@ public class UIcorePlugin extends JavaPlugin {
                }
 
                this.refreshMenuContent(var1, var2, var5);
+               if (var7.dragInput.equals("block-digging") || var4.dragInput.equals("block-digging")) this.sendCameraPacket(var1, playerSit.get(var1));
                this.rebuildMenuModules(var1, var2);
                this.runMenuAutoCommands(var1, var4);
+               this.startBoundCutscene(var1, var4);
                return;
             }
          }
@@ -2115,7 +2668,7 @@ public class UIcorePlugin extends JavaPlugin {
                                return;
                             }
                             for (MenuLayout layout : visibleLayouts.values()) {
-                               Location layoutLocation = this.toMenuWorldLocation(var15, this.resolveLayoutPositionForSpawn(var1, var2, layout));
+                               Location layoutLocation = this.toLayoutWorldLocation(var15, layout, this.resolveLayoutPositionForSpawn(var1, var2, layout));
                                if (layoutLocation != null && !Bukkit.isOwnedByCurrentRegion(layoutLocation)) {
                                   this.abortMenuTransition(var1, var2, menuTransitionToken, previousViewSnapshot, "layout '" + layout.key + "' falls outside the player's Folia region");
                                   return;
@@ -2130,8 +2683,9 @@ public class UIcorePlugin extends JavaPlugin {
                            this.playerMenuItemDisplays.put(var1, menuItemDisplays);
 
                             for (MenuLayout var19 : visibleLayouts.values()) {
+                               if (var19.interaction().group()) continue;
                                DynamicPositionSpec.Position layoutPosition = this.resolveLayoutPositionForSpawn(var1, var2, var19);
-                               Location var21 = this.toMenuWorldLocation(var15, layoutPosition);
+                               Location var21 = this.toLayoutWorldLocation(var15, var19, layoutPosition);
                                if (var21 == null) {
                                   continue;
                                }
@@ -2200,6 +2754,9 @@ public class UIcorePlugin extends JavaPlugin {
                            this.resetCameraEdgePan(var1);
                            Pig var30 = this.spawnPlayerLocStand(var1, var6x);
                            var30.setRotation(var15.yaw, var15.pitch);
+                           var cameraReady = var15.cameraViewpointCoordinates
+                              ? var30.teleportAsync(var6x.clone().subtract(0, var30.getEyeHeight(), 0))
+                              : java.util.concurrent.CompletableFuture.completedFuture(true);
                            playerSit.put(var1, var30);
                            Pig playerSeat = this.spawnPlayerLocStand(var1, seatLocation);
                            this.playerMenuSeats.put(var1, playerSeat);
@@ -2218,13 +2775,13 @@ public class UIcorePlugin extends JavaPlugin {
                               return;
                            }
 
-                           foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(() -> {
+                           cameraReady.whenComplete((ready, cameraError) -> foliaLib.scheduling().entitySpecificScheduler(var1).runDelayed(() -> {
                               if (!this.isActiveMenuTransition(var1, var2, menuTransitionToken)) {
                                  this.cleanupMenuViewSnapshot(var1, newViewSnapshot);
                                  return;
                               }
 
-                              if (!var30.isValid() || !playerSeat.isValid() || !playerSeat.getPassengers().contains(var1)) {
+                              if (cameraError != null || !Boolean.TRUE.equals(ready) || !var30.isValid() || !playerSeat.isValid() || !playerSeat.getPassengers().contains(var1)) {
                                  this.cleanupMenuViewSnapshot(var1, newViewSnapshot);
                                  this.abortMenuTransition(var1, var2, menuTransitionToken, previousViewSnapshot, "camera mount was lost before activation");
                                  return;
@@ -2235,10 +2792,11 @@ public class UIcorePlugin extends JavaPlugin {
                               MenuSession session = this.menuSessions.get(var1.getUniqueId());
                               if (session != null) session.activate();
                               this.runMenuAutoCommands(var1, var15);
+                              this.startBoundCutscene(var1, var15);
                               if (previousMenuForEvent != null && !previousMenuForEvent.equals(var2)) {
                                  this.getLogger().info("Switched " + var1.getName() + " to menu '" + var2 + "'.");
                               }
-                           }, null, 2L);
+                           }, null, 2L));
                            if (this.debugMode) {
                               var1.sendMessage(this.getLangMessage("menu.cursor_activated", "&a[UIcore] Menu cursor activated."));
                            }
@@ -2257,6 +2815,11 @@ public class UIcorePlugin extends JavaPlugin {
             }
          }
       }
+   }
+
+   private void startBoundCutscene(Player player, Section section) {
+      if (section.cutsceneAutoStart && cutsceneManager != null && !cutsceneManager.active(player)
+         && section.key.equals(getCurrentPlayerMenu(player))) cutsceneManager.start(player, section.cutsceneId);
    }
 
    private void runMenuAutoCommands(Player player, Section section) {
@@ -2282,6 +2845,8 @@ public class UIcorePlugin extends JavaPlugin {
          return completion;
       }
       UUID playerId = player.getUniqueId();
+      PendingMenuOpen pending = pendingMenuOpens.get(playerId);
+      if (pending != null) pending.cancelled = true;
       java.util.concurrent.CompletableFuture<Boolean> existing = this.closingSessions.putIfAbsent(playerId, completion);
       if (existing != null) return existing;
       completion.whenComplete((result, error) -> this.closingSessions.remove(playerId, completion));
@@ -2300,6 +2865,25 @@ public class UIcorePlugin extends JavaPlugin {
 
    private void stopCursorOnOwner(Player player, boolean returnToOrigin, java.util.concurrent.CompletableFuture<Boolean> completion) {
       UUID playerId = player.getUniqueId();
+      if (cutsceneManager != null) cutsceneManager.abort(player, CutsceneAbortReason.MENU_CLOSED);
+      CutsceneView pendingView = cutsceneViews.get(playerId);
+      if (pendingView != null && pendingView.moving && pendingView.inFlight != null && !pendingView.inFlight.isDone()) {
+         pendingView.inFlight.copy().completeOnTimeout(false, 1, java.util.concurrent.TimeUnit.SECONDS).whenComplete((ok, error) -> {
+            Runnable finish = () -> {
+               if (completion.isDone()) return;
+               if (cutsceneViews.get(playerId) == pendingView && pendingView.moving) releaseCutsceneView(player);
+               stopCursorOnOwner(player, returnToOrigin, completion);
+            };
+            Runnable retired = () -> completion.complete(false);
+            if (!org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, player, finish, retired)) retired.run();
+         });
+         return;
+      }
+      finishDrag(player, true);
+      closeDiggingInput(player);
+      MenuClientView clientView = menuClientViews.remove(playerId);
+      if (clientView != null) clientView.close(player.getEntityId(), player.getGameMode().getValue());
+      releaseCutsceneView(player);
       if (this.extensionManager != null) this.extensionManager.invalidateData(player);
       if (this.extensionManager != null) this.extensionManager.invalidateComponents(player);
       MenuSession session = this.menuSessions.remove(playerId);
@@ -2338,14 +2922,22 @@ public class UIcorePlugin extends JavaPlugin {
          Location origin = session == null ? playerLocations.get(player) : session.originalLocation();
          boolean playerRestored = true;
          if (session != null) { try { session.restore(player); } catch (RuntimeException exception) { playerRestored = false; this.getLogger().warning("Player restoration failed; recovery journal retained: " + exception.getMessage()); } }
+         // Bukkit may keep ADVENTURE unchanged, so explicitly undo the client-only spectator mode.
+         this.closeSessionStep(() -> PacketEvents.getAPI().getPlayerManager().sendPacket(player,
+            new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState(
+               com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState.Reason.CHANGE_GAME_MODE,
+               player.getGameMode().getValue())));
          this.closeSessionStep(() -> player.removeMetadata("cursor_original_gamemode", this));
          this.clearPlayerSessionReferences(player);
            if (!playerRestored || player.isDead()) {
               this.getLogger().warning("Original player state/location not fully restored; recovery journal retained for " + player.getName());
               completion.complete(false);
+           } else if (!returnToOrigin && this.isEnabled()) {
+              // A MONITOR teleport hook runs before the external teleport moves the player.
+              player.getScheduler().run(this, ignored -> completion.complete(this.checkpointRestoredSession(player)),
+                 () -> completion.complete(false));
            } else if (!returnToOrigin || origin == null) {
-              this.deleteSessionJournal(player);
-              completion.complete(true);
+              completion.complete(this.checkpointRestoredSession(player));
            } else if (origin.getWorld() == null) {
               this.getLogger().warning("Original player world is unavailable; recovery journal retained for " + player.getName());
               completion.complete(false);
@@ -2359,15 +2951,13 @@ public class UIcorePlugin extends JavaPlugin {
                        try { restored = player.teleport(origin); }
                        finally { this.internalMenuTeleports.complete(player.getUniqueId(), token); }
                     }
-                    if (restored) this.deleteSessionJournal(player);
-                    completion.complete(restored);
+                    completion.complete(restored && this.checkpointRestoredSession(player));
                  } else {
                     this.teleportMenuInternalAsync(player, origin).whenComplete((returned, error) -> {
                        boolean dispatched = org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, player, () -> {
                           boolean restored = error == null && Boolean.TRUE.equals(returned) && !player.isDead();
-                          if (restored) this.deleteSessionJournal(player);
-                          else this.getLogger().warning("Return teleport failed; recovery journal retained for " + player.getName());
-                          completion.complete(restored);
+                          if (!restored) this.getLogger().warning("Return teleport failed; recovery journal retained for " + player.getName());
+                          completion.complete(restored && this.checkpointRestoredSession(player));
                        }, () -> completion.complete(false));
                        if (!dispatched) completion.complete(false);
                     });
@@ -2392,15 +2982,81 @@ public class UIcorePlugin extends JavaPlugin {
       return this.getDataFolder().toPath().resolve("sessions").resolve(player.getUniqueId() + ".yml");
    }
 
-   private void deleteSessionJournal(Player player) {
-      try { java.nio.file.Files.deleteIfExists(this.sessionJournal(player)); }
-      catch (IOException exception) { this.getLogger().warning("Cannot remove completed session journal: " + exception.getMessage()); }
+   private static final class PendingMenuOpen {
+      final MenuSession snapshot;
+      final java.util.concurrent.atomic.AtomicBoolean discarding = new java.util.concurrent.atomic.AtomicBoolean();
+      volatile boolean cancelled;
+
+      PendingMenuOpen(MenuSession snapshot) { this.snapshot = snapshot; }
+   }
+
+   private final Map<UUID, PendingMenuOpen> pendingMenuOpens = new ConcurrentHashMap<>();
+   private final java.util.concurrent.ThreadPoolExecutor sessionJournalWriter = new java.util.concurrent.ThreadPoolExecutor(
+      1, 1, 0, java.util.concurrent.TimeUnit.MILLISECONDS, new java.util.concurrent.ArrayBlockingQueue<>(32), work -> {
+         Thread thread = new Thread(work, "UIcore session journal");
+         thread.setDaemon(true);
+         return thread;
+      });
+
+   private void prepareMenuOpen(Player player, String menu) {
+      UUID id = player.getUniqueId();
+      var journal = this.sessionJournal(player);
+      PendingMenuOpen pending = new PendingMenuOpen(new MenuSession(player));
+      if (pendingMenuOpens.putIfAbsent(id, pending) != null) return;
+      try {
+         sessionJournalWriter.execute(() -> {
+            try {
+               if (pending.cancelled || !isEnabled()) { pendingMenuOpens.remove(id, pending); return; }
+               pending.snapshot.save(journal);
+            } catch (IOException | RuntimeException exception) {
+               pendingMenuOpens.remove(id, pending);
+               getLogger().warning("Menu opening rejected: cannot save recovery snapshot: " + exception.getMessage());
+               return;
+            }
+            Runnable discard = () -> {
+               if (!pending.discarding.compareAndSet(false, true) || pendingMenuOpens.get(id) != pending) return;
+               try { java.nio.file.Files.deleteIfExists(journal); }
+               catch (IOException exception) { getLogger().warning("Could not remove unused menu recovery snapshot: " + exception.getMessage()); }
+               finally { pendingMenuOpens.remove(id, pending); }
+            };
+            boolean dispatched = org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, player, () -> {
+               try {
+                  if (!pending.cancelled && isEnabled() && player.isOnline() && !player.isDead()
+                     && player.getWorld().equals(pending.snapshot.originalLocation().getWorld())
+                     && pending.snapshot.matchesPlayerFlags(player)) {
+                     setupCursor(player, menu, pending.snapshot);
+                  }
+               } finally {
+                  if (menuSessions.get(id) == pending.snapshot) pendingMenuOpens.remove(id, pending);
+                  else discard.run();
+               }
+            }, discard);
+            if (!dispatched) discard.run();
+         });
+      } catch (java.util.concurrent.RejectedExecutionException exception) {
+         pendingMenuOpens.remove(id, pending);
+         getLogger().warning("Menu opening rejected: session journal queue is full or shutting down.");
+      }
+   }
+
+   private boolean checkpointRestoredSession(Player player) {
+      var journal = this.sessionJournal(player);
+      if (!java.nio.file.Files.exists(journal)) return true;
+      try {
+         player.saveData();
+         java.nio.file.Files.deleteIfExists(journal);
+         return true;
+      } catch (IOException | RuntimeException exception) {
+         this.getLogger().warning("Could not checkpoint restored player; session journal retained: " + exception.getMessage());
+         return false;
+      }
    }
 
    private void recoverSavedSession(Player player) {
       java.nio.file.Path journal = this.sessionJournal(player);
       UUID playerId = player.getUniqueId();
-      if (!java.nio.file.Files.exists(journal) || this.menuSessions.containsKey(playerId) || !this.recoveringSessions.add(playerId)) return;
+      if (!java.nio.file.Files.exists(journal) || this.menuSessions.containsKey(playerId)
+         || this.pendingMenuOpens.containsKey(playerId) || !this.recoveringSessions.add(playerId)) return;
       try {
           MenuSession saved = MenuSession.load(journal, Bukkit::getWorld);
           saved.restore(player);
@@ -2415,7 +3071,7 @@ public class UIcorePlugin extends JavaPlugin {
           this.teleportMenuInternalAsync(player, origin).whenComplete((returned, error) -> {
              foliaLib.scheduling().entitySpecificScheduler(player).run(() -> {
                 this.recoveringSessions.remove(playerId);
-                if (error == null && Boolean.TRUE.equals(returned)) this.deleteSessionJournal(player);
+                if (error == null && Boolean.TRUE.equals(returned)) this.checkpointRestoredSession(player);
                 else this.getLogger().warning("Session return teleport failed; retained recovery journal for " + player.getName());
              }, () -> this.recoveringSessions.remove(playerId));
           });
@@ -2533,6 +3189,7 @@ public class UIcorePlugin extends JavaPlugin {
       if (layout.isItemRotate()) {
          final ScheduledTask[] rotation = {null};
          rotation[0] = foliaLib.scheduling().entitySpecificScheduler(display).runAtFixedRate(() -> {
+                   if (isCutsceneUiFrozen(player)) return;
                    if (!player.isOnline()
                       || !display.isValid()
                       || !UIcorePlugin.this.playerMenuItemDisplays.getOrDefault(player, Collections.emptyList()).contains(display)) {
@@ -2591,10 +3248,10 @@ public class UIcorePlugin extends JavaPlugin {
       String textPrefix = menuKey + ":";
       List<TextDisplay> trackedTextDisplays = this.playerDisplays.get(player);
       if (trackedTextDisplays != null) {
-         trackedTextDisplays.removeIf(display -> display == null || !display.isValid());
+         trackedTextDisplays.removeIf(display -> display == null || Bukkit.isOwnedByCurrentRegion(display) && !display.isValid());
       }
       for (TextDisplay display : this.playerDisplays.getOrDefault(player, Collections.emptyList())) {
-         String customName = display == null ? null : display.getCustomName();
+         String customName = this.trackedMenuEntityName(player, display);
          if (customName != null && customName.startsWith(textPrefix)) {
             elementIds.add(customName.substring(textPrefix.length()));
          }
@@ -2603,17 +3260,17 @@ public class UIcorePlugin extends JavaPlugin {
       String itemSuffix = ":item";
       List<ItemDisplay> trackedItemDisplays = this.playerMenuItemDisplays.get(player);
       if (trackedItemDisplays != null) {
-         trackedItemDisplays.removeIf(display -> display == null || !display.isValid());
+         trackedItemDisplays.removeIf(display -> display == null || Bukkit.isOwnedByCurrentRegion(display) && !display.isValid());
       }
       for (ItemDisplay display : this.playerMenuItemDisplays.getOrDefault(player, Collections.emptyList())) {
-         String customName = display == null ? null : display.getCustomName();
+         String customName = this.trackedMenuEntityName(player, display);
          if (customName != null && customName.startsWith(textPrefix) && customName.endsWith(itemSuffix)) {
             elementIds.add(customName.substring(textPrefix.length(), customName.length() - itemSuffix.length()));
          }
       }
 
       for (String elementId : elementIds) {
-         this.refreshMenuElement(player, menuKey, elementId, false, section, desired.get(elementId));
+         this.refreshMenuElement(player, menuKey, elementId, false, section, desired);
       }
    }
 
@@ -2637,9 +3294,7 @@ public class UIcorePlugin extends JavaPlugin {
          return false;
       }
 
-      MenuLayout layout = this.getLayoutsForPlayer(player, menuKey, section).get(elementId);
-      boolean changed = this.refreshMenuElement(player, menuKey, elementId, replaceExisting, section, layout);
-      return changed;
+      return this.refreshMenuElement(player, menuKey, elementId, replaceExisting, section, this.getLayoutsForPlayer(player, menuKey, section));
    }
 
    private boolean refreshMenuElement(
@@ -2648,19 +3303,23 @@ public class UIcorePlugin extends JavaPlugin {
       String elementId,
       boolean replaceExisting,
       Section section,
-      MenuLayout layout
+      Map<String, MenuLayout> layouts
    ) {
+      this.playerDisplays.computeIfPresent(player, (viewer, displays) -> displays instanceof CopyOnWriteArrayList ? displays : new CopyOnWriteArrayList<>(displays));
+      this.playerMenuItemDisplays.computeIfPresent(player, (viewer, displays) -> displays instanceof CopyOnWriteArrayList ? displays : new CopyOnWriteArrayList<>(displays));
       World world = Bukkit.getWorld(section.world);
       if (world == null) {
          return false;
       }
-      if (layout == null) {
+      MenuLayout layout = layouts.get(elementId);
+      if (layout == null || layout.interaction().group()) {
          return this.removeRenderedMenuElement(player, menuKey, elementId);
       }
 
-      DynamicPositionSpec.Position position = this.resolveLayoutPositionForSpawn(player, menuKey, layout);
-      Location location = this.toMenuWorldLocation(section, position);
-      if (location == null || !Bukkit.isOwnedByCurrentRegion(location)) {
+      DynamicPositionSpec.Position position = this.resolveLayoutPosition(player, menuKey, layout, layouts);
+      Location location = this.toLayoutWorldLocation(section, layout, position);
+      float zoom = menuZoomFactor(menuZooms.get(player.getUniqueId()), layout, layouts);
+      if (location == null) {
          return false;
       }
 
@@ -2673,29 +3332,24 @@ public class UIcorePlugin extends JavaPlugin {
          itemDisplay = null;
       }
 
-      if (layout.isItemLayout()) {
-         List<ItemDisplay> itemDisplays = this.playerMenuItemDisplays.computeIfAbsent(player, ignored -> new ArrayList<>());
-         if (itemDisplay == null || !itemDisplay.isValid()) {
-            itemDisplay = this.spawnMenuItemDisplay(player, world, location, menuKey, layout);
-            itemDisplays.add(itemDisplay);
-         } else {
-            this.updateMenuItemDisplay(player, itemDisplay, location, menuKey, layout);
-         }
+      boolean textMissing = textDisplay == null || Bukkit.isOwnedByCurrentRegion(textDisplay) && !textDisplay.isValid();
+      boolean itemMissing = itemDisplay == null || Bukkit.isOwnedByCurrentRegion(itemDisplay) && !itemDisplay.isValid();
+      if (textMissing || layout.isItemLayout() && itemMissing) {
+         this.spawnReconciledMenuDisplays(player, menuKey, layout, location, textMissing, layout.isItemLayout() && itemMissing, zoom);
+      }
 
-         List<TextDisplay> textDisplays = this.playerDisplays.computeIfAbsent(player, ignored -> new ArrayList<>());
-         if (textDisplay == null || !textDisplay.isValid()) {
-            textDisplays.add(this.spawnMenuItemHitbox(player, world, location, menuKey, layout));
-         } else {
-            this.updateMenuItemHitbox(textDisplay, location, layout);
+      if (layout.isItemLayout()) {
+         if (!itemMissing) {
+            this.updateMenuItemDisplay(player, itemDisplay, location, menuKey, layout, zoom);
+         }
+         if (!textMissing) {
+            this.updateMenuItemHitbox(player, textDisplay, location, layout, zoom);
          }
          return true;
       }
 
-      List<TextDisplay> textDisplays = this.playerDisplays.computeIfAbsent(player, ignored -> new ArrayList<>());
-      if (textDisplay == null || !textDisplay.isValid()) {
-         textDisplays.add(this.spawnMenuTextDisplay(player, world, location, menuKey, layout));
-      } else {
-         this.updateMenuTextDisplay(player, textDisplay, location, layout);
+      if (!textMissing) {
+         this.updateMenuTextDisplay(player, textDisplay, location, layout, zoom);
       }
       return true;
    }
@@ -2706,8 +3360,9 @@ public class UIcorePlugin extends JavaPlugin {
       List<TextDisplay> textDisplays = this.playerDisplays.get(player);
       if (textDisplays != null) {
          for (TextDisplay display : new ArrayList<>(textDisplays)) {
-            if (display != null && textName.equals(display.getCustomName())) {
+            if (display != null && textName.equals(this.trackedMenuEntityName(player, display))) {
                textDisplays.remove(display);
+               this.forgetCutsceneDisplay(player, display);
                this.removeMenuEntity(display);
                removed = true;
             }
@@ -2718,8 +3373,9 @@ public class UIcorePlugin extends JavaPlugin {
       List<ItemDisplay> itemDisplays = this.playerMenuItemDisplays.get(player);
       if (itemDisplays != null) {
          for (ItemDisplay display : new ArrayList<>(itemDisplays)) {
-            if (display != null && itemName.equals(display.getCustomName())) {
+            if (display != null && itemName.equals(this.trackedMenuEntityName(player, display))) {
                itemDisplays.remove(display);
+               this.forgetCutsceneDisplay(player, display);
                this.removeMenuEntity(display);
                removed = true;
             }
@@ -2729,23 +3385,193 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private TextDisplay findTrackedTextDisplay(Player player, String menuKey, String elementId) {
-      String expectedName = menuKey + ":" + elementId;
-      for (TextDisplay display : this.playerDisplays.getOrDefault(player, Collections.emptyList())) {
-         if (display != null && display.isValid() && expectedName.equals(display.getCustomName())) {
+      return this.getTextDisplayByKeys(player, menuKey, elementId);
+   }
+
+   private ItemDisplay findTrackedItemDisplay(Player player, String menuKey, String elementId) {
+      String expectedName = menuKey + ":" + elementId + ":item";
+      for (ItemDisplay display : this.playerMenuItemDisplays.getOrDefault(player, Collections.emptyList())) {
+         if (display != null && (!Bukkit.isOwnedByCurrentRegion(display) || display.isValid())
+            && expectedName.equals(this.trackedMenuEntityName(player, display))) {
             return display;
          }
       }
       return null;
    }
 
-   private ItemDisplay findTrackedItemDisplay(Player player, String menuKey, String elementId) {
-      String expectedName = menuKey + ":" + elementId + ":item";
-      for (ItemDisplay display : this.playerMenuItemDisplays.getOrDefault(player, Collections.emptyList())) {
-         if (display != null && display.isValid() && expectedName.equals(display.getCustomName())) {
-            return display;
-         }
+   private final Set<String> pendingMenuElementSpawns = ConcurrentHashMap.newKeySet();
+
+   private void forgetCutsceneDisplay(Player player, Entity display) {
+      MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+      if (clientView != null) clientView.forget(display.getEntityId());
+      CutsceneView view = this.cutsceneViews.get(player.getUniqueId());
+      if (view != null) {
+         view.names.remove(display); view.locations.remove(display); view.animationPositions.remove(display);
+         if (display instanceof TextDisplay text) view.hitboxes.remove(text);
+         view.dirty = true;
       }
-      return null;
+   }
+
+   /** Resolve viewer data on the viewer owner, then create missing displays on their destination owner. */
+   private void spawnReconciledMenuDisplays(Player player, String menuKey, MenuLayout layout, Location location,
+                                           boolean textMissing, boolean itemMissing, float zoom) {
+      long generation = this.getMenuSessionGeneration(player);
+      CutsceneView view = this.cutsceneViews.get(player.getUniqueId());
+      String pendingKey = player.getUniqueId() + ":" + generation + ":" + menuKey + ":" + layout.key;
+      if (!this.pendingMenuElementSpawns.add(pendingKey)) return;
+      if (view != null && view.moving) {
+         foliaLib.scheduling().entitySpecificScheduler(player).runDelayed(() -> {
+            this.pendingMenuElementSpawns.remove(pendingKey);
+            if (this.isMenuSessionCurrent(player, generation)) this.refreshMenuElement(player, menuKey, layout.key, false);
+         }, () -> this.pendingMenuElementSpawns.remove(pendingKey), 1L);
+         return;
+      }
+      if (Bukkit.isOwnedByCurrentRegion(location)) {
+         try {
+            if (itemMissing) {
+               ItemDisplay item = this.spawnMenuItemDisplay(player, location.getWorld(), location, menuKey, layout);
+               this.scaleMenuDisplay(item, zoom);
+               this.playerMenuItemDisplays.computeIfAbsent(player, ignored -> new CopyOnWriteArrayList<>()).add(item);
+               if (view != null) { view.names.put(item, menuKey + ":" + layout.key + ":item"); view.locations.put(item, item.getLocation()); }
+            }
+            if (textMissing) {
+               TextDisplay text = layout.isItemLayout() ? this.spawnMenuItemHitbox(player, location.getWorld(), location, menuKey, layout)
+                  : this.spawnMenuTextDisplay(player, location.getWorld(), location, menuKey, layout);
+               this.scaleMenuDisplay(text, zoom);
+               this.playerDisplays.computeIfAbsent(player, ignored -> new CopyOnWriteArrayList<>()).add(text);
+               if (view != null) {
+                  view.names.put(text, menuKey + ":" + layout.key); view.locations.put(text, text.getLocation());
+                  view.hitboxes.put(text, TextDisplayHitBox.snapshot(text));
+               }
+            }
+            if (view != null) view.dirty = true;
+         } finally { this.pendingMenuElementSpawns.remove(pendingKey); }
+         return;
+      }
+
+      try {
+      net.kyori.adventure.text.Component rendered = textMissing && !layout.isItemLayout() ? layout.renderStyledComponent(player, false, false) : null;
+      ItemStack stack = itemMissing ? this.createMenuItemStack(player, menuKey, layout) : null;
+      boolean glow = itemMissing && layout.resolveItemGlow(player);
+      boolean visibleByDefault = !this.isMenuHiddenFromOtherPlayers(player);
+      Billboard billboard = this.parseBillboard(layout.getItemBillboard());
+      ItemDisplayTransform transform = this.resolveMenuItemTransform(layout);
+      String textName = menuKey + ":" + layout.key;
+      Object token = this.menuSessionTokens.get(player.getUniqueId());
+      location.getWorld().getChunkAtAsync(location.getBlockX() >> 4, location.getBlockZ() >> 4, true).whenComplete((chunk, loadingError) -> {
+      if (loadingError != null || !isEnabled() || token != menuSessionTokens.get(player.getUniqueId())) {
+         pendingMenuElementSpawns.remove(pendingKey); return;
+      }
+      boolean scheduled = org.orvencraft.uicore.scheduler.CleanupTasks.region(this, location, () -> {
+         List<Display> created = new ArrayList<>();
+         try {
+            if (generation != this.getMenuSessionGeneration(player) || token != this.menuSessionTokens.get(player.getUniqueId())
+               || this.cutsceneViews.get(player.getUniqueId()) != view) { this.pendingMenuElementSpawns.remove(pendingKey); return; }
+            ItemDisplay item = null;
+            TextDisplay text = null;
+            if (itemMissing) {
+               item = this.tagMenuEntity(location.getWorld().spawn(location, ItemDisplay.class, entity -> entity.setVisibleByDefault(false)));
+               created.add(item);
+               item.setCustomName(textName + ":item"); item.setCustomNameVisible(false);
+               item.setItemStack(stack); item.setGlowing(glow); item.setViewRange(100F);
+               item.setBillboard(billboard); item.setItemDisplayTransform(transform); this.setTeleportDurationSafe(item, 2);
+               Transformation previous = item.getTransformation();
+               item.setTransformation(new Transformation(previous.getTranslation(),
+                  previous.getLeftRotation().rotationYXZ((float)Math.toRadians(layout.tiltY), (float)Math.toRadians(layout.tiltX), (float)Math.toRadians(layout.tiltZ)),
+                  new Vector3f((float)layout.getItemScale()), previous.getRightRotation()));
+               if (layout.isPlayerAvatarLayout() && stack.getType() == Material.PLAYER_HEAD) {
+                  item.setTransformation(AvatarDisplayTransform.create(layout.getItemScale(), layout.isAvatarFaceOnly(), layout.tiltX, layout.tiltY, layout.tiltZ, transform));
+                  item.setBrightness(new Display.Brightness(15, 15));
+               }
+            }
+            if (textMissing) {
+               text = this.tagMenuEntity(location.getWorld().spawn(location, TextDisplay.class, entity -> entity.setVisibleByDefault(false)));
+               created.add(text);
+               text.setCustomName(textName); text.setCustomNameVisible(false);
+               text.setBackgroundColor(Color.fromARGB(0, 0, 0, 0)); text.setDefaultBackground(false);
+               text.setShadowed(!layout.isItemLayout()); text.setBillboard(Billboard.CENTER);
+               this.updateMenuHitboxTag(text, layout);
+               if (layout.isItemLayout()) {
+                  text.setText(layout.getHitboxText()); text.addScoreboardTag(TextDisplayHitBox.ITEM_HITBOX_TAG);
+               } else {
+                  text.text(rendered);
+                  Transformation previous = text.getTransformation();
+                  text.setTransformation(new Transformation(previous.getTranslation(),
+                     previous.getLeftRotation().rotationYXZ((float)Math.toRadians(layout.tiltY), (float)Math.toRadians(layout.tiltX), (float)Math.toRadians(layout.tiltZ)),
+                     new Vector3f((float)layout.getTextSize()), previous.getRightRotation()));
+                  if (layout.isTypewriterEnabled()) textDisplayManager.getTypewriterEffect().applyEffect(text, rendered,
+                     layout.getTypewriterSpeed(), layout.getTypewriterStartDelay(), layout.getTypewriterCursorChar());
+               }
+            }
+            for (Display display : created) {
+               this.scaleMenuDisplay(display, zoom);
+               display.setVisibleByDefault(visibleByDefault);
+            }
+            TextDisplay newText = text;
+            ItemDisplay newItem = item;
+            TextDisplayHitBox.Snapshot hitbox = text == null ? null : TextDisplayHitBox.snapshot(text);
+            Runnable discard = () -> { this.pendingMenuElementSpawns.remove(pendingKey); created.forEach(this::removeMenuEntity); };
+            boolean adopted = org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, player, () -> {
+               this.pendingMenuElementSpawns.remove(pendingKey);
+               if (!this.isMenuSessionCurrent(player, generation) || token != this.menuSessionTokens.get(player.getUniqueId())
+                  || this.cutsceneViews.get(player.getUniqueId()) != view) { created.forEach(this::removeMenuEntity); return; }
+               Section current = this.getRuntimeSection(player, menuKey);
+               MenuLayout desired = current == null ? null : this.getLayoutsForPlayer(player, menuKey, current).get(layout.key);
+               if (desired == null || desired.isItemLayout() != layout.isItemLayout()) { created.forEach(this::removeMenuEntity); return; }
+               if (newText != null) {
+                  if (this.findTrackedTextDisplay(player, menuKey, layout.key) != null) this.removeMenuEntity(newText);
+                  else {
+                     this.playerDisplays.computeIfAbsent(player, ignored -> new CopyOnWriteArrayList<>()).add(newText);
+                     if (view != null) { view.names.put(newText, textName); view.locations.put(newText, location.clone()); view.hitboxes.put(newText, hitbox); }
+                     player.showEntity(this, newText);
+                     if (!layout.isItemLayout()) org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, newText,
+                        () -> { if (this.isMenuSessionCurrent(player, generation) && newText.isValid()) this.applyMenuTextFloatingAnimation(player, newText, layout); });
+                  }
+               }
+               if (newItem != null) {
+                  if (this.findTrackedItemDisplay(player, menuKey, layout.key) != null) this.removeMenuEntity(newItem);
+                  else {
+                     this.playerMenuItemDisplays.computeIfAbsent(player, ignored -> new CopyOnWriteArrayList<>()).add(newItem);
+                     if (view != null) { view.names.put(newItem, textName + ":item"); view.locations.put(newItem, location.clone()); }
+                     player.showEntity(this, newItem);
+                     if (layout.isItemRotate()) this.startReconciledItemRotation(player, newItem, layout, generation);
+                  }
+               }
+               if (view != null) view.dirty = true;
+               this.refreshMenuElement(player, menuKey, layout.key, false);
+            }, discard);
+            if (!adopted) discard.run();
+         } catch (RuntimeException failure) {
+            created.forEach(this::removeMenuEntity); this.pendingMenuElementSpawns.remove(pendingKey);
+            this.getLogger().warning("Cannot refresh menu element '" + textName + "': " + failure.getMessage());
+         }
+      });
+      if (!scheduled) this.pendingMenuElementSpawns.remove(pendingKey);
+      });
+      } catch (RuntimeException failure) {
+         this.pendingMenuElementSpawns.remove(pendingKey);
+         throw failure;
+      }
+   }
+
+   private void startReconciledItemRotation(Player player, ItemDisplay display, MenuLayout layout, long generation) {
+      org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, display, () -> {
+         if (!this.isMenuSessionCurrent(player, generation) || !display.isValid()) return;
+         ScheduledTask[] task = {null};
+         task[0] = foliaLib.scheduling().entitySpecificScheduler(display).runAtFixedRate(() -> {
+            if (generation != this.getMenuSessionGeneration(player) || !display.isValid()
+               || !this.playerMenuItemDisplays.getOrDefault(player, List.of()).contains(display)) {
+               if (task[0] != null) task[0].cancel();
+               return;
+            }
+            if (this.isCutsceneUiFrozen(player)) return;
+            Transformation current = display.getTransformation();
+            display.setTransformation(new Transformation(current.getTranslation(), current.getLeftRotation().rotateAxis(
+               (float)Math.toRadians(layout.getItemRotateSpeed()), 0F, layout.isAvatarFaceOnly() ? 0F : 1F,
+               layout.isAvatarFaceOnly() ? 1F : 0F), current.getScale(), current.getRightRotation()));
+         }, null, 1L, 1L);
+         if (task[0] != null) this.playerMenuItemAnimationTasks.computeIfAbsent(player, ignored -> new CopyOnWriteArrayList<>()).add(task[0]);
+      });
    }
 
    private TextDisplay spawnMenuTextDisplay(Player player, World world, Location location, String menuKey, MenuLayout layout) {
@@ -2785,40 +3611,44 @@ public class UIcorePlugin extends JavaPlugin {
       return display;
    }
 
-   private void updateMenuTextDisplay(Player player, TextDisplay display, Location location, MenuLayout layout) {
-      if (!display.getLocation().equals(location)) {
-         moveMenuEntity(display, location);
-      }
-      this.updateMenuHitboxTag(display, layout);
-      if (!layout.isTypewriterEnabled() || !textDisplayManager.getTypewriterEffect().isRunning(display)) {
-         boolean hovered = this.hoverEnlargeManager != null && this.hoverEnlargeManager.isCurrentHovered(player, layout);
-         net.kyori.adventure.text.Component rendered = layout.renderStyledComponent(player, hovered, false);
-         if (!Objects.equals(display.text(), rendered)) {
+   private void updateMenuTextDisplay(Player player, TextDisplay display, Location location, MenuLayout layout, float zoom) {
+      long generation = this.getMenuSessionGeneration(player);
+      boolean hovered = this.hoverEnlargeManager != null && this.hoverEnlargeManager.isCurrentHovered(player, layout);
+      net.kyori.adventure.text.Component rendered = layout.renderStyledComponent(player, hovered, false);
+      CutsceneView view = this.cutsceneViews.get(player.getUniqueId());
+      if (view != null) view.dirty = true;
+      org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, display, () -> {
+         if (generation != this.getMenuSessionGeneration(player) || !display.isValid()
+            || !this.playerDisplays.getOrDefault(player, List.of()).contains(display)) return;
+         CutsceneView current = this.cutsceneViews.get(player.getUniqueId());
+         if (current == null && !display.getLocation().equals(location)) moveMenuEntity(display, location);
+         this.updateMenuHitboxTag(display, layout);
+         this.scaleMenuDisplay(display, zoom);
+         if ((!layout.isTypewriterEnabled() || !textDisplayManager.getTypewriterEffect().isRunning(display)) && !Objects.equals(display.text(), rendered)) {
             display.text(rendered);
          }
-      }
+         if (current != null) current.hitboxes.put(display, TextDisplayHitBox.snapshot(display));
+      });
    }
 
-   private void updateMenuItemDisplay(Player player, ItemDisplay display, Location location, String menuKey, MenuLayout layout) {
+   private void updateMenuItemDisplay(Player player, ItemDisplay display, Location location, String menuKey, MenuLayout layout, float zoom) {
       ItemStack stack = this.createMenuItemStack(player, menuKey, layout);
-      ItemStack previousStack = display.getItemStack();
-      if (!stack.equals(previousStack)) {
-         display.setItemStack(stack);
-      }
-      if (display.isGlowing() != layout.resolveItemGlow(player)) {
-         display.setGlowing(layout.resolveItemGlow(player));
-      }
+      boolean glow = layout.resolveItemGlow(player);
       Billboard billboard = this.parseBillboard(layout.getItemBillboard());
-      if (display.getBillboard() != billboard) {
-         display.setBillboard(billboard);
-      }
       ItemDisplayTransform transform = this.resolveMenuItemTransform(layout);
-      if (display.getItemDisplayTransform() != transform) {
-         display.setItemDisplayTransform(transform);
-      }
-      if (!display.getLocation().equals(location)) {
-         moveMenuEntity(display, location);
-      }
+      long generation = this.getMenuSessionGeneration(player);
+      CutsceneView view = this.cutsceneViews.get(player.getUniqueId());
+      if (view != null) view.dirty = true;
+      org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, display, () -> {
+         if (generation != this.getMenuSessionGeneration(player) || !display.isValid()
+            || !this.playerMenuItemDisplays.getOrDefault(player, List.of()).contains(display)) return;
+         if (!stack.equals(display.getItemStack())) display.setItemStack(stack);
+         if (display.isGlowing() != glow) display.setGlowing(glow);
+         if (display.getBillboard() != billboard) display.setBillboard(billboard);
+         if (display.getItemDisplayTransform() != transform) display.setItemDisplayTransform(transform);
+         this.scaleMenuDisplay(display, zoom);
+         if (!this.cutsceneViews.containsKey(player.getUniqueId()) && !display.getLocation().equals(location)) moveMenuEntity(display, location);
+      });
    }
 
    private ItemStack createMenuItemStack(Player player, String menuKey, MenuLayout layout) {
@@ -2854,17 +3684,22 @@ public class UIcorePlugin extends JavaPlugin {
          : this.parseItemDisplayTransform(layout.getItemDisplayTransform());
    }
 
-   private void updateMenuItemHitbox(TextDisplay hitbox, Location location, MenuLayout layout) {
-      if (!hitbox.getScoreboardTags().contains(TextDisplayHitBox.ITEM_HITBOX_TAG)) {
-         hitbox.addScoreboardTag(TextDisplayHitBox.ITEM_HITBOX_TAG);
-      }
-      if (!Objects.equals(hitbox.getText(), layout.getHitboxText())) {
-         hitbox.setText(layout.getHitboxText());
-      }
-      if (!hitbox.getLocation().equals(location)) {
-         moveMenuEntity(hitbox, location);
-      }
-      this.updateMenuHitboxTag(hitbox, layout);
+   private void updateMenuItemHitbox(Player player, TextDisplay hitbox, Location location, MenuLayout layout, float zoom) {
+      long generation = this.getMenuSessionGeneration(player);
+      String text = layout.getHitboxText();
+      CutsceneView view = this.cutsceneViews.get(player.getUniqueId());
+      if (view != null) view.dirty = true;
+      org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, hitbox, () -> {
+         if (generation != this.getMenuSessionGeneration(player) || !hitbox.isValid()
+            || !this.playerDisplays.getOrDefault(player, List.of()).contains(hitbox)) return;
+         if (!hitbox.getScoreboardTags().contains(TextDisplayHitBox.ITEM_HITBOX_TAG)) hitbox.addScoreboardTag(TextDisplayHitBox.ITEM_HITBOX_TAG);
+         if (!Objects.equals(hitbox.getText(), text)) hitbox.setText(text);
+         CutsceneView current = this.cutsceneViews.get(player.getUniqueId());
+         if (current == null && !hitbox.getLocation().equals(location)) moveMenuEntity(hitbox, location);
+         this.updateMenuHitboxTag(hitbox, layout);
+         this.scaleMenuDisplay(hitbox, zoom);
+         if (current != null) current.hitboxes.put(hitbox, TextDisplayHitBox.snapshot(hitbox));
+      });
    }
 
    private void updateMenuHitboxTag(TextDisplay display, MenuLayout layout) {
@@ -2982,13 +3817,47 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private void sendCameraPacket(Player var1, Entity var2) {
+      closeDiggingInput(var1);
       try {
+         if (var2 != var1) {
+            MenuClientView previous = menuClientViews.remove(var1.getUniqueId());
+            if (previous != null) previous.close(var1.getEntityId(), var1.getGameMode().getValue());
+            var user = PacketEvents.getAPI().getPlayerManager().getUser(var1);
+            boolean digging = isBlockDiggingMenu(var1);
+            byte playerFlags = digging ? MenuClientView.readPlayerFlags(
+               io.github.retrooper.packetevents.util.SpigotConversionUtil.getEntityMetadata(var1)) : 0;
+            var clientVersion = user.getClientVersion();
+            var diggingAbilities = digging && clientVersion != null && clientVersion.isNewerThanOrEquals(
+               com.github.retrooper.packetevents.protocol.player.ClientVersion.V_26_1)
+               ? new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerAbilities(
+                  false, false, false, false, var1.getFlySpeed() / 2f, var1.getWalkSpeed() / 2f)
+               : null;
+            var clientView = new MenuClientView(packets -> ChannelHelper.runInEventLoop(user.getChannel(), () -> {
+               user.writePacketSilently(new WrapperPlayServerBundle());
+               packets.forEach(user::writePacketSilently);
+               user.writePacketSilently(new WrapperPlayServerBundle());
+               user.flushPackets();
+            }), digging, var1.getEntityId(), playerFlags, diggingAbilities);
+            menuClientViews.put(var1.getUniqueId(), clientView);
+            Location eye = ((org.bukkit.entity.LivingEntity)var2).getEyeLocation();
+            // The physical camera carrier would intercept the survival client's block ray.
+            if (digging) var1.hideEntity(this, var2);
+            else var1.showEntity(this, var2);
+            clientView.open(cameraPose(eye));
+            openDiggingInput(var1, eye);
+            return;
+         }
          WrapperPlayServerCamera var3 = new WrapperPlayServerCamera(var2.getEntityId());
          PacketEvents.getAPI().getPlayerManager().sendPacket(var1, var3);
       } catch (Exception var4) {
          this.getLogger().warning("Failed to send camera packet: " + var4.getMessage());
          var4.printStackTrace();
+         if (var2 != var1) this.stopCursor(var1, true);
       }
+   }
+
+   private static CameraPose cameraPose(Location location) {
+      return new CameraPose(location.getWorld().getName(), location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
    }
 
    private double calculateCursor(double var1, double var3) {
@@ -2996,6 +3865,20 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private void updateCursorPosition(Player var1, float var2, float var3) {
+      CutsceneView cutsceneView = cutsceneViews.get(var1.getUniqueId());
+      if (cutsceneView != null) {
+         boolean enabled = !cutsceneManager.active(var1) || cutsceneView.definition.policy().cursor();
+         if (enabled) {
+            double rangeX = Math.abs(maxX * cursorSensitivity), rangeY = Math.abs(maxY * cursorSensitivity);
+            cutsceneView.input.update(var2, var3, maxX * cursorSensitivity / 90, maxY * cursorSensitivity / 90,
+               cursorMovementRangeEnabled ? cursorMovementRangeXMin : cursorX - rangeX,
+               cursorMovementRangeEnabled ? cursorMovementRangeXMax : cursorX + rangeX,
+               cursorMovementRangeEnabled ? cursorMovementRangeYMin : cursorY - rangeY,
+               cursorMovementRangeEnabled ? cursorMovementRangeYMax : cursorY + rangeY, Math.max(.01, Math.min(1, cursorSmoothing)));
+            cutsceneView.dirty = true;
+         } else cutsceneView.input.rebase(var2, var3);
+         return;
+      }
       String var4 = this.currentPlayerMenus.get(var1);
       if (var4 == null) {
          for (Entry var6 : sectionManager.getAll().entrySet()) {
@@ -3012,7 +3895,7 @@ public class UIcorePlugin extends JavaPlugin {
          ItemDisplay var7 = this.playerItemDisplays.get(var1);
       Pig var8 = playerSit.get(var1);
          if (var31 != null && var7 != null && var8 != null) {
-            Location var9 = var8.getLocation();
+            Location var9 = var30.cameraViewpointCoordinates ? var8.getEyeLocation() : var8.getLocation();
             Vector var10 = var9.getDirection().normalize();
             Vector var11 = new Vector(-var10.getZ(), 0.0, var10.getX()).normalize();
             Vector var12 = var10.getCrossProduct(var11).multiply(-1);
@@ -3090,6 +3973,7 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private void tickCameraEdgePan(Player player) {
+      if (isBlockDiggingMenu(player) || dragGestures.containsKey(player.getUniqueId())) return;
       if (player == null) {
          return;
       }
@@ -3154,6 +4038,12 @@ public class UIcorePlugin extends JavaPlugin {
       }
 
       try {
+         MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+         if (clientView != null) {
+            Location eye = location.clone().add(0, ((org.bukkit.entity.LivingEntity)camera).getEyeHeight(), 0);
+            clientView.render(cameraPose(eye), Map.of());
+            return;
+         }
          WrapperPlayServerEntityTeleport packet = new WrapperPlayServerEntityTeleport(
             camera.getEntityId(),
             new Vector3d(location.getX(), location.getY(), location.getZ()),
@@ -3196,7 +4086,15 @@ public class UIcorePlugin extends JavaPlugin {
        }
    }
 
-   private void beginDynamicMenuSession(Player player) {
+   private void beginDynamicMenuSession(Player player, MenuZoom zoom) {
+      closeDiggingInput(player);
+      finishDrag(player, true);
+      draggedPositions.remove(player.getUniqueId());
+      closeMenuZoom(player);
+      if (zoom != null) {
+         int heldSlot = player.getInventory().getHeldItemSlot();
+         menuZooms.put(player.getUniqueId(), new ZoomState(zoom, getMenuSessionGeneration(player), heldSlot));
+      }
       if (player != null) {
          UUID playerId = player.getUniqueId();
          this.menuOpenedAtTicks.put(playerId, this.playerMenuTicks.getOrDefault(playerId, 0L));
@@ -3205,6 +4103,11 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private void clearDynamicMenuSession(Player player) {
+      closeDiggingInput(player);
+      finishDrag(player, true);
+      draggedPositions.remove(player.getUniqueId());
+      closeMenuZoom(player);
+      debugMenus.remove(player.getUniqueId());
       if (player != null) {
          UUID playerId = player.getUniqueId();
          this.menuOpenedAtTicks.remove(playerId);
@@ -3217,7 +4120,102 @@ public class UIcorePlugin extends JavaPlugin {
       return openedAt == null ? 0L : Math.max(0L, this.playerMenuTicks.getOrDefault(player.getUniqueId(), 0L) - openedAt);
    }
 
+   private static final NamespacedKey DISPLAY_ZOOM = new NamespacedKey("uicore", "display_zoom");
+   private final Map<UUID, ZoomState> menuZooms = new ConcurrentHashMap<>();
+
+   private static final class ZoomState {
+      final MenuZoom config;
+      final long generation;
+      final java.util.concurrent.atomic.AtomicInteger clientSlot;
+      final java.util.concurrent.ArrayBlockingQueue<Integer> input = new java.util.concurrent.ArrayBlockingQueue<>(16);
+      double scale = 1;
+      double target = 1;
+
+      ZoomState(MenuZoom config, long generation, int heldSlot) {
+         this.config = config;
+         this.generation = generation;
+         this.clientSlot = new java.util.concurrent.atomic.AtomicInteger(heldSlot);
+      }
+   }
+
+   private void closeMenuZoom(Player player) {
+      if (menuZooms.remove(player.getUniqueId()) != null && player.isOnline()) {
+         PacketEvents.getAPI().getPlayerManager().sendPacket(player, new WrapperPlayServerHeldItemChange(player.getInventory().getHeldItemSlot()));
+      }
+   }
+
+   private void tickMenuZoom(Player player) {
+      UUID id = player.getUniqueId();
+      ZoomState zoom = menuZooms.get(id);
+      if (zoom == null) return;
+      if (!isMenuSessionCurrent(player, zoom.generation) || dragGestures.containsKey(id) || !dragAllowed(player)) {
+         zoom.input.clear();
+         return;
+      }
+      for (int i = 0; i < 16; i++) {
+         Integer direction = zoom.input.poll();
+         if (direction == null) break;
+         zoom.target = zoom.config.step(zoom.target, direction);
+      }
+      if (zoom.scale == zoom.target) return;
+      String menu = getCurrentPlayerMenu(player);
+      Section section = getRuntimeSection(player, menu);
+      if (section == null) return;
+      zoom.scale = zoom.config.approach(zoom.scale, zoom.target);
+      var layouts = getLayoutsForPlayer(player, menu, section);
+      for (MenuLayout layout : layouts.values()) {
+         if (!layout.interaction().group() && zoom.config.affects(layout, layouts))
+            refreshMenuElement(player, menu, layout.key, false, section, layouts);
+      }
+   }
+
+   private static float menuZoomFactor(ZoomState zoom, MenuLayout layout, Map<String, MenuLayout> layouts) {
+      return zoom != null && zoom.scale != 1 && zoom.config.affects(layout, layouts) ? (float)zoom.scale : 1;
+   }
+
+   private static float appliedDisplayZoom(Display display) {
+      return display.getPersistentDataContainer().getOrDefault(DISPLAY_ZOOM, PersistentDataType.FLOAT, 1F);
+   }
+
+   /** Apply on the entity owner and preserve its current hover, animation, rotation and avatar offsets. */
+   private void scaleMenuDisplay(Display display, float scale) {
+      float previous = appliedDisplayZoom(display);
+      if (previous == scale) return;
+      float ratio = scale / previous;
+      Transformation transform = display.getTransformation();
+      display.setTransformation(new Transformation(new Vector3f(transform.getTranslation()).mul(ratio),
+         transform.getLeftRotation(), new Vector3f(transform.getScale()).mul(ratio), transform.getRightRotation()));
+      if (scale == 1) display.getPersistentDataContainer().remove(DISPLAY_ZOOM);
+      else display.getPersistentDataContainer().set(DISPLAY_ZOOM, PersistentDataType.FLOAT, scale);
+      if (hoverEnlargeManager != null) hoverEnlargeManager.scaleHoverBaseline(display.getUniqueId(), ratio);
+   }
+
+   private double dragMotionScale(Player player, MenuLayout target) {
+      ZoomState zoom = menuZooms.get(player.getUniqueId());
+      // A dragged scope root also moves the pivot, so the whole scope follows at its original speed.
+      if (zoom == null || zoom.scale == 1 || target.key.equals(zoom.config.group())) return 1;
+      String menu = getCurrentPlayerMenu(player);
+      return zoom.config.affects(target, getLayoutsForPlayer(player, menu, getRuntimeSection(player, menu))) ? zoom.scale : 1;
+   }
+
    private DynamicPositionSpec.Position resolveLayoutPositionForSpawn(Player player, String menuKey, MenuLayout layout) {
+      var layouts = getLayoutsForPlayer(player, menuKey, getRuntimeSection(player, menuKey));
+      return resolveLayoutPosition(player, menuKey, layout, layouts);
+   }
+
+   private DynamicPositionSpec.Position resolveLayoutPosition(Player player, String menuKey, MenuLayout layout, Map<String, MenuLayout> layouts) {
+      java.util.function.Function<MenuLayout, DynamicPositionSpec.Position> local = element -> localLayoutPosition(player, menuKey, element);
+      var position = ElementHierarchy.position(layout, layouts, local);
+      ZoomState zoom = menuZooms.get(player.getUniqueId());
+      if (zoom == null || zoom.scale == 1 || !zoom.config.affects(layout, layouts)) return position;
+      MenuLayout group = layouts.get(zoom.config.group());
+      var origin = group == null ? new DynamicPositionSpec.Position(0, 0, 0) : ElementHierarchy.position(group, layouts, local);
+      return zoom.config.project(position, origin, zoom.scale);
+   }
+
+   private DynamicPositionSpec.Position localLayoutPosition(Player player, String menuKey, MenuLayout layout) {
+      DynamicPositionSpec.Position dragged = draggedPosition(player, layout.key);
+      if (dragged != null) return dragged;
       DynamicPositionSpec spec = layout.getDynamicPositionSpec();
       if (!spec.isDynamic()) {
          return spec.basePosition();
@@ -3240,10 +4238,7 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private DynamicPositionSpec.Position getCurrentLayoutPosition(Player player, String menuKey, MenuLayout layout) {
-      Map<String, DynamicElementPositionState> byLayout = this.dynamicElementPositions.get(player.getUniqueId());
-      DynamicElementPositionState state = byLayout == null ? null : byLayout.get(layout.key);
-      return state == null ? this.resolveLayoutPositionForSpawn(player, menuKey, layout)
-         : state.current;
+      return resolveLayoutPositionForSpawn(player, menuKey, layout);
    }
 
    private void tickDynamicMenuPositions(Player player) {
@@ -3293,16 +4288,22 @@ public class UIcorePlugin extends JavaPlugin {
          if (positionDistanceSquared(next, state.target) < 1.0E-12) {
             next = state.target;
          }
-          Location worldLocation = this.toMenuWorldLocation(section, next);
-          if (worldLocation != null && Bukkit.isOwnedByCurrentRegion(worldLocation)) {
-             state.current = next;
-            if (!state.movementPrepared) {
-               this.prepareDynamicLayoutMovement(player, menuKey, layout.key);
-               state.movementPrepared = true;
-            }
-            this.moveLayoutEntities(player, menuKey, layout.key, worldLocation);
+         state.current = next;
       }
-   }
+      Map<String, MenuLayout> layouts = getLayoutsForPlayer(player, menuKey, section);
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      for (MenuLayout layout : layouts.values()) {
+         if (layout.interaction().group()) continue;
+         boolean moving = layout.getDynamicPositionSpec().isDynamic() || !layout.interaction().parent().isEmpty()
+            || hasDraggedPosition(player, layout.key);
+         if (!moving) continue;
+         if (view != null) { view.dirty = true; continue; }
+         Location location = toLayoutWorldLocation(section, layout, resolveLayoutPosition(player, menuKey, layout, layouts));
+         if (location != null && Bukkit.isOwnedByCurrentRegion(location)) {
+            prepareDynamicLayoutMovement(player, menuKey, layout.key);
+            moveLayoutEntities(player, menuKey, layout.key, location);
+         }
+      }
    }
 
    private DynamicPositionSpec.Evaluation evaluateDynamicPosition(
@@ -3354,6 +4355,14 @@ public class UIcorePlugin extends JavaPlugin {
       } catch (NumberFormatException exception) {
          throw new IllegalArgumentException("'" + reference + "' did not resolve to a finite number");
       }
+   }
+
+   private Location toLayoutWorldLocation(Section section, MenuLayout layout, DynamicPositionSpec.Position position) {
+      if (layout.isWorldAnchored()) {
+         World world = Bukkit.getWorld(section.world);
+         return world == null ? null : new Location(world, position.x(), position.y(), position.z(), section.yaw, section.pitch);
+      }
+      return toMenuWorldLocation(section, position);
    }
 
    private Location toMenuWorldLocation(Section section, DynamicPositionSpec.Position position) {
@@ -3506,8 +4515,9 @@ public class UIcorePlugin extends JavaPlugin {
             Vector var12 = var10.getCrossProduct(var11).multiply(-1);
 
             for (MenuLayout var14 : this.getLayoutsForPlayer(var1, var2, var25).values()) {
+               if (var14.interaction().group()) continue;
                DynamicPositionSpec.Position layoutPosition = this.resolveLayoutPositionForSpawn(var1, var2, var14);
-                Location var16 = this.toMenuWorldLocation(var25, layoutPosition);
+                Location var16 = this.toLayoutWorldLocation(var25, var14, layoutPosition);
                 if (var16 == null || !Bukkit.isOwnedByCurrentRegion(var16)) {
                    continue;
                }
@@ -3592,20 +4602,300 @@ public class UIcorePlugin extends JavaPlugin {
    }
 
    private void handleCursorClick(Player player) {
+      if (!dragAllowed(player)) return;
+      if (dragGestures.containsKey(player.getUniqueId())) { tickDrag(player); finishDrag(player, false); return; }
+      MenuLayout layout = pickedLayout(player);
+      if (layout == null) return;
+      if (layout.interaction().draggable()) beginDrag(player, layout);
+      else activateMenuElement(player, layout.key);
+   }
+
+   public TextDisplay pickMenuDisplay(Player player) {
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
       Location cursor = cursorExactLocations.get(player);
-      String menuKey = this.getCurrentPlayerMenu(player);
-      Section section = this.getRuntimeSection(player, menuKey);
-      if (cursor == null || section == null || this.isMenuTransitionActive(player)) return;
+      String menuKey = getCurrentPlayerMenu(player);
+      Section section = getRuntimeSection(player, menuKey);
+      if (cursor == null || section == null || isMenuTransitionActive(player)) return null;
+      Map<String, MenuLayout> layouts = getLayoutsForPlayer(player, menuKey, section);
+      String prefix = menuKey + ":";
       TextDisplay nearest = null;
       double distance = Double.MAX_VALUE;
-      for (TextDisplay display : this.playerDisplays.getOrDefault(player, Collections.emptyList())) {
-         if (display == null || !display.isValid() || display.getCustomName() == null) continue;
-         MenuLayout layout = this.getLayoutForPlayer(player, display.getCustomName());
-         if (layout == null || !layout.isVisible(player) || !this.isCursorInsideMenuDisplay(player, section, display, cursor)) continue;
-         double candidate = display.getLocation().distanceSquared(cursor);
-         if (candidate < distance) { nearest = display; distance = candidate; }
+      int priority = Integer.MIN_VALUE;
+      for (TextDisplay display : playerDisplays.getOrDefault(player, Collections.emptyList())) {
+         String name = view == null ? (display == null ? null : display.getCustomName()) : view.names.get(display);
+         MenuLayout layout = name == null || !name.startsWith(prefix) ? null : layouts.get(name.substring(prefix.length()));
+         if (layout == null || !layout.interaction().pointerEvents() || !isCursorInsideMenuDisplay(player, section, display, cursor)) continue;
+         Location location = getMenuDisplayLocation(player, display);
+         if (location == null) continue;
+         double candidate = location.distanceSquared(cursor);
+         if (layout.interaction().priority() > priority || layout.interaction().priority() == priority && candidate < distance) {
+            nearest = display; distance = candidate; priority = layout.interaction().priority();
+         }
       }
-      if (nearest != null) this.activateMenuElement(player, nearest.getCustomName());
+      return nearest;
+   }
+
+   private MenuLayout pickedLayout(Player player) {
+      TextDisplay display = pickMenuDisplay(player);
+      if (display == null) return null;
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      return getLayoutForPlayer(player, view == null ? display.getCustomName() : view.names.get(display));
+   }
+
+   private record DigInput(boolean start, int sequence) {}
+   private record DiggingInput(Location location, com.github.retrooper.packetevents.util.Vector3i position,
+      long generation, java.util.concurrent.ArrayBlockingQueue<DigInput> queue, java.util.concurrent.atomic.AtomicBoolean overflow) {}
+   private final Map<UUID, DiggingInput> diggingInputs = new ConcurrentHashMap<>();
+   private boolean hasHierarchy(Player player) {
+      String menu = getCurrentPlayerMenu(player);
+      return getLayoutsForPlayer(player, menu, getRuntimeSection(player, menu), false).values().stream()
+         .anyMatch(layout -> !layout.interaction().parent().isEmpty());
+   }
+   private boolean isBlockDiggingMenu(Player player) {
+      Section section = getRuntimeSection(player, getCurrentPlayerMenu(player));
+      return section != null && section.dragInput.equals("block-digging");
+   }
+   // shortcut: fixed-block input supports stationary menus; extend targeting after vanilla camera tests.
+   private void openDiggingInput(Player player, Location eye) {
+      if (!isBlockDiggingMenu(player)) return;
+      Location projected = eye.clone().add(eye.getDirection().multiply(2));
+      Location location = new Location(eye.getWorld(), projected.getBlockX(), projected.getBlockY(), projected.getBlockZ());
+      if (!Bukkit.isOwnedByCurrentRegion(location)) throw new IllegalStateException("Drag input block is outside the player's region");
+      var position = new com.github.retrooper.packetevents.util.Vector3i(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+      diggingInputs.put(player.getUniqueId(), new DiggingInput(location, position, getMenuSessionGeneration(player),
+         new java.util.concurrent.ArrayBlockingQueue<>(32), new java.util.concurrent.atomic.AtomicBoolean()));
+      player.sendBlockChange(location, Material.BARRIER.createBlockData());
+   }
+   private void closeDiggingInput(Player player) {
+      DiggingInput input = diggingInputs.remove(player.getUniqueId());
+      if (input == null || !player.isOnline() || !player.getWorld().equals(input.location().getWorld())) return;
+      Runnable restore = () -> {
+         var data = input.location().getBlock().getBlockData();
+         org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, player, () -> {
+            if (player.isOnline() && player.getWorld().equals(input.location().getWorld()))
+               player.sendBlockChange(input.location(), resolveClientBlock(player.getUniqueId(), input.location(), data));
+         });
+      };
+      org.orvencraft.uicore.scheduler.CleanupTasks.region(this, input.location(), restore);
+   }
+   private void tickDiggingInput(Player player) {
+      DiggingInput input = diggingInputs.get(player.getUniqueId());
+      if (input == null) return;
+      if (!isMenuSessionCurrent(player, input.generation())) { closeDiggingInput(player); return; }
+      if (input.overflow().getAndSet(false)) { input.queue().clear(); finishDrag(player, true); }
+      for (int i = 0; i < 32; i++) {
+         DigInput action = input.queue().poll();
+         if (action == null) break;
+         PacketEvents.getAPI().getPlayerManager().sendPacket(player,
+            new com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerAcknowledgeBlockChanges(action.sequence()));
+         if (action.start()) {
+            if (!dragGestures.containsKey(player.getUniqueId())) handleCursorClick(player);
+         } else { tickDrag(player); finishDrag(player, false); }
+         if (!isMenuSessionCurrent(player, input.generation())) break;
+      }
+      if (diggingInputs.get(player.getUniqueId()) == input) player.sendBlockChange(input.location(), Material.BARRIER.createBlockData());
+   }
+   public void toggleMenuDebug(Player player) {
+      if (!debugMenus.remove(player.getUniqueId())) debugMenus.add(player.getUniqueId());
+      player.sendMessage("UIcore menu debug: " + (debugMenus.contains(player.getUniqueId()) ? "on" : "off"));
+   }
+   private void tickMenuDebug(Player player) {
+      if (!debugMenus.contains(player.getUniqueId())) return;
+      String menu = getCurrentPlayerMenu(player);
+      Section section = getRuntimeSection(player, menu);
+      MenuLayout picked = pickedLayout(player);
+      player.sendActionBar(net.kyori.adventure.text.Component.text("UIcore " + menu + " | selected: " + (picked == null ? "none" : picked.key + " | parent: " + picked.interaction().parent())));
+      if (section == null) return;
+      for (MenuLayout layout : getLayoutsForPlayer(player, menu, section).values()) {
+         TextDisplay display = findTrackedTextDisplay(player, menu, layout.key);
+         Location center = display == null ? null : getMenuDisplayLocation(player, display);
+         if (center == null) continue;
+         CutsceneView view = cutsceneViews.get(player.getUniqueId());
+         TextDisplayHitBox.Snapshot geometry = view == null ? TextDisplayHitBox.snapshot(display) : view.hitboxes.get(display);
+         if (geometry == null) continue;
+         Vector forward = view == null ? new Location(center.getWorld(), 0, 0, 0, section.yaw, section.pitch).getDirection() : view.frame.forward();
+         Vector right = view == null ? new Vector(-forward.getZ(), 0, forward.getX()).normalize() : view.frame.right();
+         Vector up = view == null ? forward.clone().crossProduct(right).multiply(-1).normalize() : view.frame.up();
+         for (Vector point : geometry.outline()) {
+            Location dot = center.clone().add(right.clone().multiply(point.getX())).add(up.clone().multiply(point.getY())).add(forward.clone().multiply(point.getZ()));
+            player.spawnParticle(org.bukkit.Particle.DUST, dot, 1, new org.bukkit.Particle.DustOptions(layout == picked ? Color.LIME : Color.YELLOW, .5f));
+         }
+         if (!layout.interaction().parent().isEmpty()) {
+            MenuLayout parent = getLayoutForPlayer(player, menu, layout.interaction().parent());
+            if (parent != null) {
+               var position = getCurrentLayoutPosition(player, menu, parent);
+               Location parentLocation = view == null ? toLayoutWorldLocation(section, parent, position)
+                  : view.frame.localToWorld(center.getWorld(), position.x() + view.menuOriginOffset.getX(), position.y() + view.menuOriginOffset.getY(), position.z() + view.menuOriginOffset.getZ());
+               if (parentLocation != null) for (int i = 0; i <= 8; i++) {
+                  Vector point = center.toVector().multiply(1 - i / 8.0).add(parentLocation.toVector().multiply(i / 8.0));
+                  player.spawnParticle(org.bukkit.Particle.DUST, point.toLocation(center.getWorld()), 1, new org.bukkit.Particle.DustOptions(Color.AQUA, .4f));
+               }
+            }
+         }
+      }
+   }
+
+   private final Map<UUID, Map<String, DynamicPositionSpec.Position>> draggedPositions = new ConcurrentHashMap<>();
+   private final Map<UUID, DragGesture> dragGestures = new ConcurrentHashMap<>();
+   private final Set<UUID> debugMenus = ConcurrentHashMap.newKeySet();
+   private record DragGesture(String menu, long generation, MenuLayout handle, MenuLayout target,
+      DynamicPositionSpec.Position initial, DynamicPositionSpec.Position previous, Vector pointer,
+      Location plane, Vector right, Vector up, Vector normal, Location origin, double motionScale, String previousSlider) {}
+
+   private DynamicPositionSpec.Position draggedPosition(Player player, String id) {
+      return draggedPositions.getOrDefault(player.getUniqueId(), Map.of()).get(id);
+   }
+   private boolean hasDraggedPosition(Player player, String id) { return draggedPosition(player, id) != null; }
+   private void setDraggedPosition(Player player, String id, DynamicPositionSpec.Position position) {
+      draggedPositions.computeIfAbsent(player.getUniqueId(), ignored -> new ConcurrentHashMap<>()).put(id, position);
+   }
+   private boolean dragAllowed(Player player) {
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      return !isMenuTransitionActive(player) && !isCutsceneUiFrozen(player)
+         && (cutsceneManager == null || !cutsceneManager.active(player) || view != null && view.definition.policy().clicks());
+   }
+   private void beginDrag(Player player, MenuLayout handle) {
+      if (!dragAllowed(player) || !handle.prepareInteraction(player)) return;
+      String menu = getCurrentPlayerMenu(player);
+      long generation = getMenuSessionGeneration(player);
+      MenuLayout target = handle.interaction().target().isEmpty() ? handle : getLayoutForPlayer(player, menu, handle.interaction().target());
+      if (target == null || target.isWorldAnchored() || !target.isInteractionStillAllowed(player)) return;
+      Section section = getRuntimeSection(player, menu);
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      Pig camera = playerSit.get(player);
+      if (camera == null) return;
+      Location origin = view == null ? MenuCameraGeometry.viewOrigin(camera, cameraEdgePanOffsets.getOrDefault(player.getUniqueId(), CameraEdgePan.Offset.ZERO)) : view.frame.origin(player.getWorld());
+      Vector normal = origin.getDirection().normalize();
+      Vector right = view == null ? new Vector(-normal.getZ(), 0, normal.getX()).normalize() : view.frame.right();
+      Vector up = view == null ? normal.clone().crossProduct(right).multiply(-1).normalize() : view.frame.up();
+      var absolute = getCurrentLayoutPosition(player, menu, target);
+      Location plane = view == null ? toLayoutWorldLocation(section, target, absolute)
+         : view.frame.localToWorld(player.getWorld(), absolute.x() + view.menuOriginOffset.getX(), absolute.y() + view.menuOriginOffset.getY(), absolute.z() + view.menuOriginOffset.getZ());
+      Location pointer = TextDisplayHitBox.projectToPlane(origin, cursorExactLocations.get(player), plane, normal);
+      if (pointer == null) return;
+      var initial = localLayoutPosition(player, menu, target);
+      DragGesture gesture = new DragGesture(menu, generation, handle, target, initial, draggedPosition(player, target.key), pointer.toVector(),
+         plane, right, up, normal, origin, dragMotionScale(player, target),
+         getPlayerMenuStateSnapshot(player, menu).get(handle.interaction().sliderState()));
+      if (!fireDrag(player, gesture, MenuDragEvent.Phase.START, initial, null)
+         || !isMenuSessionCurrent(player, generation) || getLayoutForPlayer(player, menu, handle.key) != handle
+         || getLayoutForPlayer(player, menu, target.key) != target || !handle.isInteractionStillAllowed(player)
+         || !target.isInteractionStillAllowed(player)) return;
+      dragGestures.put(player.getUniqueId(), gesture);
+   }
+   private boolean fireDrag(Player player, DragGesture g, MenuDragEvent.Phase phase,
+                            DynamicPositionSpec.Position p, String drop) {
+      var event = new MenuDragEvent(player, g.menu(), g.handle().key, g.target().key, phase, p.x(), p.y(), p.z(), drop);
+      Bukkit.getPluginManager().callEvent(event);
+      return !event.isCancelled();
+   }
+   private void tickDrag(Player player) {
+      DragGesture g = dragGestures.get(player.getUniqueId());
+      if (g == null) return;
+      if (!isMenuSessionCurrent(player, g.generation()) || !dragAllowed(player)
+         || getLayoutForPlayer(player, g.menu(), g.handle().key) != g.handle()
+         || getLayoutForPlayer(player, g.menu(), g.target().key) != g.target()
+         || !g.handle().isInteractionStillAllowed(player) || !g.target().isInteractionStillAllowed(player)) { finishDrag(player, true); return; }
+      CutsceneView activeView = cutsceneViews.get(player.getUniqueId());
+      if (activeView != null && (activeView.moving || activeView.frame.origin(player.getWorld()).distanceSquared(g.origin()) > 1e-10)) { finishDrag(player, true); return; }
+      Location cursor = cursorExactLocations.get(player);
+      if (cursor == null || !cursor.getWorld().equals(g.origin().getWorld())) { finishDrag(player, true); return; }
+      Location point = TextDisplayHitBox.projectToPlane(g.origin(), cursor, g.plane(), g.normal());
+      if (point == null) return;
+      Vector delta = point.toVector().subtract(g.pointer());
+      var config = g.handle().interaction();
+      var next = new DynamicPositionSpec.Position(config.x(g.initial().x(), delta.dot(g.right()) / g.motionScale()),
+         config.y(g.initial().y(), delta.dot(g.up()) / g.motionScale()), g.initial().z());
+      var current = draggedPosition(player, g.target().key);
+      if (positionDistanceSquared(current == null ? g.initial() : current, next) < 1e-12) return;
+      if (!fireDrag(player, g, MenuDragEvent.Phase.MOVE, next, null)) { finishDrag(player, true); return; }
+      if (dragGestures.get(player.getUniqueId()) != g || !isMenuSessionCurrent(player, g.generation())) return;
+      if (getLayoutForPlayer(player, g.menu(), g.handle().key) != g.handle()
+         || getLayoutForPlayer(player, g.menu(), g.target().key) != g.target()
+         || !g.handle().isInteractionStillAllowed(player) || !g.target().isInteractionStillAllowed(player)) { finishDrag(player, true); return; }
+      applyDragPosition(player, g, next);
+   }
+
+   private void applyDragPosition(Player player, DragGesture g, DynamicPositionSpec.Position position) {
+      setDraggedPosition(player, g.target().key, position);
+      var config = g.handle().interaction();
+      if (!config.sliderState().isEmpty()) {
+         setPlayerMenuState(player, g.menu(), config.sliderState(), Double.toString(config.sliderValue(position.x(), position.y())));
+      }
+   }
+   private void finishDrag(Player player, boolean cancel) {
+      DragGesture g = dragGestures.remove(player.getUniqueId());
+      if (g == null) return;
+      var next = draggedPosition(player, g.target().key);
+      if (next == null) next = g.initial();
+      MenuLayout receiver = null;
+      if (!cancel && !g.handle().interaction().dropTargets().isEmpty()) {
+         Section section = getRuntimeSection(player, g.menu());
+         int priority = Integer.MIN_VALUE;
+         for (String id : g.handle().interaction().dropTargets()) {
+            MenuLayout zone = getLayoutForPlayer(player, g.menu(), id);
+            TextDisplay display = findTrackedTextDisplay(player, g.menu(), id);
+            if (zone == null || display == null || !zone.isInteractionStillAllowed(player)
+               || !zone.interaction().accepts().isEmpty() && !zone.interaction().accepts().contains(g.target().key)
+               || !isCursorInsideMenuDisplay(player, section, display, cursorExactLocations.get(player))) continue;
+            if (receiver == null || zone.interaction().priority() > priority) {
+               receiver = zone;
+               priority = zone.interaction().priority();
+            }
+         }
+         if (receiver == null) cancel = true;
+         else {
+            var absolute = getCurrentLayoutPosition(player, g.menu(), receiver);
+            var currentAbsolute = getCurrentLayoutPosition(player, g.menu(), g.target());
+            var snapped = new DynamicPositionSpec.Position(next.x() + (absolute.x() - currentAbsolute.x()) / g.motionScale(),
+               next.y() + (absolute.y() - currentAbsolute.y()) / g.motionScale(), next.z());
+            cancel = !g.handle().interaction().permitsDrop(next.x(), next.y(), snapped.x(), snapped.y());
+            next = snapped;
+         }
+      }
+      String drop = receiver == null ? null : receiver.key;
+      if (!cancel) cancel = !fireDrag(player, g, MenuDragEvent.Phase.DROP, next, drop);
+      if (!isMenuSessionCurrent(player, g.generation())) return;
+      if (!cancel && receiver != null) {
+         cancel = getLayoutForPlayer(player, g.menu(), drop) != receiver || !receiver.isInteractionStillAllowed(player);
+      }
+      boolean sameTarget = getLayoutForPlayer(player, g.menu(), g.target().key) == g.target();
+      cancel |= !dragAllowed(player) || getLayoutForPlayer(player, g.menu(), g.handle().key) != g.handle()
+         || !sameTarget || !g.handle().isInteractionStillAllowed(player) || !g.target().isInteractionStillAllowed(player);
+      if (cancel) {
+         if (g.previous() == null || !sameTarget) {
+            Map<String, DynamicPositionSpec.Position> positions = draggedPositions.get(player.getUniqueId());
+            if (positions != null) positions.remove(g.target().key);
+         } else setDraggedPosition(player, g.target().key, g.previous());
+         if (!g.handle().interaction().sliderState().isEmpty()) setPlayerMenuState(player, g.menu(), g.handle().interaction().sliderState(), g.previousSlider());
+         fireDrag(player, g, MenuDragEvent.Phase.CANCEL, g.initial(), null);
+      } else {
+         applyDragPosition(player, g, next);
+         g.handle().startCooldown(player);
+         if (receiver != null && receiver != g.handle()) receiver.startCooldown(player);
+         Bukkit.getPluginManager().callEvent(new MenuDropEvent(player, g.menu(), g.handle().key, g.target().key,
+            drop, next.x(), next.y(), next.z()));
+         if (!g.handle().interaction().onDrop().isEmpty() || receiver != null && !receiver.interaction().onDrop().isEmpty()) {
+            Map<String, Object> arguments = receiver == null
+               ? Map.of("drag-handle", g.handle().key, "drag-target", g.target().key)
+               : Map.of("drag-handle", g.handle().key, "drag-target", g.target().key, "drop-target", receiver.key);
+            runDropActions(player, g, g.handle(), arguments);
+            if (receiver != null && receiver != g.handle()) runDropActions(player, g, receiver, arguments);
+         }
+      }
+      if (isMenuSessionCurrent(player, g.generation()) && !isMenuTransitionActive(player)) reconcileMenuContent(player, g.menu());
+   }
+
+   private void runDropActions(Player player, DragGesture gesture, MenuLayout owner, Map<String, Object> arguments) {
+      for (String action : owner.interaction().onDrop()) {
+         if (!isMenuSessionCurrent(player, gesture.generation()) || isMenuTransitionActive(player)) break;
+         try {
+            CommandUtils.executeCommand(player, action, 0L, owner.key, arguments);
+         } catch (RuntimeException exception) {
+            getLogger().log(java.util.logging.Level.WARNING,
+               "on-drop action failed for menu '" + gesture.menu() + "', element '" + owner.key + "'", exception);
+         }
+      }
    }
 
    public long getMenuSessionGeneration(Player player) {
@@ -3620,11 +4910,14 @@ public class UIcorePlugin extends JavaPlugin {
    public boolean activateMenuElement(Player player, String elementId) {
       String menuKey = this.getCurrentPlayerMenu(player);
       if (!Bukkit.isOwnedByCurrentRegion(player) || menuKey == null || this.isMenuTransitionActive(player) || elementId == null) return false;
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      if (view != null && cutsceneManager.active(player) && !view.definition.policy().clicks()) return false;
       String qualified = elementId.contains(":") ? elementId : menuKey + ":" + elementId;
       if (!qualified.startsWith(menuKey + ":")) return false;
       MenuLayout layout = this.getLayoutForPlayer(player, qualified);
       if (layout == null || !layout.isVisible(player) || !this.tryAcquireLayoutClick(player, menuKey, layout.key)
          || !this.authorizeMenuInteraction(player, menuKey, layout)) return false;
+      if (cutsceneManager != null && cutsceneManager.chooseElement(player, layout.key)) return true;
       layout.runCommand(player);
       return true;
    }
@@ -3634,7 +4927,8 @@ public class UIcorePlugin extends JavaPlugin {
       long generation = this.getMenuSessionGeneration(player);
       MenuClickEvent event = new MenuClickEvent(player, menuKey, layout.key, UIcoreApiImpl.snapshot(menuKey, layout));
       Bukkit.getPluginManager().callEvent(event);
-      return !event.isCancelled() && this.isMenuSessionCurrent(player, generation) && layout.isInteractionStillAllowed(player);
+      return !event.isCancelled() && this.isMenuSessionCurrent(player, generation)
+         && this.getLayoutForPlayer(player, menuKey, layout.key) == layout && layout.isInteractionStillAllowed(player);
    }
 
    public boolean isMenuInputField(Player player, String field) {
@@ -3661,9 +4955,61 @@ public class UIcorePlugin extends JavaPlugin {
 
    private void registerUseEntityPacketListener() {
       this.menuPacketListener = new PacketListenerAbstract(PacketListenerPriority.LOWEST) {
+         @Override public void onPacketSend(PacketSendEvent event) {
+            if (!(event.getPlayer() instanceof Player player)) return;
+            if (event.getPacketType() == Server.HELD_ITEM_CHANGE) {
+               ZoomState zoom = menuZooms.get(player.getUniqueId());
+               if (zoom != null) zoom.clientSlot.set(new WrapperPlayServerHeldItemChange(event).getSlot());
+            }
+            MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+            if (clientView != null) clientView.filter(event);
+         }
          @Override public void onPacketReceive(PacketReceiveEvent event) {
             if (!(event.getPlayer() instanceof Player player) || !playerCursors.containsKey(player)) return;
             long generation = getMenuSessionGeneration(player);
+            if (event.getPacketType() == Client.HELD_ITEM_CHANGE) {
+               ZoomState zoom = menuZooms.get(player.getUniqueId());
+               if (zoom != null && zoom.generation == generation) {
+                  event.setCancelled(true);
+                  int slot = new WrapperPlayClientHeldItemChange(event).getSlot();
+                  if (slot >= 0 && slot <= 8) {
+                     // The invisible client slot rolls normally. The authoritative inventory never changes.
+                     int direction = MenuZoom.scrollDirection(zoom.clientSlot.getAndSet(slot), slot);
+                     if (direction != 0) zoom.input.offer(direction);
+                  }
+               }
+               return;
+            }
+            DiggingInput digging = diggingInputs.get(player.getUniqueId());
+            if (digging != null && event.getPacketType() == Client.PLAYER_DIGGING) {
+               event.setCancelled(true);
+               var packet = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging(event);
+               if (packet.getBlockPosition().equals(digging.position())) {
+                  var action = packet.getAction();
+                  if (action == com.github.retrooper.packetevents.protocol.player.DiggingAction.START_DIGGING
+                     || action == com.github.retrooper.packetevents.protocol.player.DiggingAction.CANCELLED_DIGGING
+                     || action == com.github.retrooper.packetevents.protocol.player.DiggingAction.FINISHED_DIGGING) {
+                     if (!digging.queue().offer(new DigInput(action == com.github.retrooper.packetevents.protocol.player.DiggingAction.START_DIGGING, packet.getSequence())))
+                        digging.overflow().set(true);
+                  }
+               }
+               return;
+            }
+            if (event.getPacketType() == Client.SPECTATE_ENTITY) {
+               event.setCancelled(true);
+               MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+               var packet = new WrapperPlayClientSpectateEntity(event);
+               if (digging == null && clientView != null && packet.hasEntityId() && clientView.acceptsEntityClick())
+                  pendingClicks.put(player.getUniqueId(), generation);
+               return;
+            }
+            if (event.getPacketType() == Client.SPECTATE) {
+               event.setCancelled(true);
+               MenuClientView clientView = menuClientViews.get(player.getUniqueId());
+               if (digging == null && clientView != null && clientView.acceptsClick(new WrapperPlayClientSpectate(event).getTargetUUID()))
+                  pendingClicks.put(player.getUniqueId(), generation);
+               return;
+            }
             if (event.getPacketType() == Client.PLAYER_ROTATION || event.getPacketType() == Client.PLAYER_POSITION_AND_ROTATION) {
                float yaw, pitch;
                if (event.getPacketType() == Client.PLAYER_ROTATION) {
@@ -3678,7 +5024,7 @@ public class UIcorePlugin extends JavaPlugin {
             }
              if (event.getPacketType() == Client.INTERACT_ENTITY || event.getPacketType() == Client.ANIMATION || event.getPacketType() == Client.USE_ITEM) {
                 event.setCancelled(true);
-                pendingClicks.put(player.getUniqueId(), generation);
+                if (digging == null) pendingClicks.put(player.getUniqueId(), generation);
              }
          }
       };
@@ -3699,9 +5045,23 @@ public class UIcorePlugin extends JavaPlugin {
       }
    }
 
+   public Location getMenuDisplayLocation(Player player, Entity entity) {
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      Location location = view == null ? null : view.locations.get(entity);
+      return location != null ? location.clone() : Bukkit.isOwnedByCurrentRegion(entity) ? entity.getLocation() : null;
+   }
+
    boolean isCursorInsideMenuDisplay(Player player, Section section, TextDisplay display, Location cursor) {
       if (player == null || section == null || display == null || cursor == null) {
          return false;
+      }
+      CutsceneView view = cutsceneViews.get(player.getUniqueId());
+      if (view != null) {
+         var geometry = view.hitboxes.get(display);
+         Location origin = view.locations.get(display);
+         if (geometry == null || origin == null || !origin.getWorld().equals(cursor.getWorld())) return false;
+         return TextDisplayHitBox.hitsMenuRay(geometry, view.frame.origin(origin.getWorld()), cursor, origin,
+            view.frame.right(), view.frame.up(), view.frame.forward());
       }
 
       World world = Bukkit.getWorld(section.world);
@@ -3724,8 +5084,8 @@ public class UIcorePlugin extends JavaPlugin {
       }
        right.normalize();
        Vector up = forward.getCrossProduct(right).multiply(-1.0).normalize();
-       Location projected = TextDisplayHitBox.projectToPlane(cameraOrigin, cursor, display.getLocation(), forward);
-      return projected != null && TextDisplayHitBox.isInsideMenuPlane(display, projected, right, up, forward);
+       return display.isValid() && TextDisplayHitBox.hitsMenuRay(TextDisplayHitBox.snapshot(display),
+          cameraOrigin, cursor, display.getLocation(), right, up, forward);
    }
 
    public void resetTextDisplaySize(Player var1, TextDisplay var2) {
@@ -3866,8 +5226,7 @@ public class UIcorePlugin extends JavaPlugin {
                if (!player.isOnline() || this.clientHiddenBlocks.get(playerId) != locations) return;
                for (Location location : solid) {
                   locations.add(location);
-                  if (this.schematicPreviewManager == null || !this.schematicPreviewManager.contains(playerId, location))
-                     player.sendBlockChange(location, Material.AIR.createBlockData());
+                  player.sendBlockChange(location, resolveClientBlock(playerId, location, Material.AIR.createBlockData()));
                }
             }, null);
          });
@@ -3887,6 +5246,15 @@ public class UIcorePlugin extends JavaPlugin {
       return hidden != null && hidden.contains(location);
    }
 
+   /** Resolve current player-only layers on the player's scheduler just before sending a block packet. */
+   public BlockData resolveClientBlock(UUID playerId, Location location, BlockData actual) {
+      DiggingInput digging = diggingInputs.get(playerId);
+      if (digging != null && digging.location().equals(location)) return Material.BARRIER.createBlockData();
+      BlockData preview = schematicPreviewManager == null ? null : schematicPreviewManager.blockAt(playerId, location);
+      if (preview != null) return preview;
+      return isClientHiddenBlock(playerId, location) ? Material.AIR.createBlockData() : actual;
+   }
+
    private void restoreBlocks(Player player) {
       Set<Location> locations = this.clientHiddenBlocks.remove(player.getUniqueId());
       if (locations == null || !player.isOnline()) return;
@@ -3904,9 +5272,8 @@ public class UIcorePlugin extends JavaPlugin {
             org.orvencraft.uicore.scheduler.CleanupTasks.entity(this, player, () -> {
                if (!player.isOnline()) return;
                for (Map.Entry<Location, BlockData> entry : blocks.entrySet()) {
-                  if (entry.getKey().getWorld().equals(player.getWorld())
-                     && (this.schematicPreviewManager == null || !this.schematicPreviewManager.contains(player.getUniqueId(), entry.getKey())))
-                     player.sendBlockChange(entry.getKey(), entry.getValue());
+                  if (entry.getKey().getWorld().equals(player.getWorld()))
+                     player.sendBlockChange(entry.getKey(), resolveClientBlock(player.getUniqueId(), entry.getKey(), entry.getValue()));
                }
             });
          });
@@ -3970,6 +5337,7 @@ public class UIcorePlugin extends JavaPlugin {
       public void onPlayerMove(PlayerMoveEvent var1) {
          Player var2 = var1.getPlayer();
          if (UIcorePlugin.playerCursors.containsKey(var2)
+            && !UIcorePlugin.plugin.cutsceneViews.containsKey(var2.getUniqueId())
             && var1.getTo() != null
             && CursorRotationTracker.rotationChanged(
                var1.getFrom().getYaw(),
@@ -4040,6 +5408,7 @@ public class UIcorePlugin extends JavaPlugin {
       @EventHandler
       public void onDeath(org.bukkit.event.entity.PlayerDeathEvent event) {
          Player player = event.getEntity();
+         if (cutsceneManager != null) cutsceneManager.abort(player, CutsceneAbortReason.PLAYER_DIED);
          MenuSession session = UIcorePlugin.this.menuSessions.get(player.getUniqueId());
          if (session == null) return;
          UIcorePlugin.this.respawnOrigins.put(player.getUniqueId(), session.originalLocation());
@@ -4058,7 +5427,7 @@ public class UIcorePlugin extends JavaPlugin {
             }
             if (origin != null && origin.getWorld() != null) {
                event.setRespawnLocation(origin);
-               UIcorePlugin.this.deleteSessionJournal(player);
+               player.getScheduler().run(UIcorePlugin.this, ignored -> UIcorePlugin.this.checkpointRestoredSession(player), null);
             }
          } catch (IOException | RuntimeException exception) {
             UIcorePlugin.this.getLogger().warning("Respawn recovery failed; journal retained: " + exception.getMessage());
@@ -4078,6 +5447,7 @@ public class UIcorePlugin extends JavaPlugin {
       }
 
       private void cleanup(Player player) {
+         if (cutsceneManager != null) cutsceneManager.abort(player, CutsceneAbortReason.PLAYER_QUIT);
          UIcorePlugin.this.stopCursor(player, true);
       }
    }

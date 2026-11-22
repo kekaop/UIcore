@@ -1,0 +1,96 @@
+id: lab_tour
+start: approach
+policy:
+  start-mode: transition
+  transition-ticks: 10
+  completion: keep-open
+points:
+  arrival:
+    world: world
+    x: 0.5
+    y: 111.15
+    z: 1.6
+    yaw: 0
+    pitch: 0
+  west:
+    world: world
+    x: -2.3
+    y: 111.6
+    z: 1.6
+    yaw: -10
+    pitch: 0
+  east:
+    world: world
+    x: 3.2
+    y: 111.6
+    z: 1.6
+    yaw: 10
+    pitch: 0
+  home:
+    world: world
+    x: 0.5
+    y: 110.85
+    z: 0.5
+    yaw: 0
+    pitch: 0
+steps:
+  approach:
+    type: move
+    from: current
+    to: arrival
+    duration: 42
+    path: linear
+    speed: ease-in-out
+    next: choose
+    enter:
+    - '[element-state] launch busy'
+    - '[element-state] route_status moving'
+  choose:
+    type: choice
+    options:
+      observe:
+        element: route_a
+        next: observe
+      systems:
+        element: route_b
+        next: systems
+    timeout: 200
+    timeout-next: observe
+    fallback-next: observe
+    enter:
+    - '[element-state] route_a shown'
+    - '[element-state] route_b shown'
+    - '[element-state] route_status choosing'
+    exit:
+    - '[element-state] route_a hidden'
+    - '[element-state] route_b hidden'
+    - '[element-state] route_status moving'
+  observe:
+    type: move
+    from: current
+    to: west
+    duration: 56
+    path: linear
+    speed: ease-in-out
+    next: return
+  systems:
+    type: move
+    from: current
+    to: east
+    duration: 56
+    path: linear
+    speed: ease-in-out
+    next: return
+  return:
+    type: move
+    from: current
+    to: home
+    duration: 54
+    path: linear
+    speed: ease-in-out
+    next: done
+  done:
+    type: end
+    enter:
+    - '[element-state] route_status done'
+    - '[element-state] launch ready'

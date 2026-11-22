@@ -36,6 +36,12 @@ public class Section {
    public double playerOffsetForward;
    public float playerYawOffset;
    public float playerPitchOffset;
+   public String cutsceneId = "";
+   public boolean cutsceneAutoStart;
+   /** Only cutscene-built menus use viewpoint coordinates; legacy menus retain their carrier origin. */
+   public boolean cameraViewpointCoordinates;
+   public String dragInput = "click";
+   public org.orvencraft.uicore.layout.MenuZoom zoom;
 
    public Section(
       double distance,
@@ -64,9 +70,24 @@ public class Section {
       this.autoCommandsEnabled = autoCommandsEnabled;
    }
 
+   void addLoaded(String key, MenuLayout layout) {
+      Map<String, MenuLayout> updated = new LinkedHashMap<>(definition.layouts());
+      updated.put(key, layout);
+      definition = new Definition(updated, definition.templates(), definition.slots());
+   }
+
    public synchronized void add(String key, MenuLayout layout) {
       Map<String, MenuLayout> updated = new LinkedHashMap<>(definition.layouts());
       updated.put(key, layout);
+      Map<String, MenuLayout> hierarchy = new LinkedHashMap<>(updated);
+      for (MenuSlot slot : definition.slots().values()) {
+         if (hierarchy.containsKey(slot.id())) throw new IllegalArgumentException("Duplicate layout/slot ID: " + slot.id());
+         hierarchy.put(slot.id(), MenuConfigLoader.loadLayout(this.key, slot.id(), slot.positionConfig(), this.world));
+      }
+      Map<String, MenuLayout> previous = new LinkedHashMap<>(hierarchy);
+      previous.remove(key);
+      if (definition.layouts().containsKey(key)) previous.put(key, definition.layouts().get(key));
+      org.orvencraft.uicore.layout.ElementHierarchy.validateMutation(previous, hierarchy);
       definition = new Definition(updated, definition.templates(), definition.slots());
    }
 
@@ -150,6 +171,8 @@ public class Section {
          this.autoCommandsEnabled
       );
       copy.key = this.key;
+      copy.dragInput = this.dragInput;
+      copy.zoom = this.zoom;
       copy.npcSettings = this.npcSettings;
       copy.privacy = this.privacy;
       copy.schematics = this.schematics;
@@ -159,6 +182,9 @@ public class Section {
       copy.playerOffsetForward = this.playerOffsetForward;
       copy.playerYawOffset = this.playerYawOffset;
       copy.playerPitchOffset = this.playerPitchOffset;
+      copy.cutsceneId = this.cutsceneId;
+      copy.cutsceneAutoStart = this.cutsceneAutoStart;
+      copy.cameraViewpointCoordinates = this.cameraViewpointCoordinates;
       copy.definition = definition;
       return copy;
    }

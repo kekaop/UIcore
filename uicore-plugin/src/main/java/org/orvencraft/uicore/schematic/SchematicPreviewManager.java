@@ -100,7 +100,7 @@ public final class SchematicPreviewManager {
          return;
       }
       if (changes.isEmpty()) return;
-      ActivePreview preview = new ActivePreview(world.getUID(), Set.copyOf(changes.keySet()));
+      ActivePreview preview = new ActivePreview(world.getUID(), Map.copyOf(changes));
       active.put(player.getUniqueId(), preview);
       sendBatches(player, preview, new ArrayList<>(changes.entrySet()), 0);
    }
@@ -109,7 +109,10 @@ public final class SchematicPreviewManager {
       if (!player.isOnline() || active.get(player.getUniqueId()) != preview || !player.getWorld().getUID().equals(preview.worldId())) return;
       int end = Math.min(entries.size(), index + PACKET_BATCH);
       Map<Location, BlockData> batch = new LinkedHashMap<>();
-      for (int i = index; i < end; i++) batch.put(entries.get(i).getKey(), entries.get(i).getValue());
+      for (int i = index; i < end; i++) {
+         var entry = entries.get(i);
+         batch.put(entry.getKey(), plugin.resolveClientBlock(player.getUniqueId(), entry.getKey(), entry.getValue()));
+      }
       player.sendMultiBlockChange(batch);
       if (end < entries.size()) {
          UIcorePlugin.foliaLib.scheduling().entitySpecificScheduler(player)
@@ -117,9 +120,9 @@ public final class SchematicPreviewManager {
       }
    }
 
-   public boolean contains(UUID playerId, Location location) {
+   public BlockData blockAt(UUID playerId, Location location) {
       ActivePreview preview = active.get(playerId);
-      return preview != null && preview.positions().contains(location);
+      return preview == null ? null : preview.blocks().get(location);
    }
 
    public void clear(Player player) {
@@ -133,12 +136,11 @@ public final class SchematicPreviewManager {
       if (!plugin.isEnabled()) {
          // Paper can restore packets immediately. Never read another Folia region during disable.
          Map<Location, BlockData> restored = new LinkedHashMap<>();
-         for (Location location : previous.positions()) {
+         for (Location location : previous.blocks().keySet()) {
             if (location.getWorld() != null && location.getWorld().equals(player.getWorld())
                && Bukkit.isOwnedByCurrentRegion(location)
-               && location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)
-               && !plugin.isClientHiddenBlock(player.getUniqueId(), location)) {
-               restored.put(location, location.getBlock().getBlockData());
+               && location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
+               restored.put(location, plugin.resolveClientBlock(player.getUniqueId(), location, location.getBlock().getBlockData()));
                if (restored.size() >= PACKET_BATCH) {
                   player.sendMultiBlockChange(restored);
                   restored.clear();
@@ -149,7 +151,7 @@ public final class SchematicPreviewManager {
          return;
       }
       Map<Long, List<Location>> byChunk = new HashMap<>();
-      for (Location location : previous.positions()) {
+      for (Location location : previous.blocks().keySet()) {
          long key = ((long) (location.getBlockX() >> 4) << 32) ^ ((location.getBlockZ() >> 4) & 0xffffffffL);
          byChunk.computeIfAbsent(key, ignored -> new ArrayList<>()).add(location);
       }
@@ -185,9 +187,7 @@ public final class SchematicPreviewManager {
       Map<Location, BlockData> batch = new LinkedHashMap<>();
       for (int i = index; i < end; i++) {
          Map.Entry<Location, BlockData> entry = entries.get(i);
-         if (!contains(player.getUniqueId(), entry.getKey())
-            && !plugin.isClientHiddenBlock(player.getUniqueId(), entry.getKey()))
-            batch.put(entry.getKey(), entry.getValue());
+         batch.put(entry.getKey(), plugin.resolveClientBlock(player.getUniqueId(), entry.getKey(), entry.getValue()));
       }
       if (!batch.isEmpty()) player.sendMultiBlockChange(batch);
       if (end < entries.size()) {
@@ -201,5 +201,5 @@ public final class SchematicPreviewManager {
    }
 
    private record PreparedSchematic(SpongeSchematic schematic, Map<Integer, BlockData> palette) {}
-   private record ActivePreview(UUID worldId, Set<Location> positions) {}
+   private record ActivePreview(UUID worldId, Map<Location, BlockData> blocks) {}
 }

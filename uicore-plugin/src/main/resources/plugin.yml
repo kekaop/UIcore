@@ -10,8 +10,14 @@ commands:
   uicore:
     aliases: [ui]
     description: Opens and manages UIcore menus.
-    usage: /uicore <run|stop|reload|items|itemsstop|text|input|npc|slot>
+    usage: /uicore <run|stop|reload|items|itemsstop|text|input|npc|slot|cutscene>
 permissions:
+  uicore.cutscene.edit:
+    default: op
+  uicore.cutscene.preview:
+    default: op
+  uicore.debug:
+    default: op
   uicore.start:
     default: op
   uicore.stop:

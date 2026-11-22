@@ -3,6 +3,7 @@ package org.orvencraft.uicore.util;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.orvencraft.uicore.ColorParser;
@@ -18,13 +19,23 @@ public class TypewriterEffect {
    private final Map<UUID, String> fullTexts = new ConcurrentHashMap<>();
    private final Map<UUID, Integer> currentIndexes = new ConcurrentHashMap<>();
    private final TaskScheduler scheduler;
+   private final Predicate<TextDisplay> frozen;
 
    public TypewriterEffect(UIcorePlugin plugin) {
-      this(new EntityTaskScheduler());
+      this(new EntityTaskScheduler(), plugin::isMenuDisplayUiFrozen);
+   }
+
+   public TypewriterEffect(UIcorePlugin plugin, Predicate<TextDisplay> additionalFreeze) {
+      this(new EntityTaskScheduler(), display -> plugin.isMenuDisplayUiFrozen(display) || additionalFreeze.test(display));
    }
 
    TypewriterEffect(TaskScheduler scheduler) {
+      this(scheduler, ignored -> false);
+   }
+
+   TypewriterEffect(TaskScheduler scheduler, Predicate<TextDisplay> frozen) {
       this.scheduler = scheduler;
+      this.frozen = frozen;
    }
 
    public void applyEffect(TextDisplay display, String fullText, int speed, int startDelay, String cursorChar) {
@@ -70,6 +81,7 @@ public class TypewriterEffect {
                finish();
                return;
             }
+            if (frozen.test(display)) return;
             tick++;
             if (tick <= safeStartDelay) {
                if (tick % 10L == 0L) {

@@ -6,4 +6,6 @@ allowed-commands:
   - "warp"
   - "uicore stop"
   - "ui stop"
+  - "uicore cutscene"
+  - "ui cutscene"
   - "uicarousel"

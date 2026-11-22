@@ -29,6 +29,11 @@ public final class MenuElementEditor {
       return this;
    }
 
+   public MenuElementEditor parent(String id) { return set("parent", id); }
+   public MenuElementEditor draggable(boolean enabled) { return set("drag.enabled", enabled); }
+   public MenuElementEditor pointerEvents(boolean enabled) { return set("pointer-events", enabled); }
+   public MenuElementEditor interactionPriority(int priority) { return set("interaction-priority", priority); }
+
    public MenuElementEditor x(double x) {
       this.model = this.model.with("x", x);
       return this;

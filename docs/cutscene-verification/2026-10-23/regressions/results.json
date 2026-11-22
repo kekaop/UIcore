@@ -1,0 +1,73 @@
+[
+  {
+    "family": "Paper",
+    "version": "26.1.2",
+    "started": "2026-10-23T14:00:21.800Z",
+    "jarSha256": "c76adc02652605f6bd7b998bbbb2de86314d865e7cd98228ea14f19a83becf5c",
+    "movingClicks": 15,
+    "movingRightClicks": 5,
+    "movingHover": "pass",
+    "pausedClicks": 5,
+    "mouseClicks": 5,
+    "restoration": "pass",
+    "staticClicks": 10,
+    "result": "pass",
+    "audit": {
+      "frames": 157,
+      "frameErrors": [],
+      "detached": [],
+      "spawns": {
+        "11": 1,
+        "17": 1,
+        "18": 1,
+        "29": 1
+      },
+      "corrections": 155,
+      "absoluteCorrections": 0,
+      "clicksSent": 40,
+      "receiverClicks": 22,
+      "carrierClicks": 18,
+      "movingHoverStyleReceived": true,
+      "restoredGameMode": 0
+    },
+    "finished": "2026-10-23T14:01:01.473Z"
+  },
+  {
+    "family": "Folia",
+    "version": "26.1.2",
+    "started": "2026-10-23T14:00:21.816Z",
+    "jarSha256": "c76adc02652605f6bd7b998bbbb2de86314d865e7cd98228ea14f19a83becf5c",
+    "movingClicks": 15,
+    "movingRightClicks": 5,
+    "movingHover": "pass",
+    "pausedClicks": 5,
+    "mouseClicks": 5,
+    "restoration": "pass",
+    "staticClicks": 10,
+    "result": "pass",
+    "audit": {
+      "frames": 155,
+      "frameErrors": [],
+      "detached": [],
+      "spawns": {
+        "10": 1,
+        "13": 1,
+        "14": 1,
+        "15": 1,
+        "16": 1,
+        "17": 1,
+        "23": 153,
+        "24": 1,
+        "25": 1
+      },
+      "corrections": 153,
+      "absoluteCorrections": 0,
+      "clicksSent": 40,
+      "receiverClicks": 22,
+      "carrierClicks": 18,
+      "movingHoverStyleReceived": true,
+      "restoredGameMode": 0
+    },
+    "finished": "2026-10-23T14:01:02.012Z"
+  }
+]

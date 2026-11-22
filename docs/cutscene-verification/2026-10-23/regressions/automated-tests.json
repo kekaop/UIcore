@@ -1,0 +1,9 @@
+{
+  "command": "mvn -q package",
+  "result": "pass",
+  "tests": 190,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "jarSha256": "c76adc02652605f6bd7b998bbbb2de86314d865e7cd98228ea14f19a83becf5c"
+}

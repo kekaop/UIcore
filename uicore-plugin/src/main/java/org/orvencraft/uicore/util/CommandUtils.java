@@ -5,6 +5,7 @@ import org.orvencraft.uicore.UIcorePlugin;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -24,6 +25,11 @@ public final class CommandUtils {
    }
 
    public static void executeCommand(Player player, String cmd, long fallbackDelayTicks) {
+      executeCommand(player, cmd, fallbackDelayTicks, "", Map.of());
+   }
+
+   public static void executeCommand(Player player, String cmd, long fallbackDelayTicks,
+                                     String elementId, Map<String, Object> arguments) {
       if (player == null || cmd == null || cmd.trim().isEmpty()) {
          return;
       }
@@ -38,7 +44,7 @@ public final class CommandUtils {
          long generation = UIcorePlugin.plugin.getMenuSessionGeneration(player);
          player.getScheduler().execute(UIcorePlugin.plugin, guardSession(
             () -> !fromMenu || UIcorePlugin.plugin.isMenuSessionCurrent(player, generation),
-            () -> executeCommand(player, cmd, fallbackDelayTicks)), null, 0L);
+            () -> executeCommand(player, cmd, fallbackDelayTicks, elementId, arguments)), null, 0L);
          return;
       }
 
@@ -51,13 +57,13 @@ public final class CommandUtils {
             .entitySpecificScheduler(player)
             .runDelayed(ignored -> {
                if (!requireCurrentSession || UIcorePlugin.plugin.isMenuSessionCurrent(player, sessionGeneration)) {
-                  executeCommandNow(player, delayed.command());
+                  executeCommandNow(player, delayed.command(), elementId, arguments);
                }
             }, null, delayed.delayTicks());
          return;
       }
 
-      executeCommandNow(player, delayed.command());
+      executeCommandNow(player, delayed.command(), elementId, arguments);
    }
 
    static DelayedCommand parseDelayedCommand(String raw, long fallbackDelayTicks) {
@@ -76,8 +82,13 @@ public final class CommandUtils {
       return new DelayedCommand(command.substring(matcher.end()), Math.max(0L, delay));
    }
 
-   private static void executeCommandNow(Player player, String cmd) {
+   private static void executeCommandNow(Player player, String cmd, String elementId, Map<String, Object> arguments) {
       if (cmd == null || cmd.trim().isEmpty()) {
+         return;
+      }
+      if (UIcorePlugin.plugin != null && (cmd.startsWith("[cutscene] ") || cmd.startsWith("[state] ")
+         || cmd.startsWith("[element-state] ") || cmd.startsWith("[action] "))) {
+         UIcorePlugin.plugin.executeMenuAction(player, cmd, elementId, arguments);
          return;
       }
 

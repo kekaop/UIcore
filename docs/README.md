@@ -9,13 +9,17 @@ English is the repository's primary documentation language. Use the pages below 
 - [Install UIcore](../release/INSTALL.md) · [Русская версия](../release/INSTALL_RU.md)
 - [Check runtime contracts and dependencies](RUNTIME_CONTRACTS.md)
 - [Review the compatibility matrix](COMPATIBILITY.md) · [Русская версия](COMPATIBILITY_RU.md)
-- [Run the smoke checklist](SMOKE_CHECKLIST.md)
+- [Run the interaction checks](interaction-verification/README.md)
 
 ## Create menus
 
 - [Author a menu](MENU_AUTHORING_GUIDE.md) · [Русская версия](MENU_AUTHORING_GUIDE_RU.md)
+- [Group elements, configure drag and drop, and add zoom](INTERACTIONS_1_1.md) · [Русская версия](INTERACTIONS_1_1_RU.md)
 - [Use dynamic coordinates](DYNAMIC_COORDINATES.md)
 - [Use slots and templates](SLOTS_AND_TEMPLATES.md)
+- [Build camera cutscenes](CUTSCENES.md) · [Русская версия](CUTSCENES_RU.md)
+- [Run cutscene gameplay checks](CUTSCENE_GAMEPLAY_CHECKS.md)
+- [Install the UIcore Lab showcase](../showcase/README.md) · [Русская версия](../showcase/README_RU.md)
 
 ## Extend UIcore
 
@@ -28,11 +32,9 @@ English is the repository's primary documentation language. Use the pages below 
 - [Prepare the API for Maven Central](MAVEN_CENTRAL_PUBLISHING.md) (Russian)
 - [Current release check](../release/VALIDATION.md) · [Русская версия](../release/VALIDATION_RU.md)
 - [Short English description](../release/DESCRIPTION.md) · [Русское описание в BBCode](../release/DESCRIPTION_RU.bbcode)
-- [Audit fixes](AUDIT_FIXES.md) · [Русская версия](AUDIT_FIXES_RU.md)
-- [Audit plan](BUG_AUDIT_PLAN.md) · [Русская версия](BUG_AUDIT_PLAN_RU.md)
-- [Folia port status](PORT_26_2.md) · [Русская версия](PORT_26_2_RU.md)
-- [Planned tasks](PLANNED_TASKS.md) · [Русская версия](PLANNED_TASKS_RU.md)
+- [Development roadmap](ROADMAP.md) · [План развития](ROADMAP_RU.md)
 - [Release notes](../release/RELEASE_NOTES.md) · [Русская версия](../release/RELEASE_NOTES_RU.md)
+- [Modrinth changelog](../release/MODRINTH_CHANGELOG.md) · [Русский BBCode](../release/RELEASE_NOTES_RU.bbcode)
 
 ## Russian translations
 

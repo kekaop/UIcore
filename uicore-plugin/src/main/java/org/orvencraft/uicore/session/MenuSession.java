@@ -18,13 +18,15 @@ public final class MenuSession {
    private final boolean invisible;
    private final boolean collidable;
    private final Location location;
-   private Stage stage = Stage.PREPARING;
+   private final String originWorld;
+   private volatile Stage stage = Stage.PREPARING;
 
    public MenuSession(Player player) {
       gameMode = player.getGameMode();
       invisible = player.isInvisible();
       collidable = player.isCollidable();
       location = player.getLocation().clone();
+      originWorld = location.getWorld() == null ? null : location.getWorld().getName();
    }
 
    private MenuSession(GameMode mode, boolean invisible, boolean collidable, Location location) {
@@ -32,16 +34,17 @@ public final class MenuSession {
       this.invisible = invisible;
       this.collidable = collidable;
       this.location = location;
+      this.originWorld = location.getWorld() == null ? null : location.getWorld().getName();
    }
 
    /** Must complete before applying any menu side effects. */
    public void save(Path destination) throws IOException {
-      if (location.getWorld() == null) throw new IOException("Session origin world is unavailable");
+      if (originWorld == null) throw new IOException("Session origin world is unavailable");
       YamlConfiguration data = new YamlConfiguration();
       data.set("gamemode", gameMode.name());
       data.set("invisible", invisible);
       data.set("collidable", collidable);
-      data.set("world", location.getWorld().getName());
+      data.set("world", originWorld);
       data.set("x", location.getX()); data.set("y", location.getY()); data.set("z", location.getZ());
       data.set("yaw", location.getYaw()); data.set("pitch", location.getPitch());
       Files.createDirectories(destination.getParent());
@@ -84,10 +87,13 @@ public final class MenuSession {
       try { player.setInvisible(invisible); } catch (RuntimeException exception) { if (failure == null) failure = exception; }
       try { player.setCollidable(collidable); } catch (RuntimeException exception) { if (failure == null) failure = exception; }
       if (failure != null) throw failure;
-      if (player.getGameMode() != gameMode || player.isInvisible() != invisible || player.isCollidable() != collidable)
+      if (!matchesPlayerFlags(player))
          throw new IllegalStateException("Player state restoration rejected");
       stage = Stage.CLOSED;
    }
    public Location originalLocation() { return location.clone(); }
+   public boolean matchesPlayerFlags(Player player) {
+      return player.getGameMode() == gameMode && player.isInvisible() == invisible && player.isCollidable() == collidable;
+   }
    public Stage stage() { return stage; }
 }

@@ -5,7 +5,9 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.util.Vector;
 import org.bukkit.util.Transformation;
 import org.joml.Matrix4f;
+import org.joml.Intersectionf;
 import org.joml.Quaternionf;
+import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
@@ -14,6 +16,60 @@ public final class TextDisplayHitBox {
    private static final float LOCAL_WIDTH_PER_CHAR = 0.12F;
    private static final String HITBOX_TAG_PREFIX = "uicore_hitbox:";
    static final String ITEM_HITBOX_TAG = "uicore_item_hitbox";
+
+   /** Read on the display's owner, then use the immutable geometry on the viewer's owner. */
+   public static Snapshot snapshot(TextDisplay display) {
+      float[] custom = readCustomHitbox(display);
+      String text = display.getText() == null ? "" : display.getText().replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+      Transformation tr = display.getTransformation();
+      Matrix4f inverse = new Matrix4f().translate(tr.getTranslation()).rotate(tr.getLeftRotation())
+         .scale(tr.getScale()).rotate(tr.getRightRotation()).invert();
+      return new Snapshot(custom == null ? Math.max(.1f, text.length() * LOCAL_WIDTH_PER_CHAR) : custom[0],
+         custom == null ? LOCAL_HEIGHT : custom[1], custom == null ? .05f : custom[2],
+         display.getScoreboardTags().contains(ITEM_HITBOX_TAG), inverse);
+   }
+
+   public static final class Snapshot {
+      private final double width, height, depth;
+      private final boolean centered;
+      private final Matrix4f inverse;
+      private Snapshot(double width, double height, double depth, boolean centered, Matrix4f inverse) {
+         this.width = width; this.height = height; this.depth = depth; this.centered = centered; this.inverse = new Matrix4f(inverse);
+      }
+      public java.util.List<Vector> outline() {
+         var result = new java.util.ArrayList<Vector>();
+         Matrix4f transform = new Matrix4f(inverse).invert();
+         double low = centered ? -height / 2 : 0, high = centered ? height / 2 : height;
+         for (int i = 0; i <= 8; i++) {
+            double f = i / 8.0;
+            for (int side = 0; side < 4; side++) {
+               double x = side < 2 ? (f - .5) * (width + .1) : (side == 2 ? -.5 : .5) * (width + .1);
+               double y = side < 2 ? (side == 0 ? low - .05 : high + .05) : low - .05 + f * (high - low + .1);
+               Vector4f point = transform.transform(new Vector4f((float)x, (float)y, 0, 1));
+               result.add(new Vector(point.x, point.y, point.z));
+            }
+         }
+         return java.util.List.copyOf(result);
+      }
+      public boolean contains(Vector menuLocalDelta) {
+         Vector4f point = inverse.transform(new Vector4f((float)menuLocalDelta.getX(), (float)menuLocalDelta.getY(), (float)menuLocalDelta.getZ(), 1));
+         return Math.abs(point.x) <= width / 2 + .05 && Math.abs(point.z) <= depth / 2 + .05
+            && isWithinHeight(point.y, height, .05, centered);
+      }
+
+      public boolean intersectsRay(Vector origin, Vector cursor) {
+         Vector direction = cursor.clone().subtract(origin);
+         if (direction.lengthSquared() < 1e-12) return false;
+         Vector3f localOrigin = inverse.transformPosition(new Vector3f((float)origin.getX(), (float)origin.getY(), (float)origin.getZ()));
+         Vector3f localDirection = inverse.transformDirection(new Vector3f((float)direction.getX(), (float)direction.getY(), (float)direction.getZ()));
+         float halfWidth = (float)(width / 2 + .05), halfDepth = (float)(depth / 2 + .05);
+         float low = (float)(centered ? -height / 2 - .05 : -.05);
+         float high = (float)(centered ? height / 2 + .05 : height + .05);
+         return Intersectionf.intersectRayAab(localOrigin.x, localOrigin.y, localOrigin.z,
+            localDirection.x, localDirection.y, localDirection.z, -halfWidth, low, -halfDepth,
+            halfWidth, high, halfDepth, new Vector2f());
+      }
+   }
 
    public static boolean isInside(TextDisplay display, Location cursor) {
       if (!display.isValid()) {
@@ -113,6 +169,19 @@ public final class TextDisplayHitBox {
       return Math.abs(localX) <= halfWidth
          && isWithinHeight(localY, localHeight * Math.max(0.01F, Math.abs(scale.y)), expansion, itemHitbox)
          && Math.abs(localZ) <= halfDepth;
+   }
+
+   static boolean hitsMenuRay(Snapshot geometry, Location eye, Location cursor, Location anchor,
+                              Vector right, Vector up, Vector forward) {
+      if (!java.util.Objects.equals(eye.getWorld(), anchor.getWorld())
+         || !java.util.Objects.equals(cursor.getWorld(), anchor.getWorld())) return false;
+      return geometry.intersectsRay(cameraLocal(eye, anchor, right, up, forward),
+         cameraLocal(cursor, anchor, right, up, forward));
+   }
+
+   private static Vector cameraLocal(Location point, Location anchor, Vector right, Vector up, Vector forward) {
+      Vector delta = point.toVector().subtract(anchor.toVector());
+      return new Vector(delta.dot(right), delta.dot(up), delta.dot(forward));
    }
 
    static boolean isWithinHeight(double y, double height, double expansion, boolean centered) {
