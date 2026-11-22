@@ -34,7 +34,7 @@ English is the repository's primary documentation language. Use the pages below 
 - [Short English description](../release/DESCRIPTION.md) · [Русское описание в BBCode](../release/DESCRIPTION_RU.bbcode)
 - [Development roadmap](ROADMAP.md) · [План развития](ROADMAP_RU.md)
 - [Release notes](../release/RELEASE_NOTES.md) · [Русская версия](../release/RELEASE_NOTES_RU.md)
-- [Modrinth changelog](../release/MODRINTH_CHANGELOG.md) · [Русский BBCode](../release/RELEASE_NOTES_RU.bbcode)
+- [Modrinth changelog](../release/MODRINTH_CHANGELOG.md)
 
 ## Russian translations
 
