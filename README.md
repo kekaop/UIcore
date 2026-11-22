@@ -4,6 +4,8 @@
 
 > **Note:** This project includes AI-generated code written with Codex.
 
+> **Support:** [Discord](https://discord.gg/cBq76BmfKu)
+
 ### A world-space UI framework for Minecraft servers
 
 UIcore turns the game world into a stage for menus. Text, items, buttons, input fields, stateful elements, animated slots, NPC mirrors, and per-player previews live in the same scene as the player instead of inside a flat inventory window.
