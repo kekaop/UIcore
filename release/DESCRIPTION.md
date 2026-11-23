@@ -27,7 +27,7 @@ Create menus in YAML, then extend them with the public Java API. Use UIcore for 
 
 Install UIcore and PacketEvents in the server's `plugins/` directory and start the server. UIcore creates its configuration and six example menus. Start with `/uicore run demo_main` or try `demo_cutscene`, `demo_drag`, and `demo_zoom`. Use `/uicore stop` to close a menu. Edit YAML in `plugins/UIcore/menu/`, then run `/uicore reload`.
 
-Read the [installation guide](https://github.com/kekaop/UIcore/blob/orven/normal-source-build/release/INSTALL.md) to set up the server, then follow the [menu authoring guide](https://github.com/kekaop/UIcore/blob/orven/normal-source-build/docs/MENU_AUTHORING_GUIDE.md) to build your first screen. The [compatibility matrix](https://github.com/kekaop/UIcore/blob/orven/normal-source-build/docs/COMPATIBILITY.md) lists tested server builds. Watch the [bundled menu walkthrough](https://github.com/user-attachments/assets/60c09f38-9699-4fa7-9ec8-5ccf51af7e2b) or see a [custom server menu](https://github.com/user-attachments/assets/50bd8035-eb6a-4ecd-9941-b3f17b2cd196).
+Read the [installation guide](https://github.com/kekaop/UIcore/wiki/Installation) to set up the server, then follow the [menu authoring guide](https://github.com/kekaop/UIcore/wiki/Menu-Guide) to build your first screen. The [compatibility matrix](https://github.com/kekaop/UIcore/wiki/Compatibility) lists tested server builds. Watch the [bundled menu walkthrough](https://github.com/user-attachments/assets/60c09f38-9699-4fa7-9ec8-5ccf51af7e2b) or see a [custom server menu](https://github.com/user-attachments/assets/50bd8035-eb6a-4ecd-9941-b3f17b2cd196).
 
 ## Current limits
 

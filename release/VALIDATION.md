@@ -13,9 +13,7 @@ Verification ran on November 22, 2026. The release JAR was built on Windows with
 
 The first Folia cutscene run received 9 of 10 clicks in its initial sequence. The rerun received all 40. Folia logged cleanup warnings when the first run stopped with the menu still open. The passing runs closed their menus before shutdown. The protocol checks send packets directly. Physical hold-to-drag input and cutscene smoothness on a connected client still need gameplay checks for this artifact.
 
-- [Interaction test results](../docs/interaction-verification/results.json)
-- [Cutscene regression results](../docs/interaction-verification/cutscene-regression-results.json)
-- [Compatibility matrix](../docs/COMPATIBILITY.md)
+- [Compatibility matrix](https://github.com/kekaop/UIcore/wiki/Compatibility)
 
 `UIcore-1.1.0.jar` · 832,904 bytes
 

@@ -60,7 +60,7 @@ The build produces:
 Maven Central hosts `io.github.kekaop:uicore-api:1.0.0`. For the new 1.1.0 API, run
 `mvn -pl uicore-api -am install` from the 1.1.0 source checkout and use version
 `1.1.0` in your dependency. Install UIcore on the server and use `provided` in
-extension builds. See the [API guide](docs/API_USAGE.md).
+extension builds. See the [API guide](https://github.com/kekaop/UIcore/wiki/Java-API).
 Declare the Paper API dependency and Paper repository in your plugin build when
 compiling against UIcore's Paper types.
 
@@ -71,22 +71,22 @@ compiling against UIcore's Paper types.
 - [PacketEvents 2.14.0 Spigot](https://modrinth.com/plugin/packetevents/version/m78nFxYg) is required.
 - PlaceholderAPI, FancyNpcs, SkinsRestorer, CraftEngine, Vault, and LuckPerms are optional.
 
-**Client compatibility:** NoChatReports may cause chat input to fail, including after a menu closes. See the [symptoms, cause, and workaround](docs/COMPATIBILITY.md#nochatreports-can-break-chat-input).
+**Client compatibility:** NoChatReports may cause chat input to fail, including after a menu closes. See the [symptoms, cause, and workaround](https://github.com/kekaop/UIcore/wiki/Compatibility#nochatreports-can-break-chat-input).
 
 ## Documentation
 
 English is the primary documentation language. Each translated page links to its Russian counterpart.
 
 - [GitHub Wiki](https://github.com/kekaop/UIcore/wiki) · [Русская главная страница](https://github.com/kekaop/UIcore/wiki/Home-RU)
-- [Documentation index](docs/README.md)
-- [Menu authoring guide](docs/MENU_AUTHORING_GUIDE.md) · [Русская версия](docs/MENU_AUTHORING_GUIDE_RU.md)
-- [Camera cutscenes](docs/CUTSCENES.md) · [Русская версия](docs/CUTSCENES_RU.md)
-- [Groups, drag and drop, and zoom](docs/INTERACTIONS_1_1.md) · [Русская версия](docs/INTERACTIONS_1_1_RU.md)
-- [Extension API](docs/EXTENSION_API.md) · [Русская версия](docs/EXTENSION_API_RU.md)
-- [Built-in integrations](docs/BUILTIN_INTEGRATIONS.md) · [Русская версия](docs/BUILTIN_INTEGRATIONS_RU.md)
-- [Compatibility matrix](docs/COMPATIBILITY.md) · [Русская версия](docs/COMPATIBILITY_RU.md)
-- [Installation guide](release/INSTALL.md) · [Русская версия](release/INSTALL_RU.md)
-- [Runtime contracts](docs/RUNTIME_CONTRACTS.md) · [Interaction checks](docs/interaction-verification/README.md)
+- [Documentation index](https://github.com/kekaop/UIcore/wiki/Home)
+- [Menu authoring guide](https://github.com/kekaop/UIcore/wiki/Menu-Guide) · [Русская версия](https://github.com/kekaop/UIcore/wiki/Menu-Guide-RU)
+- [Camera cutscenes](https://github.com/kekaop/UIcore/wiki/Cutscenes) · [Русская версия](https://github.com/kekaop/UIcore/wiki/Cutscenes-RU)
+- [Groups, drag and drop, and zoom](https://github.com/kekaop/UIcore/wiki/Interactions) · [Русская версия](https://github.com/kekaop/UIcore/wiki/Interactions-RU)
+- [Extension API](https://github.com/kekaop/UIcore/wiki/Extension-API) · [Русская версия](https://github.com/kekaop/UIcore/wiki/Extension-API-RU)
+- [Built-in integrations](https://github.com/kekaop/UIcore/wiki/Integrations) · [Русская версия](https://github.com/kekaop/UIcore/wiki/Integrations-RU)
+- [Compatibility matrix](https://github.com/kekaop/UIcore/wiki/Compatibility) · [Русская версия](https://github.com/kekaop/UIcore/wiki/Compatibility-RU)
+- [Installation guide](https://github.com/kekaop/UIcore/wiki/Installation) · [Русская версия](https://github.com/kekaop/UIcore/wiki/Installation-RU)
+- [Runtime contracts](https://github.com/kekaop/UIcore/wiki/Runtime-Contracts)
 
 ## Try the demo menus
 
@@ -101,7 +101,7 @@ Open `/uicore run demo_main` to explore the three introductory examples. They us
 | [demo_drag](uicore-plugin/src/main/resources/menu/demo_drag.yml)       | Parent groups, a slider, a receiving slot, and experimental hold-to-drag      |
 | [demo_zoom](uicore-plugin/src/main/resources/menu/demo_zoom.yml)       | Mouse-wheel zoom, click-to-pick-up dragging, and actions after a drop         |
 
-The gallery selectors require `uicore.slot` (granted to OP players by default). See the [demo walkthrough](showcase/README.md) · [Русская версия](showcase/README_RU.md).
+The gallery selectors require `uicore.slot` (granted to OP players by default). See the [demo walkthrough](https://github.com/kekaop/UIcore/wiki/Lab) · [Русская версия](https://github.com/kekaop/UIcore/wiki/Lab-RU).
 
 ## Showcase videos
 
